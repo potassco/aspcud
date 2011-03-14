@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 # user configurables
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Release Debug")
 
-project(cudf)
+project(aspcud)
 
 include(cmake/re2c.cmake)
 include(cmake/lemon.cmake)

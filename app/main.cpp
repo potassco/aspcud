@@ -1,3 +1,22 @@
+//
+// Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
+//
+// This file is part of aspcud.
+//
+// gringo is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// gringo is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with gringo.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 #include <iostream>
 #include <cudf/parser.h>
 #include <program_opts/app_options.h>
@@ -51,7 +70,7 @@ namespace ProgramOptions
 		{
 			criteria.removed          = -4;
 			criteria.notuptodate      = -3;
-			criteria.unmet_recommends = -2;
+			criteria.unsat_recommends = -2;
 			criteria.newpkg           = -1;
 		}
 		else if(lower == "none") { }
@@ -69,7 +88,7 @@ namespace ProgramOptions
 				else if(sub == "new")              { if(!setCrit(tok[0], criteria.newpkg, prio))           { return false; } }
 				else if(sub == "changed")          { if(!setCrit(tok[0], criteria.changed, prio))          { return false; } }
 				else if(sub == "notuptodate")      { if(!setCrit(tok[0], criteria.notuptodate, prio))      { return false; } }
-				else if(sub == "unmet_recommends") { if(!setCrit(tok[0], criteria.unmet_recommends, prio)) { return false; } }
+				else if(sub == "unsat_recommends") { if(!setCrit(tok[0], criteria.unsat_recommends, prio)) { return false; } }
 				else                               { return false; }
 				prio++;
 			}
@@ -96,7 +115,7 @@ void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions:
 			"Preprocess for specific optimization criteria\n"
 			"      Default: none\n"
 			"      Valid:   none, paranoid, trendy, -|+<crit>(,-|+<crit>)*\n"
-			"        <crit>: removed, new, changed, notuptodate, or unmet_recommends\n");
+			"        <crit>: removed, new, changed, notuptodate, or unsat_recommends\n");
 	root.addOptions(prepro);
 }
 

@@ -1,0 +1,38 @@
+1 Prerequisites
+---------------
+
+Boost (>= v1.43) - http://www.boost.org/
+cmake (>= v2.6)  - http://www.cmake.org/
+
+Note that the lexer generatror re2c is only needed for the svn version 
+
+2 Compilation
+-------------
+
+If all prerequisites are satisfied and you are running a *nix, compilation
+should be as simple as typing:
+	make
+
+If you want to use a boost library that is not installed in a default 
+location, than you can specify its location using environtment variables:
+
+BOOST_ROOT       - Installation prefix for searching for Boost.
+                   Set this if cmake has problems finding the proper
+                   Boost installation.
+
+BOOST_INCLUDEDIR - Similar to BOOST_ROOT but sets the path to the include 
+                   directory directly.
+
+BOOST_LIBRARYDIR - Similar to BOOST_ROOT but sets the path to the library
+                   directory directly.
+
+To use a Boost installation in /usr/local, you should compile the project 
+using:
+	BOOST_ROOT=/usr/local make
+
+3 Installation
+--------------
+
+If compilation succeeded, the respective build folder will contain a bin
+folder with an executable.
+

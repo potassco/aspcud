@@ -9,7 +9,7 @@ function usrtrap()
 
 function enc()
 {
-	for x in "." "$base" "$base/../../Encodings"; do
+	for x in "." "$base" "$base/encodings" "$base/../../Encodings"; do
 		[[ -e "$x/$1" ]] && { echo "$x/$1"; return 0; }
 	done
 	echo "$x"
@@ -111,11 +111,11 @@ tmp="$(mktemp -d outXXXXXX)"
 
 mkfifo $tmp/cudf_out $tmp/gringo_out
 
-clasp-mt-banane "${clasp_opts[@]}"  > "$tmp/clasp_out"  2> "$tmp/clasp_err"    < "$tmp/gringo_out" &
+clasp   "${clasp_opts[@]}"  > "$tmp/clasp_out"  2> "$tmp/clasp_err"    < "$tmp/gringo_out" &
 clasp_pid=$!
-gringo-banane   "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" - < "$tmp/cudf_out" &
+gringo  "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" - < "$tmp/cudf_out" &
 gringo_pid=$!
-cudf2lp-banane  "${cudf_opts[@]}"   > "$tmp/cudf_out"   2> "$tmp/cudf_err"   - < "$1" &
+cudf2lp "${cudf_opts[@]}"   > "$tmp/cudf_out"   2> "$tmp/cudf_err"   - < "$1" &
 cudf_pid=$!
 
 trap usrtrap USR1 TERM INT

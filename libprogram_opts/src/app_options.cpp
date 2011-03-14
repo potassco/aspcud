@@ -1,22 +1,22 @@
-// 
+//
 // Copyright (c) 2006-2007, Benjamin Kaufmann
-// 
-// This file is part of Clasp. See http://www.cs.uni-potsdam.de/clasp/ 
-// 
-// Clasp is free software; you can redistribute it and/or modify
+//
+// This file is part of aspcud.
+//
+// gringo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
+// the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
-// Clasp is distributed in the hope that it will be useful,
+//
+// gringo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with Clasp; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
+// You should have received a copy of the GNU General Public License
+// along with gringo.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 #include <program_opts/app_options.h>
 #include <program_opts/value.h>
 #include <sstream>
@@ -35,11 +35,9 @@ GenericOptions::GenericOptions()
 	, help(false)
 	, version(false) {}
 
-namespace {
-bool mapVLevel(const std::string& s, int& level) {
+bool GenericOptions::mapLevel(const std::string& s, int& level) {
 	if (s.empty()) return !!(level = std::numeric_limits<int>::max());
 	else return ProgramOptions::parseValue(s, level, 1);
-}
 }
 
 void GenericOptions::initOptions(OptionGroup& root, OptionGroup& hidden) {
@@ -47,7 +45,7 @@ void GenericOptions::initOptions(OptionGroup& root, OptionGroup& hidden) {
 	basic.addOptions()
 		("help,h"   , bool_switch(&help),    "Print help information and exit")
 		("version,v", bool_switch(&version), "Print version information and exit")    
-		("verbose,V", value<int>(&verbose)->setImplicit()->parser(mapVLevel),   "Verbosity level", "<n>")
+		("verbose,V", value<int>(&verbose)->setImplicit()->parser(mapLevel),   "Verbosity level", "<n>")
 	;
 	root.addOptions(basic, true);
 	hidden.addOptions()

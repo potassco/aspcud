@@ -1,22 +1,22 @@
-// 
+//
 // Copyright (c) 2006-2007, Benjamin Kaufmann
-// 
-// This file is part of Clasp. See http://www.cs.uni-potsdam.de/clasp/ 
-// 
-// Clasp is free software; you can redistribute it and/or modify
+//
+// This file is part of aspcud.
+//
+// gringo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
+// the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
-// Clasp is distributed in the hope that it will be useful,
+//
+// gringo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with Clasp; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
+// You should have received a copy of the GNU General Public License
+// along with gringo.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 #ifndef APP_OPTIONS_H_INCLUDED
 #define APP_OPTIONS_H_INCLUDED
 
@@ -44,6 +44,7 @@ struct GenericOptions {
 	GenericOptions();
 	void initOptions(ProgramOptions::OptionGroup& root, ProgramOptions::OptionGroup& hidden);
 	void addDefaults(std::string& def);
+	static bool mapLevel(const std::string& s, int& level);
 	StringSeq  input;    // positional options (list of files)
 	int        verbose;  // verbosity level, default:  0
 	bool       help;     // print help and exit

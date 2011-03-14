@@ -1,6 +1,7 @@
-	// Copyright (c) 2009, Roland Kaminski <kaminski@cs.uni-potsdam.de>
 //
-// This file is part of gringo.
+// Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
+//
+// This file is part of aspcud.
 //
 // gringo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,6 +15,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with gringo.  If not, see <http://www.gnu.org/licenses/>.
+//
 
 #pragma once
 

@@ -1,14 +1,21 @@
 //
-//  ProgramOptions
-//  (C) Copyright Benjamin Kaufmann, 2004 - 2005
-//  Permission to copy, use, modify, sell and distribute this software is 
-//  granted provided this copyright notice appears in all copies. 
-//  This software is provided "as is" without express or implied warranty, 
-//  and with no claim as to its suitability for any purpose.
+// Copyright (c) 2006-2007, Benjamin Kaufmann
 //
-//  ProgramOptions is a scaled-down version of boost::program_options
-//  see: http://boost-sandbox.sourceforge.net/program_options/html/
-// 
+// This file is part of aspcud.
+//
+// gringo is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// gringo is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with gringo.  If not, see <http://www.gnu.org/licenses/>.
+//
 
 #ifdef _MSC_VER
 #pragma warning (disable : 4786)
@@ -85,6 +92,8 @@ namespace ProgramOptions {
 	///////////////////////////////////////////////////////////////////////////////
 	// class OptionGroup
 	///////////////////////////////////////////////////////////////////////////////
+	// NOTE: 
+	// parts of the following implementation are based on boost::program_options::options_description
 	OptionGroup::OptionGroup(const std::string& description)
 		: size_(0)
 	{

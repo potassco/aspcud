@@ -1,3 +1,22 @@
+//
+// Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
+//
+// This file is part of aspcud.
+//
+// gringo is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// gringo is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with gringo.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 #include <cudf/dependency.h>
 #include <boost/lambda/lambda.hpp>
 #include <boost/foreach.hpp>
@@ -155,7 +174,7 @@ void Package::doAdd(Dependency *dep)
 	{
 		foreach(Entity *ent, clause) { ent->add(dep); }
 	}
-	if(dep->criteria.unmet_recommends < 0)
+	if(dep->criteria.unsat_recommends < 0)
 	{
 		foreach(EntityList &clause, recommends)
 		{
@@ -263,7 +282,7 @@ Dependency::Criteria::Criteria()
 	: removed(0)
 	, newpkg(0)
 	, changed(0)
-	, unmet_recommends(0)
+	, unsat_recommends(0)
 	, notuptodate(0)
 {
 }
@@ -433,7 +452,7 @@ void Dependency::initClosure()
 				{
 					if(criteria.changed > 0) { pkg->add(this); }
 				}
-				if(criteria.unmet_recommends > 0 && pkg->recommends.size() > 0)
+				if(criteria.unsat_recommends > 0 && pkg->recommends.size() > 0)
 				{
 					pkg->add(this);
 				}
@@ -560,5 +579,5 @@ void Dependency::dumpAsFacts(std::ostream &out)
 	if(criteria.removed)          { out << "criterion(remove," << criteria.removed << ").\n"; }
 	if(criteria.newpkg)           { out << "criterion(newpackage," << criteria.newpkg << ").\n"; }
 	if(criteria.notuptodate)      { out << "criterion(uptodate," << criteria.notuptodate << ").\n"; }
-	if(criteria.unmet_recommends) { out << "criterion(recommend," << criteria.unmet_recommends << ").\n"; }
+	if(criteria.unsat_recommends) { out << "criterion(recommend," << criteria.unsat_recommends << ").\n"; }
 }
