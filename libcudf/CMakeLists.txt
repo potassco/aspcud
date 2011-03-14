@@ -1,0 +1,14 @@
+file(GLOB_RECURSE LIBCUDF_SRC    RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.cpp *.h)
+file(GLOB_RECURSE LIBCUDF_LEXER  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.r2c)
+file(GLOB_RECURSE LIBCUDF_PARSER RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.y)
+
+include_directories(src .)
+
+RE2C(LIBCUDF_SRC ${LIBCUDF_LEXER})
+LEMON(LIBCUDF_SRC ${LIBCUDF_PARSER})
+
+add_library(cudf-lib STATIC ${LIBCUDF_SRC})
+
+target_link_libraries(cudf-lib)
+set_target_properties(cudf-lib PROPERTIES OUTPUT_NAME cudf)
+

@@ -1,0 +1,152 @@
+// Copyright (c) 2009, Roland Kaminski <kaminski@cs.uni-potsdam.de>
+//
+// This file is part of gringo.
+//
+// gringo is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// gringo is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with gringo.  If not, see <http://www.gnu.org/licenses/>.
+
+#include <cudf/parser.h>
+#include <stdexcept>
+#include "parser_impl.h"
+#include <cassert>
+
+void *parserAlloc(void *(*mallocProc)(size_t));
+void parserFree(void *p, void (*freeProc)(void*));
+void parser(void *yyp, int yymajor, Parser::Token yyminor, Parser *pParser);
+
+Parser::Parser(Dependency &dep)
+	: parser_(parserAlloc(malloc))
+	, lexIgnore_(false)
+	, request_(false)
+	, dep_(dep)
+	, doc_(0)
+	, package_(0)
+{
+	boolMap_[dep_.index("true")]  = true;
+	boolMap_[dep_.index("false")] = false;
+
+	keepMap_[dep_.index("package")] = Cudf::Package::PACKAGE;
+	keepMap_[dep_.index("feature")] = Cudf::Package::FEATURE;
+	keepMap_[dep_.index("version")] = Cudf::Package::VERSION;
+	keepMap_[dep_.index("none")]    = Cudf::Package::NONE;
+}
+
+/*!re2c
+	EOF       = [\000];
+	POSINT    = "+"?[0-9]+;
+	ANY       = [\000-\377];
+	SPACE     = [ \t]+;
+	NL        = "\n"+[ \t\n]*;
+	IDENT     = [a-z][a-z0-9-]*;
+	PKGNAME   = [A-Za-z0-9\-+./@()%]+;
+	IGNORE    = [^\n]*;
+	ATTRIBUTE = IDENT":";
+	COMMENT   = "#"[^\n]*[ \t\n]*;
+*/
+
+int Parser::lex()
+{
+start:
+	start();
+	/*!re2c
+		NL            { step(); return PARSER_NL; }
+		COMMENT       { goto start; }
+		SPACE         { goto start; }
+		","           { return PARSER_COMMA; }
+		"|"           { return PARSER_BAR; }
+		"="           { token_.index = EQ; return PARSER_EQUAL; }
+		"!="          { token_.index = NEQ; return PARSER_RELOP; }
+		">="          { token_.index = GE; return PARSER_RELOP; }
+		">"           { token_.index = GT; return PARSER_RELOP; }
+		"<="          { token_.index = LE; return PARSER_RELOP; }
+		"<"           { token_.index = LT; return PARSER_RELOP; }
+		"true!"       { return PARSER_TRUEX; }
+		"false!"      { return PARSER_FALSEX; }
+		"true"        { token_.index = dep_.index(string()); return PARSER_IDENT_TRUE; }
+		"false"       { token_.index = dep_.index(string()); return PARSER_IDENT_FALSE; }
+		"version"     { token_.index = dep_.index(string()); return PARSER_IDENT_VERSION; }
+		"package"     { token_.index = dep_.index(string()); return PARSER_IDENT_PACKAGE; }
+		"feature"     { token_.index = dep_.index(string()); return PARSER_IDENT_FEATURE; }
+		"none"        { token_.index = dep_.index(string()); return PARSER_IDENT_NONE; }
+		POSINT 		  { token_.index = dep_.index(string()); return PARSER_POSINT; }
+		IDENT         { token_.index = dep_.index(string()); return PARSER_IDENT; }
+		PKGNAME       { token_.index = dep_.index(string()); return PARSER_PKGNAME; }
+		"preamble:"   { lexIgnore_ = true; return PARSER_PREAMBLE; }
+		"request:"    { lexIgnore_ = true; return PARSER_REQUEST; }
+		"package:"    { return PARSER_PACKAGE; }
+		"version:"    { return PARSER_VERSION; }
+		"depends:"    { return PARSER_DEPENDS; }
+		"conflicts:"  { return PARSER_CONFLICTS; }
+		"provides:"   { return PARSER_PROVIDES; }
+		"installed:"  { return PARSER_INSTALLED; }
+		"keep:"       { return PARSER_KEEP; }
+		"install:"    { return PARSER_INSTALL; }
+		"remove:"     { return PARSER_REMOVE; }
+		"upgrade:"    { return PARSER_UPGRADE; }
+		"recommends:" { return PARSER_RECOMMENDS; }
+		ATTRIBUTE     { lexIgnore_ = true; return PARSER_ATTRIBUTE; }
+		EOF           { return 0; }
+		ANY           { throw std::runtime_error("syntax error:\"" + string() + "\""); }
+	*/
+	return 0;
+}
+
+int Parser::lexIgnore()
+{
+	/*!re2c
+		IGNORE { return PARSER_IGNORE; }
+		ANY    { throw std::runtime_error("syntax error:\"" + string() + "\""); }
+	*/
+}
+
+void Parser::parseError()
+{
+}
+
+std::string Parser::errorToken()
+{
+	if(eof()) return "<EOF>";
+	else return string();
+}
+
+void Parser::syntaxError()
+{
+	throw std::runtime_error("syntax error:" + errorToken());
+}
+
+void Parser::parse(std::istream &in)
+{
+	Cudf::Document doc;
+	doc_ = &doc;
+	reset(&in);
+	int token;
+	do
+	{
+		if(lexIgnore_)
+		{
+			lexIgnore_ = false;
+			token      = lexIgnore();
+		}
+		else { token = lex(); }
+		//std::cerr << "lexed: " << string() << std::endl;
+		parser(parser_, token, token_, this);
+	}
+	while(token != 0);
+	dep_.init(*doc_);
+	doc_ = 0;
+}
+
+Parser::~Parser()
+{
+	parserFree(parser_, free);
+}
