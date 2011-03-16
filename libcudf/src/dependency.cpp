@@ -66,11 +66,7 @@ namespace
 		const Cudf::PackageRef &ref;
 	};
 
-	boost::filter_range<CudfPackageRefFilter, EntityList>
-	refRange(Dependency::EntityMap &map, const Cudf::PackageRef &ref)
-	{
-		return map[ref.name] | boost::adaptors::filtered(CudfPackageRefFilter(ref));
-	}
+#define refRange(map, ref) ( map[ref.name] | boost::adaptors::filtered(CudfPackageRefFilter(ref)) )
 
 	void unroll(Dependency::EntityMap &map, const Cudf::PkgList &clause, EntityList &list)
 	{
