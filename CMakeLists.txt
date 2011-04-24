@@ -13,7 +13,6 @@ project(aspcud)
 
 include(cmake/re2c.cmake)
 include(cmake/lemon.cmake)
-include(cmake/macros.cmake)
 
 IF(USE_STATIC_LIBS)
 	set(CMAKE_EXE_LINK_DYNAMIC_C_FLAGS)
