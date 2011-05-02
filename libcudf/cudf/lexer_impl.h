@@ -26,6 +26,7 @@
 #include <cstdio>
 #include <string>
 #include <list>
+#include <cstddef>
 
 #define YYCTYPE   char
 #define YYCURSOR  state().cursor_
@@ -95,7 +96,7 @@ repeat:
 			else
 			{
 				if(*(limit_ - 1) == '\n') { in_->putback('\n'); limit_--; }
-				if(limit_ - start < (ptrdiff_t)n)    { goto repeat; }
+				if(limit_ - start < (std::ptrdiff_t)n)    { goto repeat; }
 			}
 		}
 		void step()
