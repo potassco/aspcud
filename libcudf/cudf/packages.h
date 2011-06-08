@@ -39,13 +39,8 @@ namespace Cudf
 		PackageRef(uint32_t name = 0, RelOp op = GE, uint32_t version = 0);
 	};
 
-	struct PkgList : public std::vector<PackageRef>
-	{
-	};
-
-	struct PkgFormula : public std::vector<PkgList>
-	{
-	};
+	typedef std::vector<PackageRef> PkgList;
+	typedef std::vector<PkgList> PkgFormula;
 
 	struct Package
 	{
