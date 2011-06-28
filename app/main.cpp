@@ -118,7 +118,7 @@ void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions:
 			"      Default: none\n"
 			"      Valid:   none, paranoid, trendy, -|+<crit>(,-|+<crit>)*\n"
 			"        <crit>: removed, new, changed, notuptodate, or unsat_recommends\n")
-		("addall", storeTo(addAll),
+		("addall", bool_switch(&addAll),
 			"Disable preprocessing and add all packages\n");
 
 	root.addOptions(prepro);
