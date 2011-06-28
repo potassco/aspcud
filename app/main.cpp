@@ -44,6 +44,7 @@ private:
 
 public:
 	Dependency::Criteria criteria;
+	bool                 addAll;
 };
 
 namespace ProgramOptions
@@ -98,6 +99,7 @@ namespace ProgramOptions
 }
 
 CudfOptions::CudfOptions()
+	: addAll(false)
 {
 }
 
@@ -115,7 +117,10 @@ void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions:
 			"Preprocess for specific optimization criteria\n"
 			"      Default: none\n"
 			"      Valid:   none, paranoid, trendy, -|+<crit>(,-|+<crit>)*\n"
-			"        <crit>: removed, new, changed, notuptodate, or unsat_recommends\n");
+			"        <crit>: removed, new, changed, notuptodate, or unsat_recommends\n")
+		("addall", storeTo(addAll),
+			"Disable preprocessing and add all packages\n");
+
 	root.addOptions(prepro);
 }
 
@@ -170,7 +175,7 @@ int main(int argc, char *argv[])
 			std::ifstream in(opts.generic.input.front().c_str());
 			p.parse(in);
 		}
-		d.closure();
+		d.closure(opts.addAll);
 		d.dumpAsFacts(std::cout);
 		return EXIT_SUCCESS;
 	}

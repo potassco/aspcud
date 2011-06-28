@@ -472,14 +472,18 @@ void Dependency::initClosure()
 	}
 }
 
-void Dependency::closure()
+void Dependency::closure(bool addAll)
 {
 	rewriteRequests();
-	initClosure();
-	for(PackageList::size_type i = 0; i < closure_.size(); i++)
+	if(addAll)
 	{
-		closure_[i]->doAdd(this);
+		foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
+		{
+			foreach(Entity *ent, list) { ent->add(this); }
+		}
 	}
+	else { initClosure(); }
+	for(PackageList::size_type i = 0; i < closure_.size(); i++) { closure_[i]->doAdd(this); }
 	if(verbose_)
 	{
 		std::cerr << "sizes: " << std::endl;
