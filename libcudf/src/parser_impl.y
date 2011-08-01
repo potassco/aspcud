@@ -103,7 +103,7 @@ property ::= PROVIDES     veqpkglist.  { pParser->setProvides(); }
 property ::= INSTALLED    bool(b).     { pParser->setInstalled(b.index); }
 property ::= KEEP         keep(e).     { pParser->setKeep(e.index); }
 property ::= RECOMMENDS   vpkgformula. { pParser->setRecommends(); }
-property ::= OPTSIZE      INT.         { std::cerr << "handle me!!!" << std::endl; }
+property ::= OPTSIZE(k)   INT(v).      { pParser->setIntProp(k.index, v.index); }
 
 // ======== Preamble Parsing ========
 

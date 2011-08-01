@@ -23,6 +23,7 @@
 #include <vector>
 #include <memory>
 #include <limits>
+#include <map>
 #include <boost/shared_ptr.hpp>
 #include <boost/functional/hash.hpp>
 
@@ -32,9 +33,9 @@ namespace Cudf
 	{
 		enum RelOp { GE=0, LE, EQ, NEQ };
 
-		uint32_t name;
-		RelOp    op;
-		uint32_t version;
+		uint32_t   name;
+		RelOp      op;
+		uint32_t   version;
 
 		PackageRef(uint32_t name = 0, RelOp op = GE, uint32_t version = 0);
 	};
@@ -44,6 +45,7 @@ namespace Cudf
 
 	struct Package
 	{
+		typedef std::vector<std::pair<uint32_t, int32_t> > IntPropMap;
 		enum Keep { VERSION, PACKAGE, FEATURE, NONE };
 
 		Package(uint32_t name = std::numeric_limits<uint32_t>::max(), uint32_t version = 0)
@@ -63,6 +65,7 @@ namespace Cudf
 		PkgList       provides;   // default empty
 		Keep          keep;       // default NONE
 		bool          installed;  // default false
+		IntPropMap    intProps;   // default empty
 	};
 
 	struct Request

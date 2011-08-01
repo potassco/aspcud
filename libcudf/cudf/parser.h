@@ -86,6 +86,11 @@ public:
 		pkgFormula_.clear();
 	}
 
+	void setIntProp(uint32_t key, uint32_t val)
+	{
+		if (package_) { package_->intProps.push_back(Cudf::Package::IntPropMap::value_type(key, boost::lexical_cast<uint32_t>(dep_.string(val)))); }
+	}
+
 	// package references
 	void addPkg(uint32_t name, uint32_t op = Cudf::PackageRef::GE, uint32_t version = std::numeric_limits<uint32_t>::max())
 	{

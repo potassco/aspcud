@@ -72,6 +72,7 @@ protected:
 struct Package : public Entity
 {
 	typedef Cudf::Package::Keep Keep;
+	typedef Cudf::Package::IntPropMap IntPropMap;
 
 	Package(const Cudf::Package &pkg);
 	void dumpAsFacts(Dependency *dep, std::ostream &out);
@@ -83,6 +84,7 @@ struct Package : public Entity
 	EntityFormula recommends;
 	FeatureList   provides;
 	Keep          keep;
+	IntPropMap    intProps;
 
 protected:
 	void doRemove(Dependency *dep);

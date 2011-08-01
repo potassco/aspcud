@@ -115,8 +115,8 @@ bool Entity::operator<(const Entity &ent) const
 {
 	// NOTE: will sort the maximum version to the end
 	//       see Feature::allVersions()
-	if(version != ent.version) { return version < ent.version; }
-	else if(name != ent.name)  { return name    < ent.name; }
+	if (version != ent.version) { return version < ent.version; }
+	else if (name != ent.name)  { return name    < ent.name; }
 	else                       { return typeid(this).before(typeid(&ent)); }
 }
 
@@ -130,7 +130,7 @@ bool Entity::operator==(const Entity &ent) const
 
 void Entity::remove(Dependency *dep)
 {
-	if(!remove_)
+	if (!remove_)
 	{
 		remove_ = true;
 		doRemove(dep);
@@ -139,7 +139,7 @@ void Entity::remove(Dependency *dep)
 
 void Entity::add(Dependency *dep)
 {
-	if(!visited && !remove_)
+	if (!visited && !remove_)
 	{
 		visited = true;
 		dep->add(this);
@@ -160,6 +160,7 @@ Entity::~Entity()
 Package::Package(const Cudf::Package &pkg)
 	: Entity(pkg.name, pkg.version, pkg.installed)
 	, keep(pkg.keep)
+	, intProps(pkg.intProps)
 {
 }
 
@@ -173,7 +174,7 @@ void Package::doAdd(Dependency *dep)
 	{
 		foreach(Entity *ent, clause) { ent->add(dep); }
 	}
-	if(dep->criteria.unsat_recommends < 0)
+	if (dep->criteria.unsat_recommends < 0)
 	{
 		foreach(EntityList &clause, recommends)
 		{
@@ -181,7 +182,7 @@ void Package::doAdd(Dependency *dep)
 		}
 	}
 	// TODO: inefficient packages could, i.e., be marked
-	if(dep->criteria.notuptodate < 0)
+	if (dep->criteria.notuptodate < 0)
 	{
 		dep->addMaxVersion(name, this);
 	}
@@ -225,11 +226,23 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
 		}
 
 	}
+	// attributes(VP,K,V)
+	if (!intProps.empty())
+	{
+		foreach (IntPropMap::value_type &val, intProps)
+		{
+			out << "attribute(\"" << dep->string(name) << "\"," << version << ",\"" << dep->string(val.first) << "\"," << val.second << ").\n";
+		}
+	}
+	if (dep->criteria.optSize.find("version") != dep->criteria.optSize.end())
+	{
+		out << "attribute(\"" << dep->string(name) << "\"," << version << "," << "\"version\"" << "," << version << ").\n";
+	}
 }
 
 void Package::addToClause(PackageList &clause, Package *self)
 {
-	if(!remove_ && this != self) { clause.push_back(this); }
+	if (!remove_ && this != self) { clause.push_back(this); }
 }
 
 //////////////////// Feature ////////////////////
@@ -264,7 +277,7 @@ size_t hash_value(const Feature &ftr)
 
 void Feature::addToClause(PackageList &clause, Package *self)
 {
-	if(!remove_)
+	if (!remove_)
 	{
 		foreach(Package *pkg, providedBy)
 		{
@@ -331,10 +344,10 @@ void Dependency::init(const Cudf::Document &doc)
 			// NOTE: version might be zero here, which is than mapped to the maximum integer value
 			std::pair<FeatureSet::iterator, bool> res = features_.insert(Feature(provided));
 			Feature *ftr = const_cast<Feature*>(&*res.first);
-			if(pkg->installed) { ftr->installed = true; }
+			if (pkg->installed) { ftr->installed = true; }
 			pkg->provides.push_back(ftr);
 			ftr->providedBy.push_back(pkg);
-			if(res.second) { entityMap_[ftr->name].push_back(ftr); }
+			if (res.second) { entityMap_[ftr->name].push_back(ftr); }
 		}
 		sort_uniq_ptr(pkg->provides);
 	}
@@ -358,11 +371,11 @@ void Dependency::addMaxVersion(uint32_t name, Package *reason)
 	foreach(Entity *ent, entityMap_[name])
 	{
 		Package *pkg = dynamic_cast<Package*>(ent);
-		if(pkg && (!max || max->version < pkg->version)) { max = pkg; }
+		if (pkg && (!max || max->version < pkg->version)) { max = pkg; }
 	}
-	if(max)
+	if (max)
 	{
-		if(reason->installed || boost::range::find(reason->conflicts, max) == reason->conflicts.end())
+		if (reason->installed || boost::range::find(reason->conflicts, max) == reason->conflicts.end())
 		{
 			max->add(this);
 		}
@@ -384,12 +397,12 @@ void Dependency::rewriteRequests()
 		foreach(Entity *ent, entityMap_[request.name])
 		{
 			// if some version is installed then a >= version must be installed
-			if(ent->installed && removeVersion < ent->version) { removeVersion = ent->version; }
+			if (ent->installed && removeVersion < ent->version) { removeVersion = ent->version; }
 		}
 		foreach(Entity *ent, entityMap_[request.name])
 		{
 			// no unrequested or smaller version may be installed
-			if(!ent->visited || (removeVersion != 0 && (ent->version < removeVersion || ent->allVersions())))
+			if (!ent->visited || (removeVersion != 0 && (ent->version < removeVersion || ent->allVersions())))
 			{
 				ent->remove(this);
 			}
@@ -399,7 +412,7 @@ void Dependency::rewriteRequests()
 	// rewrite keep flags into installs
 	foreach(Package &pkg, packages_)
 	{
-		if(pkg.installed)
+		if (pkg.installed)
 		{
 			switch(pkg.keep)
 			{
@@ -423,7 +436,7 @@ void Dependency::rewriteRequests()
 					install_.push_back(Request(pkg.name));
 					foreach(Entity *ent, entityMap_[pkg.name])
 					{
-						if(dynamic_cast<Package*>(ent))
+						if (dynamic_cast<Package*>(ent))
 						{
 							install_.back().requests.push_back(ent);
 						}
@@ -448,38 +461,72 @@ void Dependency::initClosure()
 		foreach(Entity *ent, list)
 		{
 			Package *pkg = dynamic_cast<Package*>(ent);
-			if(pkg)
+			if (pkg)
 			{
 				maxVersion = std::max(maxVersion, pkg->version);
-				if(pkg->installed)
+				if (pkg->installed)
 				{
 					installed = true;
-					if(criteria.removed < 0) { addAll = true; }
-					if(criteria.changed < 0) { pkg->add(this); }
+					if (criteria.removed < 0) { addAll = true; }
+					if (criteria.changed < 0) { pkg->add(this); }
 				}
 				else
 				{
-					if(criteria.changed > 0) { pkg->add(this); }
+					if (criteria.changed > 0) { pkg->add(this); }
 				}
-				if(criteria.unsat_recommends > 0 && !pkg->recommends.empty())
+				if (criteria.unsat_recommends > 0 && !pkg->recommends.empty())
 				{
 					pkg->add(this);
 				}
 			}
 		}
-		if(criteria.newpkg > 0 && !installed) { addAll = true; }
-		if(addAll)
+		if (criteria.newpkg > 0 && !installed) { addAll = true; }
+		if (addAll)
 		{
 			foreach(Entity *ent, list)
 			{
-				if(dynamic_cast<Package*>(ent)) { ent->add(this); }
+				if (dynamic_cast<Package*>(ent)) { ent->add(this); }
 			}
 		}
-		if(criteria.notuptodate > 0)
+		if (criteria.notuptodate > 0)
 		{
 			foreach(Entity *ent, list)
 			{
-				if(dynamic_cast<Package*>(ent) && ent->version < maxVersion) { ent->add(this); }
+				if (dynamic_cast<Package*>(ent) && ent->version < maxVersion) { ent->add(this); }
+			}
+		}
+		if (!criteria.optSize.empty())
+		{
+			int versionOpt = 0;
+			{
+				Criteria::OptSizeMap::iterator versionIt = criteria.optSize.find("version");
+				if (versionIt != criteria.optSize.end()) { versionOpt = versionIt->second; }
+			}
+			foreach(Entity *ent, list)
+			{
+				Package *pkg = dynamic_cast<Package*>(ent);
+				if (pkg)
+				{
+					if (versionOpt > 0 && pkg->version > 0)
+					{
+						pkg->add(this);
+					}
+					else
+					{
+						foreach (Package::IntPropMap::value_type &val,  pkg->intProps)
+						{
+							Criteria::OptSizeMap::iterator i = criteria.optSize.find(string(val.first));
+							if (i != criteria.optSize.end())
+							{
+								if ((i->second < 0 && val.second < 0) || (i->second > 0 && val.second > 0))
+								{
+									pkg->add(this);
+									break;
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
@@ -488,7 +535,7 @@ void Dependency::initClosure()
 void Dependency::closure(bool addAll)
 {
 	rewriteRequests();
-	if(addAll)
+	if (addAll)
 	{
 		foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
 		{
@@ -497,7 +544,7 @@ void Dependency::closure(bool addAll)
 	}
 	else { initClosure(); }
 	for(PackageList::size_type i = 0; i < closure_.size(); i++) { closure_[i]->doAdd(this); }
-	if(verbose_)
+	if (verbose_)
 	{
 		std::cerr << "sizes: " << std::endl;
 		std::cerr << "  features: " << features_.size() << std::endl;
@@ -510,7 +557,7 @@ uint32_t Dependency::addClause(PackageList &clause, std::ostream &out)
 {
 	sort_uniq(clause);
 	std::pair<ClauseMap::iterator,bool> res = clauses_.insert(ClauseMap::value_type(clause, 0));
-	if(res.second)
+	if (res.second)
 	{
 		res.first->second = clauses_.size();
 		foreach(Package *pkg, clause)
@@ -527,7 +574,7 @@ void Dependency::dumpAsFacts(std::ostream &out)
 	// installed(VP)
 	foreach(Package &pkg, packages_)
 	{
-		if(pkg.installed)
+		if (pkg.installed)
 		{
 			out << "installed(\"" << string(pkg.name) << "\"," << pkg.version << ").\n";
 		}
@@ -555,7 +602,7 @@ void Dependency::dumpAsFacts(std::ostream &out)
 			{
 				assert(ent->name == other->name);
 				// the entity conflicts with all other versions
-				if(ent->version != other->version || ent->allVersions())
+				if (ent->version != other->version || ent->allVersions())
 				{
 					other->addToClause(pkgClause);
 				}
@@ -577,20 +624,24 @@ void Dependency::dumpAsFacts(std::ostream &out)
 		foreach(Entity *ent, list)
 		{
 			Package *pkg = dynamic_cast<Package*>(ent);
-			if(pkg)
+			if (pkg)
 			{
-				if(pkg->visited) { visited = true; }
-				if(!max || max->version < pkg->version) { max = pkg; }
+				if (pkg->visited) { visited = true; }
+				if (!max || max->version < pkg->version) { max = pkg; }
 			}
 		}
-		if(visited && max)
+		if (visited && max)
 		{
 			out << "newestversion(\"" << string(max->name) << "\"," << max->version << ").\n";
 		}
 	}
-	if(criteria.changed)          { out << "criterion(change," << criteria.changed << ").\n"; }
-	if(criteria.removed)          { out << "criterion(remove," << criteria.removed << ").\n"; }
-	if(criteria.newpkg)           { out << "criterion(newpackage," << criteria.newpkg << ").\n"; }
-	if(criteria.notuptodate)      { out << "criterion(uptodate," << criteria.notuptodate << ").\n"; }
-	if(criteria.unsat_recommends) { out << "criterion(recommend," << criteria.unsat_recommends << ").\n"; }
+	if (criteria.changed)          { out << "criterion(change," << criteria.changed << ").\n"; }
+	if (criteria.removed)          { out << "criterion(remove," << criteria.removed << ").\n"; }
+	if (criteria.newpkg)           { out << "criterion(newpackage," << criteria.newpkg << ").\n"; }
+	if (criteria.notuptodate)      { out << "criterion(uptodate," << criteria.notuptodate << ").\n"; }
+	if (criteria.unsat_recommends) { out << "criterion(recommend," << criteria.unsat_recommends << ").\n"; }
+	foreach (Criteria::OptSizeMap::value_type &val, criteria.optSize)
+	{
+		out << "criterion(sum(\"" << val.first << "\")," << val.second << ").\n";
+	}
 }
