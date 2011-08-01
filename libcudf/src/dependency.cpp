@@ -28,6 +28,7 @@
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <typeinfo>
+#include <map>
 
 //////////////////// Helper ////////////////////
 
@@ -95,6 +96,8 @@ namespace
 			sort_uniq_ptr(requests.back().requests);
 		}
 	}
+
+#undef refRange
 }
 
 //////////////////// Entity ////////////////////
@@ -198,19 +201,29 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
 		out << "depends(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
 	}
 	// conflicts(VP, D)
-	{
+	if (!conflicts.empty()) {
 		PackageList pkgClause;
 		foreach(Entity *ent, conflicts) { ent->addToClause(pkgClause, this); }
 		uint32_t condition = dep->addClause(pkgClause, out);
 		out << "conflict(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
 	}
 	// recommends(VP,D)
-	foreach(EntityList &clause, recommends)
+	if (!recommends.empty())
 	{
-		PackageList pkgClause;
-		foreach(Entity *ent, clause) { ent->addToClause(pkgClause); }
-		uint32_t condition = dep->addClause(pkgClause, out);
-		out << "recommends(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
+		typedef std::map<uint32_t, uint32_t> OccurMap;
+		OccurMap occur;
+		foreach(EntityList &clause, recommends)
+		{
+			PackageList pkgClause;
+			foreach(Entity *ent, clause) { ent->addToClause(pkgClause); }
+			uint32_t condition = dep->addClause(pkgClause, out);
+			occur[condition]++;
+		}
+		foreach(OccurMap::value_type val, occur)
+		{
+			out << "recommends(\"" << dep->string(name) << "\"," << version << "," << val.first << "," << val.second << ").\n";
+		}
+
 	}
 }
 
@@ -442,13 +455,13 @@ void Dependency::initClosure()
 				{
 					installed = true;
 					if(criteria.removed < 0) { addAll = true; }
-					if(criteria.removed > 0 || criteria.changed < 0) { pkg->add(this); }
+					if(criteria.changed < 0) { pkg->add(this); }
 				}
 				else
 				{
 					if(criteria.changed > 0) { pkg->add(this); }
 				}
-				if(criteria.unsat_recommends > 0 && pkg->recommends.size() > 0)
+				if(criteria.unsat_recommends > 0 && !pkg->recommends.empty())
 				{
 					pkg->add(this);
 				}
