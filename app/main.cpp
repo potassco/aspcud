@@ -78,7 +78,7 @@ namespace ProgramOptions
 		else
 		{
 			std::vector<std::string> strs;
-			boost::split(strs, lower, boost::is_any_of(","));
+			boost::split(strs, s, boost::is_any_of(","));
 			if(strs.empty()) { return false; }
 			int prio = 1;
 			foreach(const std::string &tok, strs | boost::adaptors::reversed)
@@ -90,7 +90,23 @@ namespace ProgramOptions
 				else if(sub == "changed")          { if(!setCrit(tok[0], criteria.changed, prio))          { return false; } }
 				else if(sub == "notuptodate")      { if(!setCrit(tok[0], criteria.notuptodate, prio))      { return false; } }
 				else if(sub == "unsat_recommends") { if(!setCrit(tok[0], criteria.unsat_recommends, prio)) { return false; } }
-				else                               { return false; }
+				else
+				{
+					bool fail = true;
+					if (sub.size() > strlen("sum()") && boost::algorithm::starts_with(sub, "sum(") && *(sub.end() - 1) == ')')
+					{
+						std::string opt = sub.substr(strlen("sum("), sub.size() - strlen("sum()"));
+						if(tok[0] == '+')
+						{
+							fail = !criteria.optSize.insert(Dependency::Criteria::OptSizeMap::value_type(opt, prio)).second;
+						}
+						else if(tok[0] == '-')
+						{
+							fail = !criteria.optSize.insert(Dependency::Criteria::OptSizeMap::value_type(opt, -prio)).second;
+						}
+					}
+					if (fail) { return false; }
+				}
 				prio++;
 			}
 		}

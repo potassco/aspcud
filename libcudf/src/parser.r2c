@@ -29,6 +29,7 @@ void parser(void *yyp, int yymajor, Parser::Token yyminor, Parser *pParser);
 Parser::Parser(Dependency &dep)
 	: parser_(parserAlloc(malloc))
 	, lexIgnore_(false)
+	, lexInt_(false)
 	, request_(false)
 	, dep_(dep)
 	, doc_(0)
@@ -45,6 +46,7 @@ Parser::Parser(Dependency &dep)
 
 /*!re2c
 	EOF       = [\000];
+	INT       = [+-]?[0-9]+;
 	POSINT    = "+"?[0-9]+;
 	ANY       = [\000-\377];
 	SPACE     = [ \t]+;
@@ -96,7 +98,20 @@ start:
 		"remove:"     { return PARSER_REMOVE; }
 		"upgrade:"    { return PARSER_UPGRADE; }
 		"recommends:" { return PARSER_RECOMMENDS; }
-		ATTRIBUTE     { lexIgnore_ = true; return PARSER_ATTRIBUTE; }
+		ATTRIBUTE
+		{
+			if (dep_.criteria.optSize.find(string()) != dep_.criteria.optSize.end())
+			{
+				token_.index = dep_.index(string(0, 1));
+				lexInt_ = true;
+				return PARSER_OPTSIZE;
+			}
+			else
+			{
+				lexIgnore_ = true;
+				return PARSER_ATTRIBUTE;
+			}
+		}
 		EOF           { return 0; }
 		ANY           { throw std::runtime_error("syntax error:\"" + string() + "\""); }
 	*/
@@ -107,6 +122,14 @@ int Parser::lexIgnore()
 {
 	/*!re2c
 		IGNORE { return PARSER_IGNORE; }
+		ANY    { throw std::runtime_error("syntax error:\"" + string() + "\""); }
+	*/
+}
+
+int Parser::lexInt()
+{
+	/*!re2c
+		INT    { token_.index = dep_.index(string()); return PARSER_INT; }
 		ANY    { throw std::runtime_error("syntax error:\"" + string() + "\""); }
 	*/
 }
@@ -138,6 +161,11 @@ void Parser::parse(std::istream &in)
 		{
 			lexIgnore_ = false;
 			token      = lexIgnore();
+		}
+		else if(lexInt_)
+		{
+			lexInt_ = false;
+			token   = lexInt();
 		}
 		else { token = lex(); }
 		//std::cerr << "lexed: " << string() << std::endl;

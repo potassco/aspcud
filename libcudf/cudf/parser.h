@@ -40,6 +40,7 @@ public:
 	Parser(Dependency &dep);
 	int lex();
 	int lexIgnore();
+	int lexInt();
 	std::string errorToken();
 	void syntaxError();
 	void parseError();
@@ -166,6 +167,7 @@ private:
 	void            *parser_;
 	Token            token_;
 	bool             lexIgnore_;
+	bool             lexInt_;
 	bool             request_;
 	Dependency      &dep_;
 	Cudf::Document  *doc_;

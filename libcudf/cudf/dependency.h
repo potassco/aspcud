@@ -28,6 +28,7 @@
 #include <boost/unordered_set.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <iostream>
+#include <map>
 
 #define CUDF_VERSION "0.9.0"
 
@@ -121,13 +122,16 @@ public:
 	typedef boost::unordered_map<PackageList, uint32_t> ClauseMap;
 	struct Criteria
 	{
+		typedef std::map<std::string, int> OptSizeMap;
+
 		Criteria();
 
-		int removed;
-		int newpkg;
-		int changed;
-		int unsat_recommends;
-		int notuptodate;
+		int        removed;
+		int        newpkg;
+		int        changed;
+		int        unsat_recommends;
+		int        notuptodate;
+		OptSizeMap optSize;
 	};
 
 private:
