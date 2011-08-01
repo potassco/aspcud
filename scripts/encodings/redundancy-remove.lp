@@ -16,17 +16,14 @@ rec_ok(P,X)   :- unit(P,X), installed(P,X), satisfied(D) : recommends(P,X,D),
 recommends(P) :- installed(P), precommends(P,D), criterion(recommend,L), not skip_remove.
 
 rec_ok(P)     :- installed(P),  not recommends(P), not skip_remove.
-rec_ok(P)     :- recommends(P), opt_define, violated(recommend,P).
-rec_ok(P)     :- recommends(P), opt_choice, not satisfied(recommend,P).
+rec_ok(P)     :- recommends(P), not satisfied(recommend,P).
 *%
 
 utd_ok(P)     :- installed(P), not criterion(uptodate,L) : criterion(uptodate,L),
                  not skip_remove.
 utd_ok(P)     :- installed(P), newestversion(P,X), in(P,X), criterion(uptodate,L),
                  not skip_remove.
-utd_ok(P)     :- installed(P), opt_define, violated(uptodate,P),
-                 not skip_remove.
-utd_ok(P)     :- installed(P), opt_choice, not satisfied(uptodate,P), criterion(uptodate,L),
+utd_ok(P)     :- installed(P), violated(uptodate,P),
                  not skip_remove.
 
 :- con_ok(P,X), dep_ok(P,X), rec_ok(P,X), utd_ok(P), not in(P,X), not newestversion(P,X).
