@@ -29,7 +29,6 @@ void parser(void *yyp, int yymajor, Parser::Token yyminor, Parser *pParser);
 Parser::Parser(Dependency &dep)
 	: parser_(parserAlloc(malloc))
 	, lexIgnore_(false)
-	, lexInt_(false)
 	, request_(false)
 	, dep_(dep)
 	, doc_(0)
@@ -48,6 +47,7 @@ Parser::Parser(Dependency &dep)
 	EOF       = [\000];
 	INT       = [+-]?[0-9]+;
 	POSINT    = "+"?[0-9]+;
+	NEGINT    = "-"[0-9]+;
 	ANY       = [\000-\377];
 	SPACE     = [ \t]+;
 	NL        = "\n"+[ \t\n]*;
@@ -74,6 +74,8 @@ start:
 		">"           { token_.index = GT; return PARSER_RELOP; }
 		"<="          { token_.index = LE; return PARSER_RELOP; }
 		"<"           { token_.index = LT; return PARSER_RELOP; }
+		"["           { return PARSER_LSBRAC; }
+		"]"           { return PARSER_RSBRAC; }
 		"true!"       { return PARSER_TRUEX; }
 		"false!"      { return PARSER_FALSEX; }
 		"true"        { token_.index = dep_.index(string()); return PARSER_IDENT_TRUE; }
@@ -83,6 +85,7 @@ start:
 		"feature"     { token_.index = dep_.index(string()); return PARSER_IDENT_FEATURE; }
 		"none"        { token_.index = dep_.index(string()); return PARSER_IDENT_NONE; }
 		POSINT 		  { token_.index = dep_.index(string()); return PARSER_POSINT; }
+		NEGINT 		  { token_.index = dep_.index(string()); return PARSER_POSINT; }
 		IDENT         { token_.index = dep_.index(string()); return PARSER_IDENT; }
 		PKGNAME       { token_.index = dep_.index(string()); return PARSER_PKGNAME; }
 		"preamble:"   { lexIgnore_ = true; return PARSER_PREAMBLE; }
@@ -103,7 +106,6 @@ start:
 			if (dep_.criteria.optSize.find(string()) != dep_.criteria.optSize.end())
 			{
 				token_.index = dep_.index(string(0, 1));
-				lexInt_ = true;
 				return PARSER_OPTSIZE;
 			}
 			else
@@ -122,14 +124,6 @@ int Parser::lexIgnore()
 {
 	/*!re2c
 		IGNORE { return PARSER_IGNORE; }
-		ANY    { throw std::runtime_error("syntax error:\"" + string() + "\""); }
-	*/
-}
-
-int Parser::lexInt()
-{
-	/*!re2c
-		INT    { token_.index = dep_.index(string()); return PARSER_INT; }
 		ANY    { throw std::runtime_error("syntax error:\"" + string() + "\""); }
 	*/
 }
@@ -161,11 +155,6 @@ void Parser::parse(std::istream &in)
 		{
 			lexIgnore_ = false;
 			token      = lexIgnore();
-		}
-		else if(lexInt_)
-		{
-			lexInt_ = false;
-			token   = lexInt();
 		}
 		else { token = lex(); }
 		//std::cerr << "lexed: " << string() << std::endl;

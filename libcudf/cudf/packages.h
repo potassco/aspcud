@@ -45,7 +45,7 @@ namespace Cudf
 
 	struct Package
 	{
-		typedef std::vector<std::pair<uint32_t, int32_t> > IntPropMap;
+		typedef std::map<uint32_t, int32_t> IntPropMap;
 		enum Keep { VERSION, PACKAGE, FEATURE, NONE };
 
 		Package(uint32_t name = std::numeric_limits<uint32_t>::max(), uint32_t version = 0)

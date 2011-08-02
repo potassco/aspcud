@@ -42,11 +42,14 @@ start ::= preamble packages request.
 // string types
 pkgname(r) ::= PKGNAME(v). { r.index = v.index; }
 pkgname(r) ::= ident(v).   { r.index = v.index; }
-pkgname(r) ::= POSINT(v).  { r.index = v.index; }
+pkgname(r) ::= number(v).  { r.index = v.index; }
 
 ident(r) ::= IDENT(v). { r.index = v.index; }
 ident(r) ::= bool(v).  { r.index = v.index; }
 ident(r) ::= keep(v).  { r.index = v.index; }
+
+number(r) ::= POSINT(v).  { r.index = v.index; }
+number(r) ::= NEGINT(v).  { r.index = v.index; }
 
 // versioned packages
 vpkg ::= veqpkg.
@@ -92,6 +95,10 @@ keep(k) ::= IDENT_NONE(i).    { k.index = i.index; }
 properties ::= .
 properties ::= properties property NL.
 
+preamble_properties ::= .
+preamble_properties ::= preamble_properties property NL.
+preamble_properties ::= preamble_properties OPTSIZE(k) pkgname LSBRAC number(v) RSBRAC NL. { pParser->setDefaultIntProp(k.index, v.index); }
+
 property ::= ATTRIBUTE    IGNORE.
 property ::= VERSION      POSINT(v).   { pParser->setVersion(v.index); }
 property ::= DEPENDS      vpkgformula. { pParser->setDepends(); }
@@ -103,12 +110,12 @@ property ::= PROVIDES     veqpkglist.  { pParser->setProvides(); }
 property ::= INSTALLED    bool(b).     { pParser->setInstalled(b.index); }
 property ::= KEEP         keep(e).     { pParser->setKeep(e.index); }
 property ::= RECOMMENDS   vpkgformula. { pParser->setRecommends(); }
-property ::= OPTSIZE(k)   INT(v).      { pParser->setIntProp(k.index, v.index); }
+property ::= OPTSIZE(k)   number(v).   { pParser->setIntProp(k.index, v.index); }
 
 // ======== Preamble Parsing ========
 
 preamble ::= .
-preamble ::= nl PREAMBLE IGNORE NL properties.
+preamble ::= nl PREAMBLE IGNORE NL preamble_properties.
 
 // ======== Package Parsing ========
 

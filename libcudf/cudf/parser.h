@@ -40,7 +40,6 @@ public:
 	Parser(Dependency &dep);
 	int lex();
 	int lexIgnore();
-	int lexInt();
 	std::string errorToken();
 	void syntaxError();
 	void parseError();
@@ -52,6 +51,7 @@ public:
 	{
 		doc_->packages.push_back(Cudf::Package(name));
 		package_ = &doc_->packages.back();
+		package_->intProps = defaultIntProp_;
 	}
 	void setVersion(uint32_t version)
 	{
@@ -88,7 +88,12 @@ public:
 
 	void setIntProp(uint32_t key, uint32_t val)
 	{
-		if (package_) { package_->intProps.push_back(Cudf::Package::IntPropMap::value_type(key, boost::lexical_cast<uint32_t>(dep_.string(val)))); }
+		if (package_) { package_->intProps[key] = boost::lexical_cast<uint32_t>(dep_.string(val)); }
+	}
+
+	void setDefaultIntProp(uint32_t key, uint32_t val)
+	{
+		defaultIntProp_[key] = val;
 	}
 
 	// package references
@@ -172,7 +177,6 @@ private:
 	void            *parser_;
 	Token            token_;
 	bool             lexIgnore_;
-	bool             lexInt_;
 	bool             request_;
 	Dependency      &dep_;
 	Cudf::Document  *doc_;
@@ -182,4 +186,5 @@ private:
 	Cudf::PkgFormula pkgFormula_;
 	KeepMap          keepMap_;
 	BoolMap          boolMap_;
+	Cudf::Package::IntPropMap defaultIntProp_;
 };
