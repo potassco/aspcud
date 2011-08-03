@@ -26,6 +26,7 @@
 #include <map>
 #include <cudf/dependency.h>
 #include <boost/lexical_cast.hpp>
+#include <boost/ptr_container/ptr_map.hpp>
 
 class Parser : public LexerImpl
 {
@@ -39,12 +40,22 @@ public:
 public:
 	Parser(Dependency &dep);
 	int lex();
-	int lexIgnore();
 	std::string errorToken();
 	void syntaxError();
 	void parseError();
 	void parse(std::istream &sin);
 	~Parser();
+
+	// ============ NEW =============
+	void parseType(uint32_t index);
+	int lexString();
+	void parseString()
+	{
+		lexString_ = true;
+	}
+	void addType(uint32_t name, Cudf::Value *value);
+	bool mapBool(uint32_t index) { return boolMap_.find(index)->second; }
+	int32_t mapInt(uint32_t index) { return boost::lexical_cast<int32_t>(dep_.string(index)); }
 
 	// package
 	void newPackage(uint32_t name)
@@ -171,12 +182,13 @@ public:
 	}
 
 private:
-	typedef std::map<uint32_t, bool>                BoolMap;
-	typedef std::map<uint32_t, Cudf::Package::Keep> KeepMap;
+	typedef std::map<uint32_t, bool>                             BoolMap;
+	typedef std::map<uint32_t, Cudf::Package::Keep>              KeepMap;
+	typedef boost::ptr_map<uint32_t, Cudf::Value> PropMap;
 
 	void            *parser_;
 	Token            token_;
-	bool             lexIgnore_;
+	bool             lexString_;
 	bool             request_;
 	Dependency      &dep_;
 	Cudf::Document  *doc_;
@@ -187,4 +199,9 @@ private:
 	KeepMap          keepMap_;
 	BoolMap          boolMap_;
 	Cudf::Package::IntPropMap defaultIntProp_;
+
+	PropMap          propMap_;
+	uint32_t         shiftToken_;
+
+
 };

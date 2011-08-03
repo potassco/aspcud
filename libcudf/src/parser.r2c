@@ -19,7 +19,7 @@
 
 #include <cudf/parser.h>
 #include <stdexcept>
-#include "parser_impl.h"
+#include "parser_priv.h"
 #include <cassert>
 
 void *parserAlloc(void *(*mallocProc)(size_t));
@@ -28,11 +28,12 @@ void parser(void *yyp, int yymajor, Parser::Token yyminor, Parser *pParser);
 
 Parser::Parser(Dependency &dep)
 	: parser_(parserAlloc(malloc))
-	, lexIgnore_(false)
+	, lexString_(false)
 	, request_(false)
 	, dep_(dep)
 	, doc_(0)
 	, package_(0)
+	, shiftToken_(0)
 {
 	boolMap_[dep_.index("true")]  = true;
 	boolMap_[dep_.index("false")] = false;
@@ -41,21 +42,81 @@ Parser::Parser(Dependency &dep)
 	keepMap_[dep_.index("feature")] = Cudf::Package::FEATURE;
 	keepMap_[dep_.index("version")] = Cudf::Package::VERSION;
 	keepMap_[dep_.index("none")]    = Cudf::Package::NONE;
+
+	uint32_t emptyStr = dep_.index("");
+
+	// preamble
+	addType(dep_.index("property"),        new Cudf::OptionalValue<PARSER_FEEDBACK_TYPEDECL, uint32_t>(0));
+	addType(dep_.index("univ-checksum"),   new Cudf::OptionalValue<PARSER_FEEDBACK_STRING, uint32_t>(emptyStr));
+	addType(dep_.index("status-checksum"), new Cudf::OptionalValue<PARSER_FEEDBACK_STRING, uint32_t>(emptyStr));
+	addType(dep_.index("req-checksum"),    new Cudf::OptionalValue<PARSER_FEEDBACK_STRING, uint32_t>(emptyStr));
+
+	// package
+	addType(dep_.index("version"),       new Cudf::RequiredValue<PARSER_FEEDBACK_POSINT>());
+	addType(dep_.index("depends"),       new Cudf::OptionalValue<PARSER_FEEDBACK_VPKGFORMULA, Cudf::PkgFormula>(Cudf::PkgFormula()));
+	addType(dep_.index("conflicts"),     new Cudf::OptionalValue<PARSER_FEEDBACK_VPKGLIST, Cudf::PkgList>(Cudf::PkgList()));
+	addType(dep_.index("provides"),      new Cudf::OptionalValue<PARSER_FEEDBACK_VEQPKGLIST, Cudf::PkgList>(Cudf::PkgList()));
+	addType(dep_.index("installed"),     new Cudf::OptionalValue<PARSER_FEEDBACK_BOOL, bool>(false));
+	addType(dep_.index("was-installed"), new Cudf::OptionalValue<PARSER_FEEDBACK_BOOL, bool>(false));
+
+	Cudf::OptionalValue<PARSER_FEEDBACK_ENUM, uint32_t>::EnumValues values;
+	values.insert(dep_.index("package"));
+	values.insert(dep_.index("feature"));
+	values.insert(dep_.index("version"));
+	values.insert(dep_.index("none"));
+	addType(dep_.index("keep"), new Cudf::OptionalValue<PARSER_FEEDBACK_ENUM, uint32_t>(values, dep_.index("none")));
+
+	// request
+	addType(dep_.index("install"), new Cudf::OptionalValue<PARSER_FEEDBACK_VPKGLIST, Cudf::PkgList>(Cudf::PkgList()));
+	addType(dep_.index("remove"),  new Cudf::OptionalValue<PARSER_FEEDBACK_VPKGLIST, Cudf::PkgList>(Cudf::PkgList()));
+	addType(dep_.index("upgrade"), new Cudf::OptionalValue<PARSER_FEEDBACK_VPKGLIST, Cudf::PkgList>(Cudf::PkgList()));
 }
 
 /*!re2c
-	EOF       = [\000];
-	INT       = [+-]?[0-9]+;
-	POSINT    = "+"?[0-9]+;
-	NEGINT    = "-"[0-9]+;
-	ANY       = [\000-\377];
-	SPACE     = [ \t]+;
-	NL        = "\n"+[ \t\n]*;
-	IDENT     = [a-z][a-z0-9-]*;
-	PKGNAME   = [A-Za-z0-9\-+./@()%]+;
-	IGNORE    = [^\n]*;
-	ATTRIBUTE = IDENT":";
-	COMMENT   = "#"[^\n]*[ \t\n]*;
+	EOF              = [\000];
+	QUOTED           = "\"" ([^\r\n"\\] | "\\\\" | "\\\"" | ("\\"[^\r\n"\\]))* "\"";
+	NL               = "\n";
+	COMMENT          = "#" [^\n]* "\n";
+	PREAMBLE         = "preamble";
+	PACKAGE          = "package";
+	REQUEST          = "request";
+	TYPE_BOOL        = "bool";
+	TYPE_INT         = "int";
+	TYPE_NAT         = "nat";
+	TYPE_POSINT      = "posint";
+	TYPE_STRING      = "string";
+	TYPE_PKGNAME     = "pkgname";
+	TYPE_IDENT       = "ident";
+	TYPE_VPKG        = "vpkg";
+	TYPE_VEQPKG      = "veqpkg";
+	TYPE_VPKGFORMULA = "vpkgformula";
+	TYPE_VPKGLIST    = "vpkglist";
+	TYPE_VEQPKGLIST  = "veqpkglist";
+	TYPE_ENUM        = "enum";
+	TRUE             = "true";
+	FALSE            = "false";
+	COLONSP          = ": ";
+	COLON            = ":";
+	SPACE            = [ \t];
+	IDENT            = [a-z][a-z0-9\-]*;
+	POSINT           = "+"?[0-9]*[1-9]+[0-9]*;
+	NAT              = "+"?[0]+;
+	INT              = "-"[0-9]+;
+	PKGNAME          = [A-Za-z0-9\-+./@()%]+;
+	COMMA            = [ ]*","[ ]*;
+	EQUAL            = [ ]*"="[ ]*;
+	BAR              = [ ]*"|"[ ]*;
+	TRUEX            = "true!";
+	FALSEX           = "false!";
+	NEQ              = [ ]+"!="[ ]+;
+	GEQ              = [ ]+">="[ ]+;
+	GTH              = [ ]+">" [ ]+;
+	LEQ              = [ ]+"<="[ ]+;
+	LTH              = [ ]+"<" [ ]+;
+	LBRAC            = "[";
+	RBRAC            = "]";
+	STRING           = [^\n^\r]*;
+	ANY              = [\000-\377];
 */
 
 int Parser::lex()
@@ -63,69 +124,83 @@ int Parser::lex()
 start:
 	start();
 	/*!re2c
-		NL            { step(); return PARSER_NL; }
-		COMMENT       { goto start; }
-		SPACE         { goto start; }
-		","           { return PARSER_COMMA; }
-		"|"           { return PARSER_BAR; }
-		"="           { token_.index = EQ; return PARSER_EQUAL; }
-		"!="          { token_.index = NEQ; return PARSER_RELOP; }
-		">="          { token_.index = GE; return PARSER_RELOP; }
-		">"           { token_.index = GT; return PARSER_RELOP; }
-		"<="          { token_.index = LE; return PARSER_RELOP; }
-		"<"           { token_.index = LT; return PARSER_RELOP; }
-		"["           { return PARSER_LSBRAC; }
-		"]"           { return PARSER_RSBRAC; }
-		"true!"       { return PARSER_TRUEX; }
-		"false!"      { return PARSER_FALSEX; }
-		"true"        { token_.index = dep_.index(string()); return PARSER_IDENT_TRUE; }
-		"false"       { token_.index = dep_.index(string()); return PARSER_IDENT_FALSE; }
-		"version"     { token_.index = dep_.index(string()); return PARSER_IDENT_VERSION; }
-		"package"     { token_.index = dep_.index(string()); return PARSER_IDENT_PACKAGE; }
-		"feature"     { token_.index = dep_.index(string()); return PARSER_IDENT_FEATURE; }
-		"none"        { token_.index = dep_.index(string()); return PARSER_IDENT_NONE; }
-		POSINT 		  { token_.index = dep_.index(string()); return PARSER_POSINT; }
-		NEGINT 		  { token_.index = dep_.index(string()); return PARSER_POSINT; }
-		IDENT         { token_.index = dep_.index(string()); return PARSER_IDENT; }
-		PKGNAME       { token_.index = dep_.index(string()); return PARSER_PKGNAME; }
-		"preamble:"   { lexIgnore_ = true; return PARSER_PREAMBLE; }
-		"request:"    { lexIgnore_ = true; return PARSER_REQUEST; }
-		"package:"    { return PARSER_PACKAGE; }
-		"version:"    { return PARSER_VERSION; }
-		"depends:"    { return PARSER_DEPENDS; }
-		"conflicts:"  { return PARSER_CONFLICTS; }
-		"provides:"   { return PARSER_PROVIDES; }
-		"installed:"  { return PARSER_INSTALLED; }
-		"keep:"       { return PARSER_KEEP; }
-		"install:"    { return PARSER_INSTALL; }
-		"remove:"     { return PARSER_REMOVE; }
-		"upgrade:"    { return PARSER_UPGRADE; }
-		"recommends:" { return PARSER_RECOMMENDS; }
-		ATTRIBUTE
+		EOF              { return 0; }
+		NL               { return PARSER_NL; }
+		COLONSP          { return PARSER_COLONSP; }
+		COLON            { return PARSER_COLON; }
+		TRUEX            { return PARSER_TRUEX; }
+		FALSEX           { return PARSER_FALSEX; }
+		COMMENT          { token_.index = dep_.index(string()); return PARSER_COMMENT; }
+		COMMA
 		{
-			if (dep_.criteria.optSize.find(string()) != dep_.criteria.optSize.end())
-			{
-				token_.index = dep_.index(string(0, 1));
-				return PARSER_OPTSIZE;
-			}
-			else
-			{
-				lexIgnore_ = true;
-				return PARSER_ATTRIBUTE;
-			}
+			std::string &tok = string();
+			if (*tok.begin() == ' ') { return PARSER_COMMA; }
+			else                     { return PARSER_COMMASP; }
 		}
-		EOF           { return 0; }
-		ANY           { throw std::runtime_error("syntax error:\"" + string() + "\""); }
+		EQUAL
+		{
+			std::string &tok = string();
+			if (*tok.begin() == ' ' && *(tok.end()-1) == ' ') { return PARSER_SPEQUALSP; }
+			else                                              { return PARSER_EQUAL; }
+		}
+		BAR              { return PARSER_BAR; }
+		NEQ              { return PARSER_RELOP; }
+		GEQ              { return PARSER_RELOP; }
+		GTH              { return PARSER_RELOP; }
+		LEQ              { return PARSER_RELOP; }
+		LTH              { return PARSER_RELOP; }
+		LBRAC            { return PARSER_LBRAC; }
+		RBRAC            { return PARSER_RBRAC; }
+		SPACE            { return PARSER_SPACE; }
+		QUOTED           { token_.index = dep_.index(string(1, 1)); return PARSER_QUOTED; }
+		PREAMBLE         { token_.index = dep_.index(string()); return PARSER_PREAMBLE; }
+		PACKAGE          { token_.index = dep_.index(string()); return PARSER_PACKAGE; }
+		REQUEST          { token_.index = dep_.index(string()); return PARSER_REQUEST; }
+		TYPE_BOOL        { token_.index = dep_.index(string()); return PARSER_TYPE_BOOL; }
+		TYPE_INT         { token_.index = dep_.index(string()); return PARSER_TYPE_INT; }
+		TYPE_NAT         { token_.index = dep_.index(string()); return PARSER_TYPE_NAT; }
+		TYPE_POSINT      { token_.index = dep_.index(string()); return PARSER_TYPE_POSINT; }
+		TYPE_STRING      { token_.index = dep_.index(string()); return PARSER_TYPE_STRING; }
+		TYPE_PKGNAME     { token_.index = dep_.index(string()); return PARSER_TYPE_PKGNAME; }
+		TYPE_IDENT       { token_.index = dep_.index(string()); return PARSER_TYPE_IDENT; }
+		TYPE_VPKG        { token_.index = dep_.index(string()); return PARSER_TYPE_VPKG; }
+		TYPE_VEQPKG      { token_.index = dep_.index(string()); return PARSER_TYPE_VEQPKG; }
+		TYPE_VPKGFORMULA { token_.index = dep_.index(string()); return PARSER_TYPE_VPKGFORMULA; }
+		TYPE_VPKGLIST    { token_.index = dep_.index(string()); return PARSER_TYPE_VPKGLIST; }
+		TYPE_VEQPKGLIST  { token_.index = dep_.index(string()); return PARSER_TYPE_VEQPKGLIST; }
+		TYPE_ENUM        { token_.index = dep_.index(string()); return PARSER_TYPE_ENUM; }
+		TRUE             { token_.index = dep_.index(string()); return PARSER_TRUE; }
+		FALSE            { token_.index = dep_.index(string()); return PARSER_FALSE; }
+		POSINT           { token_.index = dep_.index(string()); return PARSER_POSINT; }
+		NAT              { token_.index = dep_.index(string()); return PARSER_NAT; }
+		INT              { token_.index = dep_.index(string()); return PARSER_INT; }
+		IDENT            { token_.index = dep_.index(string()); return PARSER_IDENT; }
+		PKGNAME          { token_.index = dep_.index(string()); return PARSER_PKGNAME; }
+		ANY              { syntaxError(); }
 	*/
 	return 0;
 }
 
-int Parser::lexIgnore()
+int Parser::lexString()
 {
+	start();
 	/*!re2c
-		IGNORE { return PARSER_IGNORE; }
-		ANY    { throw std::runtime_error("syntax error:\"" + string() + "\""); }
+		STRING { return PARSER_STRING; }
+		ANY    { syntaxError(); }
 	*/
+	return 0;
+}
+
+void Parser::addType(uint32_t name, Cudf::Value *value)
+{
+	propMap_.insert(name, value);
+}
+
+void Parser::parseType(uint32_t index)
+{
+	PropMap::iterator it = propMap_.find(index);
+	if (it != propMap_.end()) { shiftToken_ = it->second->getType(); }
+	else { syntaxError(); }
 }
 
 void Parser::parseError()
@@ -151,13 +226,18 @@ void Parser::parse(std::istream &in)
 	int token;
 	do
 	{
-		if(lexIgnore_)
+		if (shiftToken_)
 		{
-			lexIgnore_ = false;
-			token      = lexIgnore();
+			token       = shiftToken_;
+			shiftToken_ = 0;
+		}
+		else if(lexString_)
+		{
+			lexString_ = false;
+			token      = lexString();
 		}
 		else { token = lex(); }
-		//std::cerr << "lexed: " << string() << std::endl;
+		//std::cerr << "lexed: '" << string() << "' (" << token << ")" << std::endl;
 		parser(parser_, token, token_, this);
 	}
 	while(token != 0);

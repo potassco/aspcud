@@ -82,4 +82,6 @@ namespace Cudf
 		Request  request;
 	};
 
+	struct Value;
+
 }
