@@ -1,7 +1,9 @@
+inp :- 1 { criterion(newpackage;remove;uptodate,L) }.
+
 % generate installation
 
 { in(P,X) }  :- unit(P,X).
-in(P)        :- in(P,X), 1 { criterion(newpackage;remove;uptodate,L) }.
+in(P)        :- in(P,X), inp.
 
 forbidden(D) :- in(P,X), conflict(P,X,D).
 
