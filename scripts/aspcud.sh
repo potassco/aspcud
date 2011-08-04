@@ -1,5 +1,9 @@
 #!/bin/bash
 
+clasp_bin=clasp-2.0.2-mt
+gringo_bin=gringo-3.0.3
+cudf2lp_bin=cudf2lp-banane
+
 function usrtrap()
 {
 	kill $cudf_pid   2> /dev/null
@@ -113,11 +117,11 @@ tmp="$(mktemp -d outXXXXXX)"
 
 mkfifo $tmp/cudf_out $tmp/gringo_out
 
-clasp-2.0.1-st   "${clasp_opts[@]}"  > "$tmp/clasp_out"  2> "$tmp/clasp_err"    < "$tmp/gringo_out" &
+"${clasp_bin}"   "${clasp_opts[@]}"  > "$tmp/clasp_out"  2> "$tmp/clasp_err"    < "$tmp/gringo_out" &
 clasp_pid=$!
-gringo-3.0.3  "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" - < "$tmp/cudf_out" &
+"${gringo_bin}"  "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" - < "$tmp/cudf_out" &
 gringo_pid=$!
-cudf2lp-0.9.0 "${cudf_opts[@]}"   > "$tmp/cudf_out"   2> "$tmp/cudf_err"   - < "$1" &
+"${cudf2lp_bin}" "${cudf_opts[@]}"   > "$tmp/cudf_out"   2> "$tmp/cudf_err"   - < "$1" &
 cudf_pid=$!
 
 trap usrtrap USR1 TERM INT
