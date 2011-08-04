@@ -76,8 +76,8 @@ public:
 	}
 	bool mapBool(uint32_t index)
 	{
-		assert(boolMap_.find(index) != boolMap_.end());
-		return boolMap_.find(index)->second;
+		assert(index == falseStr_ || index == trueStr_);
+		return index == trueStr_;
 	}
 	int32_t mapInt(uint32_t index)
 	{
@@ -107,14 +107,14 @@ public:
 	template <class T>
 	void setProperty(uint32_t name, T &value)
 	{
-		Cudf::Value &val = propMap[name];
+		Cudf::Value &val = propMap_[name];
 		if (!val.empty()) { throw std::runtime_error("duplicate property"); }
 		std::swap(boost::any_cast<T&>(val), value);
 	}
 	template <class T>
 	void setProperty(uint32_t name, const T &value)
 	{
-		if(!propMap.insert(PropMap::value_type(name, value)).second)
+		if(!propMap_.insert(PropMap::value_type(name, value)).second)
 		{
 			throw std::runtime_error("duplicate property");
 		}
@@ -122,8 +122,8 @@ public:
 	template <class T>
 	void getProp(uint32_t name, T &dst)
 	{
-		PropMap::iterator it = propMap.find(name);
-		if (it != propMap.end())
+		PropMap::iterator it = propMap_.find(name);
+		if (it != propMap_.end())
 		{
 			dst = boost::any_cast<T&>(it->second);
 		}
@@ -140,7 +140,7 @@ public:
 	}
 	void addPreamble()
 	{
-		propMap.clear();
+		propMap_.clear();
 	}
 	void addPackage(uint32_t name)
 	{
@@ -155,9 +155,12 @@ public:
 
 		uint32_t keep;
 		getProp(keepStr_, keep);
-		KeepMap::iterator it = keepMap_.find(keep);
-		if (it != keepMap_.end()) { pkg.keep = it->second; }
-		else                      { throw std::runtime_error("invalid keep value"); }
+
+		if (keep == packageStr_)      { pkg.keep = Cudf::Package::PACKAGE; }
+		else if (keep == featureStr_) { pkg.keep = Cudf::Package::FEATURE; }
+		else if (keep == versionStr_) { pkg.keep = Cudf::Package::VERSION; }
+		else if (keep == noneStr_)    { pkg.keep = Cudf::Package::NONE; }
+		else                          { throw std::runtime_error("invalid keep value"); }
 
 		BOOST_FOREACH (uint32_t name, optSize_)
 		{
@@ -165,38 +168,33 @@ public:
 			getProp(name, value);
 			pkg.intProps.insert(Package::IntPropMap::value_type(name, value));
 		}
-		propMap.clear();
+		propMap_.clear();
 	}
 	void addRequest()
 	{
 		getProp(installStr_, doc_->request.install);
 		getProp(removeStr_,  doc_->request.remove);
 		getProp(upgradeStr_, doc_->request.upgrade);
-		propMap.clear();
+		propMap_.clear();
 	}
 
 private:
-	typedef std::map<uint32_t, bool>                    BoolMap;
-	typedef std::map<uint32_t, Cudf::Package::Keep>     KeepMap;
 	typedef boost::unordered_map<uint32_t, Type>        TypeMap;
 	typedef boost::unordered_map<uint32_t, Cudf::Value> PropMap;
 	typedef std::vector<uint32_t>                       EnumValues;
 	typedef std::vector<uint32_t>                       OptSizeVec;
 
+	Dependency      &dep_;
+	Cudf::Document  *doc_;
 	void            *parser_;
 	Token            token_;
 	bool             lexString_;
-	Dependency      &dep_;
-	Cudf::Document  *doc_;
-
-	OptSizeVec       optSize_;
-	KeepMap          keepMap_;
-	BoolMap          boolMap_;
-
-	TypeMap          typeMap_;
 	uint32_t         shiftToken_;
 
-	// for efficient lookups
+	OptSizeVec       optSize_;
+	TypeMap          typeMap_;
+	PropMap          propMap_;
+
 	uint32_t         versionStr_;
 	uint32_t         conflictsStr_;
 	uint32_t         dependsStr_;
@@ -207,11 +205,15 @@ private:
 	uint32_t         installStr_;
 	uint32_t         removeStr_;
 	uint32_t         upgradeStr_;
+	uint32_t         packageStr_;
+	uint32_t         featureStr_;
+	uint32_t         noneStr_;
+	uint32_t         trueStr_;
+	uint32_t         falseStr_;
 
 public:
 	Cudf::PackageRef pkgRef;
 	Cudf::PkgList    pkgList;
 	Cudf::PkgFormula pkgFormula;
 	EnumValues       identList;
-	PropMap          propMap;
 };

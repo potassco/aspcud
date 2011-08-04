@@ -57,20 +57,15 @@ Parser::Parser(Dependency &dep)
 	removeStr_  = dep_.index("remove");
 	upgradeStr_ = dep_.index("upgrade");
 
-	uint32_t emptyStr        = dep_.index("");
-	uint32_t packageStr      = dep_.index("package");
-	uint32_t featureStr      = dep_.index("feature");
+	trueStr_  = dep_.index("true");
+	falseStr_ = dep_.index("false");
+
+	packageStr_ = dep_.index("package");
+	featureStr_ = dep_.index("feature");
+	noneStr_    = dep_.index("none");
+
 	uint32_t wasInstalledStr = dep_.index("was-installed");
-
-	uint32_t noneStr    = dep_.index("none");
-
-	boolMap_[dep_.index("true")]  = true;
-	boolMap_[dep_.index("false")] = false;
-
-	keepMap_[packageStr]  = Cudf::Package::PACKAGE;
-	keepMap_[featureStr]  = Cudf::Package::FEATURE;
-	keepMap_[versionStr_] = Cudf::Package::VERSION;
-	keepMap_[noneStr]     = Cudf::Package::NONE;
+	uint32_t emptyStr = dep_.index("");
 
 	// preamble
 	addType(dep_.index("property"),        PARSER_FEEDBACK_TYPEDECL) = uint32_t(0);
@@ -93,7 +88,7 @@ Parser::Parser(Dependency &dep)
 	values.insert(versionStr);
 	values.insert(noneStr);
 	*/
-	addType(dep_.index("keep"), PARSER_FEEDBACK_ENUM) = uint32_t(noneStr);
+	addType(dep_.index("keep"), PARSER_FEEDBACK_ENUM) = uint32_t(noneStr_);
 
 	// request
 	addType(installStr_, PARSER_FEEDBACK_VPKGLIST) = pkgList;
