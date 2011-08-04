@@ -26,6 +26,7 @@
 #include <map>
 #include <boost/shared_ptr.hpp>
 #include <boost/functional/hash.hpp>
+#include <boost/any.hpp>
 
 namespace Cudf
 {
@@ -33,11 +34,11 @@ namespace Cudf
 	{
 		enum RelOp { GE=0, LE, EQ, NEQ };
 
-		uint32_t   name;
-		RelOp      op;
-		uint32_t   version;
+		uint32_t  name;
+		uint32_t  op;
+		int32_t   version;
 
-		PackageRef(uint32_t name = 0, RelOp op = GE, uint32_t version = 0);
+		PackageRef(uint32_t name = 0, RelOp op = GE, int32_t version = 0);
 	};
 
 	typedef std::vector<PackageRef> PkgList;
@@ -48,7 +49,7 @@ namespace Cudf
 		typedef std::map<uint32_t, int32_t> IntPropMap;
 		enum Keep { VERSION, PACKAGE, FEATURE, NONE };
 
-		Package(uint32_t name = std::numeric_limits<uint32_t>::max(), uint32_t version = 0)
+		Package(uint32_t name = std::numeric_limits<uint32_t>::max(), int32_t version = 0)
 			: name(name)
 			, version(version)
 			, keep(NONE)
@@ -58,7 +59,7 @@ namespace Cudf
 		bool initialized() { return name != std::numeric_limits<uint32_t>::max(); }
 
 		uint32_t      name;
-		uint32_t      version;
+		int32_t       version;
 		PkgList       conflicts;  // default empty
 		PkgFormula    depends;    // default true
 		PkgFormula    recommends; // default empty
@@ -82,6 +83,5 @@ namespace Cudf
 		Request  request;
 	};
 
-	struct Value;
-
+	typedef boost::any Value;
 }

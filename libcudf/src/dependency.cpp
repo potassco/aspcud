@@ -102,7 +102,7 @@ namespace
 
 //////////////////// Entity ////////////////////
 
-Entity::Entity(uint32_t name, uint32_t version, bool installed)
+Entity::Entity(uint32_t name, int32_t version, bool installed)
 	: name(name)
 	, version(version)
 	, visited(false)
@@ -148,7 +148,7 @@ void Entity::add(Dependency *dep)
 
 bool Entity::allVersions() const
 {
-	return version == std::numeric_limits<uint32_t>::max();
+	return version == std::numeric_limits<int32_t>::max();
 }
 
 Entity::~Entity()
@@ -160,7 +160,7 @@ Entity::~Entity()
 Package::Package(const Cudf::Package &pkg)
 	: Entity(pkg.name, pkg.version, pkg.installed)
 	, keep(pkg.keep)
-	, intProps(pkg.intProps)
+	, intProps(pkg.intProps.begin(), pkg.intProps.end())
 {
 }
 
@@ -234,10 +234,6 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
 			out << "attribute(\"" << dep->string(name) << "\"," << version << ",\"" << dep->string(val.first) << "\"," << val.second << ").\n";
 		}
 	}
-	if (dep->criteria.optSize.find("version") != dep->criteria.optSize.end())
-	{
-		out << "attribute(\"" << dep->string(name) << "\"," << version << "," << "\"version\"" << "," << version << ").\n";
-	}
 }
 
 void Package::addToClause(PackageList &clause, Package *self)
@@ -248,7 +244,7 @@ void Package::addToClause(PackageList &clause, Package *self)
 //////////////////// Feature ////////////////////
 
 Feature::Feature(const Cudf::PackageRef &ftr)
-	: Entity(ftr.name, ftr.version == 0 ? std::numeric_limits<uint32_t>::max() : ftr.version, false)
+	: Entity(ftr.name, ftr.version == 0 ? std::numeric_limits<int32_t>::max() : ftr.version, false)
 {
 }
 
@@ -393,7 +389,7 @@ void Dependency::rewriteRequests()
 	foreach(Request &request, upgrade_)
 	{
 		foreach(Entity *ent, request.requests) { ent->visited = true; }
-		uint32_t removeVersion = 0;
+		int32_t removeVersion = 0;
 		foreach(Entity *ent, entityMap_[request.name])
 		{
 			// if some version is installed then a >= version must be installed
@@ -457,7 +453,7 @@ void Dependency::initClosure()
 	{
 		bool installed      = false;
 		bool addAll         = false;
-		uint32_t maxVersion = 0;
+		int32_t maxVersion  = 0;
 		foreach(Entity *ent, list)
 		{
 			Package *pkg = dynamic_cast<Package*>(ent);

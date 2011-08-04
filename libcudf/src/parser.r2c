@@ -19,57 +19,91 @@
 
 #include <cudf/parser.h>
 #include <stdexcept>
-#include "parser_priv.h"
+#include "parser_impl.h"
 #include <cassert>
 
 void *parserAlloc(void *(*mallocProc)(size_t));
 void parserFree(void *p, void (*freeProc)(void*));
 void parser(void *yyp, int yymajor, Parser::Token yyminor, Parser *pParser);
 
+Parser::Type::Type(uint32_t type)
+	: type(type)
+{ }
+
+bool Parser::Type::intType() const
+{
+	return
+		type == PARSER_FEEDBACK_INT ||
+		type == PARSER_FEEDBACK_NAT ||
+		type == PARSER_FEEDBACK_POSINT;
+}
+
 Parser::Parser(Dependency &dep)
 	: parser_(parserAlloc(malloc))
 	, lexString_(false)
-	, request_(false)
 	, dep_(dep)
 	, doc_(0)
-	, package_(0)
 	, shiftToken_(0)
 {
+	versionStr_    = dep_.index("version");
+	conflictsStr_  = dep_.index("conflicts");
+	dependsStr_    = dep_.index("depends");
+	recommendsStr_ = dep_.index("recommends");
+	providesStr_   = dep_.index("provides");
+	keepStr_       = dep_.index("keep");
+	installedStr_  = dep_.index("installed");
+
+	installStr_ = dep_.index("install");
+	removeStr_  = dep_.index("remove");
+	upgradeStr_ = dep_.index("upgrade");
+
+	uint32_t emptyStr        = dep_.index("");
+	uint32_t packageStr      = dep_.index("package");
+	uint32_t featureStr      = dep_.index("feature");
+	uint32_t wasInstalledStr = dep_.index("was-installed");
+
+	uint32_t noneStr    = dep_.index("none");
+
 	boolMap_[dep_.index("true")]  = true;
 	boolMap_[dep_.index("false")] = false;
 
-	keepMap_[dep_.index("package")] = Cudf::Package::PACKAGE;
-	keepMap_[dep_.index("feature")] = Cudf::Package::FEATURE;
-	keepMap_[dep_.index("version")] = Cudf::Package::VERSION;
-	keepMap_[dep_.index("none")]    = Cudf::Package::NONE;
-
-	uint32_t emptyStr = dep_.index("");
+	keepMap_[packageStr]  = Cudf::Package::PACKAGE;
+	keepMap_[featureStr]  = Cudf::Package::FEATURE;
+	keepMap_[versionStr_] = Cudf::Package::VERSION;
+	keepMap_[noneStr]     = Cudf::Package::NONE;
 
 	// preamble
-	addType(dep_.index("property"),        new Cudf::OptionalValue<PARSER_FEEDBACK_TYPEDECL, uint32_t>(0));
-	addType(dep_.index("univ-checksum"),   new Cudf::OptionalValue<PARSER_FEEDBACK_STRING, uint32_t>(emptyStr));
-	addType(dep_.index("status-checksum"), new Cudf::OptionalValue<PARSER_FEEDBACK_STRING, uint32_t>(emptyStr));
-	addType(dep_.index("req-checksum"),    new Cudf::OptionalValue<PARSER_FEEDBACK_STRING, uint32_t>(emptyStr));
+	addType(dep_.index("property"),        PARSER_FEEDBACK_TYPEDECL) = uint32_t(0);
+	addType(dep_.index("univ-checksum"),   PARSER_FEEDBACK_STRING)   = uint32_t(emptyStr);
+	addType(dep_.index("status-checksum"), PARSER_FEEDBACK_STRING)   = uint32_t(emptyStr);
+	addType(dep_.index("req-checksum"),    PARSER_FEEDBACK_STRING)   = uint32_t(emptyStr);
 
 	// package
-	addType(dep_.index("version"),       new Cudf::RequiredValue<PARSER_FEEDBACK_POSINT>());
-	addType(dep_.index("depends"),       new Cudf::OptionalValue<PARSER_FEEDBACK_VPKGFORMULA, Cudf::PkgFormula>(Cudf::PkgFormula()));
-	addType(dep_.index("conflicts"),     new Cudf::OptionalValue<PARSER_FEEDBACK_VPKGLIST, Cudf::PkgList>(Cudf::PkgList()));
-	addType(dep_.index("provides"),      new Cudf::OptionalValue<PARSER_FEEDBACK_VEQPKGLIST, Cudf::PkgList>(Cudf::PkgList()));
-	addType(dep_.index("installed"),     new Cudf::OptionalValue<PARSER_FEEDBACK_BOOL, bool>(false));
-	addType(dep_.index("was-installed"), new Cudf::OptionalValue<PARSER_FEEDBACK_BOOL, bool>(false));
+	addType(versionStr_,     PARSER_FEEDBACK_POSINT);
+	addType(dependsStr_,     PARSER_FEEDBACK_VPKGFORMULA) = pkgFormula;
+	addType(conflictsStr_,   PARSER_FEEDBACK_VPKGLIST)    = pkgList;
+	addType(providesStr_,    PARSER_FEEDBACK_VEQPKGLIST)  = pkgList;
+	addType(installedStr_,   PARSER_FEEDBACK_BOOL)        = false;
+	addType(wasInstalledStr, PARSER_FEEDBACK_BOOL)        = false;
 
-	Cudf::OptionalValue<PARSER_FEEDBACK_ENUM, uint32_t>::EnumValues values;
-	values.insert(dep_.index("package"));
-	values.insert(dep_.index("feature"));
-	values.insert(dep_.index("version"));
-	values.insert(dep_.index("none"));
-	addType(dep_.index("keep"), new Cudf::OptionalValue<PARSER_FEEDBACK_ENUM, uint32_t>(values, dep_.index("none")));
+	/*
+	EnumValues values;
+	values.insert(packageStr);
+	values.insert(featureStr);
+	values.insert(versionStr);
+	values.insert(noneStr);
+	*/
+	addType(dep_.index("keep"), PARSER_FEEDBACK_ENUM) = uint32_t(noneStr);
 
 	// request
-	addType(dep_.index("install"), new Cudf::OptionalValue<PARSER_FEEDBACK_VPKGLIST, Cudf::PkgList>(Cudf::PkgList()));
-	addType(dep_.index("remove"),  new Cudf::OptionalValue<PARSER_FEEDBACK_VPKGLIST, Cudf::PkgList>(Cudf::PkgList()));
-	addType(dep_.index("upgrade"), new Cudf::OptionalValue<PARSER_FEEDBACK_VPKGLIST, Cudf::PkgList>(Cudf::PkgList()));
+	addType(installStr_, PARSER_FEEDBACK_VPKGLIST) = pkgList;
+	addType(removeStr_,  PARSER_FEEDBACK_VPKGLIST) = pkgList;
+	addType(upgradeStr_, PARSER_FEEDBACK_VPKGLIST) = pkgList;
+
+	BOOST_FOREACH (Dependency::Criteria::OptSizeMap::value_type &val, dep_.criteria.optSize)
+	{
+		optSize_.push_back(dep_.index(val.first));
+	}
 }
 
 /*!re2c
@@ -139,16 +173,17 @@ start:
 		}
 		EQUAL
 		{
+			token_.index = EQ;
 			std::string &tok = string();
 			if (*tok.begin() == ' ' && *(tok.end()-1) == ' ') { return PARSER_SPEQUALSP; }
 			else                                              { return PARSER_EQUAL; }
 		}
 		BAR              { return PARSER_BAR; }
-		NEQ              { return PARSER_RELOP; }
-		GEQ              { return PARSER_RELOP; }
-		GTH              { return PARSER_RELOP; }
-		LEQ              { return PARSER_RELOP; }
-		LTH              { return PARSER_RELOP; }
+		NEQ              { token_.index = NEQ; return PARSER_RELOP; }
+		GEQ              { token_.index = GE; return PARSER_RELOP; }
+		GTH              { token_.index = GT; return PARSER_RELOP; }
+		LEQ              { token_.index = LE; return PARSER_RELOP; }
+		LTH              { token_.index = LT; return PARSER_RELOP; }
 		LBRAC            { return PARSER_LBRAC; }
 		RBRAC            { return PARSER_RBRAC; }
 		SPACE            { return PARSER_SPACE; }
@@ -191,15 +226,10 @@ int Parser::lexString()
 	return 0;
 }
 
-void Parser::addType(uint32_t name, Cudf::Value *value)
-{
-	propMap_.insert(name, value);
-}
-
 void Parser::parseType(uint32_t index)
 {
-	PropMap::iterator it = propMap_.find(index);
-	if (it != propMap_.end()) { shiftToken_ = it->second->getType(); }
+	TypeMap::iterator it = typeMap_.find(index);
+	if (it != typeMap_.end()) { shiftToken_ = it->second.type; }
 	else { syntaxError(); }
 }
 

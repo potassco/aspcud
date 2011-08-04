@@ -44,6 +44,7 @@ function usage()
 	echo "  -h       print this help"
 	echo "  -c OPT   append clasp option OPT"
 	echo "  -e ENC   append encoding ENC"
+	echo "  -p OPT   append cudf2lp option OPT"
 	echo
 	echo "Default commandline:"
 	echo -n "$(basename "${0}")"
@@ -62,7 +63,7 @@ base="$(dirname "$(readlink -f "$0")")"
 PATH=".:$base:$base/../build/release/bin:$PATH"
 
 # default options
-clasp_opts_def=( "--opt-he=1" "--sat" "--restarts=32" "--heu=VSIDS" "--restart-o" "--opt-hi=2" )
+clasp_opts_def=( "--opt-heu=1" "--sat-prepro" "--restarts=128" "--heuristic=VSIDS" "--solution-recording" "--opt-hierarch=1" "--local-restarts" )
 gringo_opts_def=( "$(enc configuration.lp)" "$(enc optimize-define.lp)" )
 
 cudf_opts=( )
@@ -80,6 +81,7 @@ do
 	case "$flag" in
 		"e") gringo_opts=( "${gringo_opts[@]}" "$(enc "$OPTARG")" ) ;;
 		"c") clasp_opts=( "${clasp_opts[@]}" "$OPTARG" ) ;;
+		"p") cudf_opts=( "${cudf_opts[@]}" "$OPTARG" ) ;;
 		"h") usage; exit 0 ;;
 		"?") exit 1 ;;
 	esac
@@ -90,13 +92,13 @@ shift $((OPTIND-1))
 [[ ${#clasp_opts[*]} -eq 0 ]] && clasp_opts=( "${clasp_opts_def[@]}" )
 [[ ${#gringo_opts[*]} -eq 0 ]] && gringo_opts=( "${gringo_opts_def[@]}" )
 if [[ $# -eq 3 ]]; then
-	cudf_opts=( "-c" "$3" )
+	cudf_opts=( "${cudf_opts[@]}" "-c" "$3" )
 elif echo $(basename "$0") | grep -q "trendy"; then
 	[[ $# -ne 2 ]] && { die "error: exactly two arguments expected"; }
-	cudf_opts=( "-c" "trendy" )
+	cudf_opts=( "${cudf_opts[@]}" "-c" "trendy" )
 elif echo $(basename "$0") | grep -q "paranoid"; then
 	[[ $# -ne 2 ]] && { die "error: exactly two arguments expected"; }
-	cudf_opts=( "-c" "paranoid" )
+	cudf_opts=( "${cudf_opts[@]}" "-c" "paranoid" )
 else
 	die "error: exactly three arguments expected"
 fi
@@ -111,11 +113,11 @@ tmp="$(mktemp -d outXXXXXX)"
 
 mkfifo $tmp/cudf_out $tmp/gringo_out
 
-clasp   "${clasp_opts[@]}"  > "$tmp/clasp_out"  2> "$tmp/clasp_err"    < "$tmp/gringo_out" &
+clasp-2.0.1-st   "${clasp_opts[@]}"  > "$tmp/clasp_out"  2> "$tmp/clasp_err"    < "$tmp/gringo_out" &
 clasp_pid=$!
-gringo  "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" - < "$tmp/cudf_out" &
+gringo-3.0.3  "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" - < "$tmp/cudf_out" &
 gringo_pid=$!
-cudf2lp "${cudf_opts[@]}"   > "$tmp/cudf_out"   2> "$tmp/cudf_err"   - < "$1" &
+cudf2lp-0.9.0 "${cudf_opts[@]}"   > "$tmp/cudf_out"   2> "$tmp/cudf_err"   - < "$1" &
 cudf_pid=$!
 
 trap usrtrap USR1 TERM INT

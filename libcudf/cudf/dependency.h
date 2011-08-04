@@ -44,7 +44,7 @@ typedef std::vector<Package*>   PackageList;
 
 struct Entity
 {
-	Entity(uint32_t name, uint32_t version, bool installed = false);
+	Entity(uint32_t name, int32_t version, bool installed = false);
 	bool operator<(const Entity &ent) const;
 	bool operator==(const Entity &ent) const;
 	void remove(Dependency *dep);
@@ -59,7 +59,7 @@ struct Entity
 	virtual ~Entity() = 0;
 
 	uint32_t name;
-	uint32_t version;
+	int32_t  version;
 	bool     visited;
 	bool     installed;
 
@@ -72,7 +72,7 @@ protected:
 struct Package : public Entity
 {
 	typedef Cudf::Package::Keep Keep;
-	typedef Cudf::Package::IntPropMap IntPropMap;
+	typedef std::vector<std::pair<uint32_t, int32_t> > IntPropMap;
 
 	Package(const Cudf::Package &pkg);
 	void dumpAsFacts(Dependency *dep, std::ostream &out);

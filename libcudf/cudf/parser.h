@@ -27,14 +27,30 @@
 #include <cudf/dependency.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
+#include <boost/foreach.hpp>
 
 class Parser : public LexerImpl
 {
 public:
-	enum RelOp { GE=0, GT, LE, LT, EQ, NEQ };
+	enum RelOp
+	{
+		GE  = Cudf::PackageRef::GE,
+		LE  = Cudf::PackageRef::LE,
+		EQ  = Cudf::PackageRef::EQ,
+		NEQ = Cudf::PackageRef::NEQ,
+		LT, GT
+	};
 	struct Token
 	{
 		uint32_t index;
+	};
+	struct Type
+	{
+		Type(uint32_t type);
+		bool intType() const;
+
+		uint32_t    type;
+		Cudf::Value value;
 	};
 
 public:
@@ -46,162 +62,156 @@ public:
 	void parse(std::istream &sin);
 	~Parser();
 
-	// ============ NEW =============
 	void parseType(uint32_t index);
 	int lexString();
 	void parseString()
 	{
 		lexString_ = true;
 	}
-	void addType(uint32_t name, Cudf::Value *value);
-	bool mapBool(uint32_t index) { return boolMap_.find(index)->second; }
-	int32_t mapInt(uint32_t index) { return boost::lexical_cast<int32_t>(dep_.string(index)); }
-
-	// package
-	void newPackage(uint32_t name)
+	Cudf::Value &addType(uint32_t name, uint32_t type)
 	{
-		doc_->packages.push_back(Cudf::Package(name));
-		package_ = &doc_->packages.back();
-		package_->intProps = defaultIntProp_;
+		std::pair<TypeMap::iterator, bool> res = typeMap_.insert(TypeMap::value_type(name, Type(type)));
+		if (!res.second) { throw std::runtime_error("duplicate type"); }
+		return res.first->second.value;
 	}
-	void setVersion(uint32_t version)
+	bool mapBool(uint32_t index)
 	{
-		if(package_) { package_->version = boost::lexical_cast<uint32_t>(dep_.string(version)); }
+		assert(boolMap_.find(index) != boolMap_.end());
+		return boolMap_.find(index)->second;
 	}
-	void setProvides()
+	int32_t mapInt(uint32_t index)
 	{
-		if(package_) { package_->provides.swap(pkgList_); }
-		pkgList_.clear();
+		return boost::lexical_cast<int32_t>(dep_.string(index));
 	}
-	void setInstalled(uint32_t value)
+	void setPkgRef(uint32_t name, uint32_t op = Cudf::PackageRef::GE, uint32_t version = std::numeric_limits<uint32_t>::max())
 	{
-		if(package_) { package_->installed = boolMap_[value]; }
-	}
-	void setKeep(uint32_t value)
-	{
-		if(package_) { package_->keep = keepMap_[value]; }
-	}
-	void setDepends()
-	{
-		if(package_) { package_->depends.swap(pkgFormula_); }
-		pkgFormula_.clear();
-	}
-	void setConflicts()
-	{
-		if(package_) { package_->conflicts.swap(pkgList_); }
-		pkgList_.clear();
-	}
-	void setRecommends()
-	{
-		if(package_) { package_->recommends.swap(pkgFormula_); }
-		pkgFormula_.clear();
-	}
-
-	void setIntProp(uint32_t key, uint32_t val)
-	{
-		if (package_) { package_->intProps[key] = boost::lexical_cast<uint32_t>(dep_.string(val)); }
-	}
-
-	void setDefaultIntProp(uint32_t key, uint32_t val)
-	{
-		defaultIntProp_[key] = val;
-	}
-
-	// package references
-	void addPkg(uint32_t name, uint32_t op = Cudf::PackageRef::GE, uint32_t version = std::numeric_limits<uint32_t>::max())
-	{
-		packageRef_.name = name;
-		version = (version == std::numeric_limits<uint32_t>::max()) ? 0 : boost::lexical_cast<uint32_t>(dep_.string(version));
-		switch(op)
+		pkgRef.name    = name;
+		pkgRef.version = (version == std::numeric_limits<uint32_t>::max()) ? 0 : boost::lexical_cast<int32_t>(dep_.string(version));
+		if (op == GT)
 		{
-		case GE:
-			packageRef_.op      = Cudf::PackageRef::GE;
-			packageRef_.version = version;
-			break;
-		case GT:
-			packageRef_.op      = Cudf::PackageRef::GE;
-			packageRef_.version = version + 1;
-			break;
-		case LE:
-			packageRef_.op      = Cudf::PackageRef::LE;
-			packageRef_.version = version;
-			break;
-		case LT:
-			packageRef_.op      = Cudf::PackageRef::LE;
-			packageRef_.version = version - 1;
-			break;
-		case EQ:
-			packageRef_.op      = Cudf::PackageRef::EQ;
-			packageRef_.version = version;
-			break;
-		case NEQ:
-			packageRef_.op      = Cudf::PackageRef::NEQ;
-			packageRef_.version = version;
-			break;
+			pkgRef.version = version++;
+			pkgRef.op      = Cudf::PackageRef::GE;
+		}
+		else if (op == LT)
+		{
+			pkgRef.version = version--;
+			pkgRef.op      = Cudf::PackageRef::LE;
+		}
+		else { pkgRef.op = op; }
+	}
+	void pushPkgList()
+	{
+		pkgFormula.push_back(Cudf::PkgList());
+		std::swap(pkgFormula.back(), pkgList);
+	}
+	template <class T>
+	void setProperty(uint32_t name, T &value)
+	{
+		Cudf::Value &val = propMap[name];
+		if (!val.empty()) { throw std::runtime_error("duplicate property"); }
+		std::swap(boost::any_cast<T&>(val), value);
+	}
+	template <class T>
+	void setProperty(uint32_t name, const T &value)
+	{
+		if(!propMap.insert(PropMap::value_type(name, value)).second)
+		{
+			throw std::runtime_error("duplicate property");
 		}
 	}
+	template <class T>
+	void getProp(uint32_t name, T &dst)
+	{
+		PropMap::iterator it = propMap.find(name);
+		if (it != propMap.end())
+		{
+			dst = boost::any_cast<T&>(it->second);
+		}
+		else
+		{
+			TypeMap::iterator it = typeMap_.find(name);
+			assert(it != typeMap_.end());
+			if (!it->second.value.empty())
+			{
+				dst = boost::any_cast<T&>(it->second.value);
+			}
+			else { throw std::runtime_error("required attribute missing"); }
+		}
+	}
+	void addPreamble()
+	{
+		propMap.clear();
+	}
+	void addPackage(uint32_t name)
+	{
+		doc_->packages.push_back(Cudf::Package(name));
+		Cudf::Package &pkg = doc_->packages.back();
+		getProp(versionStr_,    pkg.version);
+		getProp(conflictsStr_,  pkg.conflicts);
+		getProp(dependsStr_,    pkg.depends);
+		if (typeMap_.find(recommendsStr_) != typeMap_.end()) { getProp(recommendsStr_, pkg.recommends); }
+		getProp(providesStr_,   pkg.provides);
+		getProp(installedStr_,  pkg.installed);
 
-	// formulas
-	void setConstant(bool value)
-	{
-		pkgFormula_.clear();
-		if(!value) { pkgFormula_.resize(1); }
-	}
-	void addClause()
-	{
-		pkgFormula_.resize(pkgFormula_.size() + 1);
-		pkgFormula_.back().swap(pkgList_);
-	}
-	void addToClause() {
-		pkgList_.push_back(packageRef_);
-	}
+		uint32_t keep;
+		getProp(keepStr_, keep);
+		KeepMap::iterator it = keepMap_.find(keep);
+		if (it != keepMap_.end()) { pkg.keep = it->second; }
+		else                      { throw std::runtime_error("invalid keep value"); }
 
-	// lists
-	void addToList() { pkgList_.push_back(packageRef_); }
-
-	// requests
-	void newRequest()
-	{
-		package_ = 0;
-		request_ = true;
+		BOOST_FOREACH (uint32_t name, optSize_)
+		{
+			int32_t value;
+			getProp(name, value);
+			pkg.intProps.insert(Package::IntPropMap::value_type(name, value));
+		}
+		propMap.clear();
 	}
-	void setInstall()
+	void addRequest()
 	{
-		if(request_) { pkgList_.swap(doc_->request.install); }
-		pkgList_.clear();
-	}
-	void setRemove()
-	{
-		if(request_) { pkgList_.swap(doc_->request.remove); }
-		pkgList_.clear();
-	}
-	void setUpgrade()
-	{
-		if(request_) { pkgList_.swap(doc_->request.upgrade); }
-		pkgList_.clear();
+		getProp(installStr_, doc_->request.install);
+		getProp(removeStr_,  doc_->request.remove);
+		getProp(upgradeStr_, doc_->request.upgrade);
+		propMap.clear();
 	}
 
 private:
-	typedef std::map<uint32_t, bool>                             BoolMap;
-	typedef std::map<uint32_t, Cudf::Package::Keep>              KeepMap;
-	typedef boost::ptr_map<uint32_t, Cudf::Value> PropMap;
+	typedef std::map<uint32_t, bool>                    BoolMap;
+	typedef std::map<uint32_t, Cudf::Package::Keep>     KeepMap;
+	typedef boost::unordered_map<uint32_t, Type>        TypeMap;
+	typedef boost::unordered_map<uint32_t, Cudf::Value> PropMap;
+	typedef std::vector<uint32_t>                       EnumValues;
+	typedef std::vector<uint32_t>                       OptSizeVec;
 
 	void            *parser_;
 	Token            token_;
 	bool             lexString_;
-	bool             request_;
 	Dependency      &dep_;
 	Cudf::Document  *doc_;
-	Cudf::PackageRef packageRef_;
-	Cudf::Package   *package_;
-	Cudf::PkgList    pkgList_;
-	Cudf::PkgFormula pkgFormula_;
+
+	OptSizeVec       optSize_;
 	KeepMap          keepMap_;
 	BoolMap          boolMap_;
-	Cudf::Package::IntPropMap defaultIntProp_;
 
-	PropMap          propMap_;
+	TypeMap          typeMap_;
 	uint32_t         shiftToken_;
 
+	// for efficient lookups
+	uint32_t         versionStr_;
+	uint32_t         conflictsStr_;
+	uint32_t         dependsStr_;
+	uint32_t         recommendsStr_;
+	uint32_t         providesStr_;
+	uint32_t         keepStr_;
+	uint32_t         installedStr_;
+	uint32_t         installStr_;
+	uint32_t         removeStr_;
+	uint32_t         upgradeStr_;
 
+public:
+	Cudf::PackageRef pkgRef;
+	Cudf::PkgList    pkgList;
+	Cudf::PkgFormula pkgFormula;
+	EnumValues       identList;
+	PropMap          propMap;
 };

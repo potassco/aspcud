@@ -37,8 +37,8 @@
 %start_symbol     cudf
 
 // lexer feedback
-parse_string ::= .          { pParser->parseString(); }
-parse_type   ::= ident(id). { pParser->parseType(id.index); }
+parse_string    ::= .          { pParser->parseString(); }
+parse_type(res) ::= ident(id). { res.index = id.index; pParser->parseType(id.index); }
 
 // overall structure
 cudf ::= universe request.
@@ -57,31 +57,30 @@ comma   ::= COMMA.
 comma   ::= COMMASP.
 
 // document parts
-preamble ::= PREAMBLE parse_string COLONSP STRING NL stanza ssep.
+preamble ::= PREAMBLE parse_string COLONSP STRING NL stanza ssep. { pParser->addPreamble(); }
 universe ::= .
 universe ::= universe package.
-package  ::= PACKAGE COLONSP pkgname NL stanza ssep.
-request  ::= REQUEST parse_string COLONSP STRING NL stanza.
+package  ::= PACKAGE COLONSP pkgname(name) NL stanza ssep.  { pParser->addPackage(name.index); }
+request  ::= REQUEST parse_string COLONSP STRING NL stanza. { pParser->addRequest(); }
 
 // stanzas
 stanza ::= .
 stanza ::= stanza COMMENT.
 stanza ::= stanza property NL.
-property ::= parse_type COLONSP value.
-value ::= FEEDBACK_BOOL        bool.
-value ::= FEEDBACK_IDENT       ident.
-value ::= FEEDBACK_ENUM        ident.
-value ::= FEEDBACK_INT         int.
-value ::= FEEDBACK_NAT         nat.
-value ::= FEEDBACK_POSINT      posint.
-value ::= FEEDBACK_PKGNAME     pkgname.
-value ::= FEEDBACK_TYPEDECL    typedecl.
-value ::= FEEDBACK_VPKG        vpkg.
-value ::= FEEDBACK_VEQPKG      veqpkg.
-value ::= FEEDBACK_VPKGFORMULA vpkgformula.
-value ::= FEEDBACK_VPKGLIST    vpkglist.
-value ::= FEEDBACK_VEQPKGLIST  veqpkglist.
-value ::= parse_string FEEDBACK_STRING STRING.
+property ::= parse_type(name) COLONSP FEEDBACK_BOOL        bool(val).           { pParser->setProperty(name.index, pParser->mapBool(val.index)); }
+property ::= parse_type(name) COLONSP FEEDBACK_IDENT       ident(val).          { pParser->setProperty(name.index, uint32_t(val.index)); }
+property ::= parse_type(name) COLONSP FEEDBACK_ENUM        ident(val).          { /* name, val */ }
+property ::= parse_type(name) COLONSP FEEDBACK_INT         int(val).            { pParser->setProperty(name.index, pParser->mapInt(val.index)); }
+property ::= parse_type(name) COLONSP FEEDBACK_NAT         nat(val).            { pParser->setProperty(name.index, pParser->mapInt(val.index)); }
+property ::= parse_type(name) COLONSP FEEDBACK_POSINT      posint(val).         { pParser->setProperty(name.index, pParser->mapInt(val.index)); }
+property ::= parse_type(name) COLONSP FEEDBACK_PKGNAME     pkgname(val).        { pParser->setProperty(name.index, uint32_t(val.index)); }
+property ::= parse_type(name) COLONSP FEEDBACK_TYPEDECL    typedecl(val).       { /* ignore: name, val */ }
+property ::= parse_type(name) COLONSP FEEDBACK_VPKG        vpkg.                { pParser->setProperty(name.index, pParser->pkgRef); }
+property ::= parse_type(name) COLONSP FEEDBACK_VEQPKG      veqpkg.              { pParser->setProperty(name.index, pParser->pkgRef); }
+property ::= parse_type(name) COLONSP FEEDBACK_VPKGFORMULA vpkgformula.         { pParser->setProperty(name.index, pParser->pkgFormula); }
+property ::= parse_type(name) COLONSP FEEDBACK_VPKGLIST    vpkglist.            { pParser->setProperty(name.index, pParser->pkgList); }
+property ::= parse_type(name) COLONSP FEEDBACK_VEQPKGLIST  veqpkglist.          { pParser->setProperty(name.index, pParser->pkgList); }
+property ::= parse_type(name) COLONSP parse_string FEEDBACK_STRING STRING(val). { pParser->setProperty(name.index, uint32_t(val.index)); }
 
 // simple cudf types
 bool(res) ::= TRUE(tok).  { res.index = tok.index; }
@@ -117,38 +116,35 @@ nat(res) ::= posint(tok). { res.index = tok.index; }
 int(res) ::= INT(tok). { res.index = tok.index; }
 int(res) ::= nat(tok). { res.index = tok.index; }
 
-relop(res) ::= SPEQUALSP(tok). { res.index = tok.index; }
-relop(res) ::= RELOP(tok).     { res.index = tok.index; }
-
 equal(res) ::= SPEQUALSP(tok). { res.index = tok.index; }
 equal(res) ::= EQUAL(tok).     { res.index = tok.index; }
 
 // complex cudf types
-vpkg ::=	pkgname.
-vpkg ::=	pkgname relop posint.
+veqpkg ::= pkgname(name).                           { pParser->setPkgRef(name.index); }
+veqpkg ::= pkgname(name) SPEQUALSP(op) posint(num). { pParser->setPkgRef(name.index, op.index, num.index); }
 
-veqpkg ::= pkgname.
-veqpkg ::= pkgname SPEQUALSP posint.
+vpkg ::= pkgname(name) RELOP(op) posint(num). { pParser->setPkgRef(name.index, op.index, num.index); }
+vpkg ::= veqpkg.
 
-orfla ::= vpkg.
-orfla ::= orfla BAR vpkg.
+orfla ::= vpkg.           { pParser->pkgList.clear(); pParser->pkgList.push_back(pParser->pkgRef); }
+orfla ::= orfla BAR vpkg. { pParser->pkgList.push_back(pParser->pkgRef); }
 
-andfla ::= orfla.
-andfla ::= andfla comma orfla.
+andfla ::= orfla.              { pParser->pkgFormula.clear(); pParser->pushPkgList(); }
+andfla ::= andfla comma orfla. { pParser->pushPkgList(); }
 
 vpkgformula ::=	andfla.
-vpkgformula ::=	TRUEX.
-vpkgformula ::=	FALSEX.
+vpkgformula ::=	TRUEX.  { pParser->pkgFormula.clear(); }
+vpkgformula ::=	FALSEX. { pParser->pkgFormula.clear(); pParser->pkgList.clear(); pParser->pushPkgList(); }
 
 vpkglist  ::= .
 vpkglist  ::= nvpkglist.
-nvpkglist ::= vpkg.
-nvpkglist ::= nvpkglist comma vpkg.
+nvpkglist ::= vpkg.                 { pParser->pkgList.clear(); pParser->pkgList.push_back(pParser->pkgRef); }
+nvpkglist ::= nvpkglist comma vpkg. { pParser->pkgList.push_back(pParser->pkgRef); }
 
 veqpkglist  ::= .
 veqpkglist  ::= nveqpkglist.
-nveqpkglist ::= veqpkg.
-nveqpkglist ::= nveqpkglist comma veqpkg.
+nveqpkglist ::= veqpkg.                   { pParser->pkgList.clear(); pParser->pkgList.push_back(pParser->pkgRef); }
+nveqpkglist ::= nveqpkglist comma veqpkg. { pParser->pkgList.push_back(pParser->pkgRef); }
 
 // type declarations
 typedecl  ::= .
@@ -156,32 +152,32 @@ typedecl  ::= ntypedecl.
 ntypedecl ::= typedecl1.
 ntypedecl ::= ntypedecl comma typedecl1.
 
-identlist ::= ident.
-identlist ::= identlist COMMASP ident.
+identlist ::= ident(id).                   { pParser->identList.clear(); pParser->identList.push_back(id.index); }
+identlist ::= identlist COMMASP ident(id). { pParser->identList.push_back(id.index); }
 
-typedecl1 ::= ident(id) colon TYPE_ENUM space LBRAC identlist RBRAC.                                   { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_ENUM>()); }
-typedecl1 ::= ident(id) colon TYPE_ENUM space LBRAC identlist(lst) RBRAC equal LBRAC ident(val) RBRAC. { /* id lst val */ }
-typedecl1 ::= ident(id) colon TYPE_BOOL.                                                               { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_BOOL>()); }
-typedecl1 ::= ident(id) colon TYPE_BOOL equal LBRAC bool(val) RBRAC.                                   { pParser->addType(id.index, new Cudf::OptionalValue<PARSER_FEEDBACK_BOOL, bool>(pParser->mapBool(val.index))); }
-typedecl1 ::= ident(id) colon TYPE_INT.                                                                { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_INT>()); }
-typedecl1 ::= ident(id) colon TYPE_INT equal LBRAC int(val) RBRAC.                                     { pParser->addType(id.index, new Cudf::OptionalValue<PARSER_FEEDBACK_INT, int32_t>(pParser->mapInt(val.index))); }
-typedecl1 ::= ident(id) colon TYPE_NAT.                                                                { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_NAT>()); }
-typedecl1 ::= ident(id) colon TYPE_NAT equal LBRAC nat(val) RBRAC.                                     { pParser->addType(id.index, new Cudf::OptionalValue<PARSER_FEEDBACK_NAT, int32_t>(pParser->mapInt(val.index))); }
-typedecl1 ::= ident(id) colon TYPE_POSINT.                                                             { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_POSINT>()); }
-typedecl1 ::= ident(id) colon TYPE_POSINT equal LBRAC posint(val) RBRAC.                               { pParser->addType(id.index, new Cudf::OptionalValue<PARSER_FEEDBACK_POSINT, int32_t>(pParser->mapInt(val.index))); }
-typedecl1 ::= ident(id) colon TYPE_STRING.                                                             { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_STRING>()); }
-typedecl1 ::= ident(id) colon TYPE_STRING equal LBRAC QUOTED(val) RBRAC.                               { pParser->addType(id.index, new Cudf::OptionalValue<PARSER_FEEDBACK_STRING, uint32_t>(val.index)); }
-typedecl1 ::= ident(id) colon TYPE_PKGNAME.                                                            { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_PKGNAME>()); }
-typedecl1 ::= ident(id) colon TYPE_PKGNAME equal LBRAC pkgname(val) RBRAC.                             { pParser->addType(id.index, new Cudf::OptionalValue<PARSER_FEEDBACK_PKGNAME, uint32_t>(val.index)); }
-typedecl1 ::= ident(id) colon TYPE_IDENT.                                                              { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_IDENT>()); }
-typedecl1 ::= ident(id) colon TYPE_IDENT equal LBRAC ident(val) RBRAC.                                 { pParser->addType(id.index, new Cudf::OptionalValue<PARSER_FEEDBACK_IDENT, uint32_t>(val.index)); }
-typedecl1 ::= ident(id) colon TYPE_VPKG.                                                               { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_VPKG>()); }
-typedecl1 ::= ident colon TYPE_VPKG equal LBRAC vpkg RBRAC.
-typedecl1 ::= ident(id) colon TYPE_VEQPKG.                                                             { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_VEQPKG>()); }
-typedecl1 ::= ident colon TYPE_VEQPKG equal LBRAC veqpkg RBRAC.
-typedecl1 ::= ident(id) colon TYPE_VPKGFORMULA.                                                        { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_VPKGFORMULA>()); }
-typedecl1 ::= ident colon TYPE_VPKGFORMULA equal LBRAC vpkgformula RBRAC.
-typedecl1 ::= ident(id) colon TYPE_VPKGLIST.                                                           { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_VPKGLIST>()); }
-typedecl1 ::= ident colon TYPE_VPKGLIST equal LBRAC vpkglist RBRAC.
-typedecl1 ::= ident(id) colon TYPE_VEQPKGLIST.                                                         { pParser->addType(id.index, new Cudf::RequiredValue<PARSER_FEEDBACK_VEQPKGLIST>()); }
-typedecl1 ::= ident colon TYPE_VEQPKGLIST equal LBRAC veqpkglist RBRAC.
+typedecl1 ::= ident(id) colon TYPE_ENUM space LBRAC identlist RBRAC.                              { pParser->addType(id.index, PARSER_FEEDBACK_ENUM); }
+typedecl1 ::= ident(id) colon TYPE_ENUM space LBRAC identlist RBRAC equal LBRAC ident(val) RBRAC. { pParser->addType(id.index, PARSER_FEEDBACK_ENUM) = uint32_t(val.index); }
+typedecl1 ::= ident(id) colon TYPE_BOOL.                                                          { pParser->addType(id.index, PARSER_FEEDBACK_BOOL); }
+typedecl1 ::= ident(id) colon TYPE_BOOL equal LBRAC bool(val) RBRAC.                              { pParser->addType(id.index, PARSER_FEEDBACK_BOOL) = pParser->mapBool(val.index); }
+typedecl1 ::= ident(id) colon TYPE_INT.                                                           { pParser->addType(id.index, PARSER_FEEDBACK_INT); }
+typedecl1 ::= ident(id) colon TYPE_INT equal LBRAC int(val) RBRAC.                                { pParser->addType(id.index, PARSER_FEEDBACK_INT) = pParser->mapInt(val.index); }
+typedecl1 ::= ident(id) colon TYPE_NAT.                                                           { pParser->addType(id.index, PARSER_FEEDBACK_NAT); }
+typedecl1 ::= ident(id) colon TYPE_NAT equal LBRAC nat(val) RBRAC.                                { pParser->addType(id.index, PARSER_FEEDBACK_NAT) = pParser->mapInt(val.index); }
+typedecl1 ::= ident(id) colon TYPE_POSINT.                                                        { pParser->addType(id.index, PARSER_FEEDBACK_POSINT); }
+typedecl1 ::= ident(id) colon TYPE_POSINT equal LBRAC posint(val) RBRAC.                          { pParser->addType(id.index, PARSER_FEEDBACK_POSINT) = pParser->mapInt(val.index); }
+typedecl1 ::= ident(id) colon TYPE_STRING.                                                        { pParser->addType(id.index, PARSER_FEEDBACK_STRING); }
+typedecl1 ::= ident(id) colon TYPE_STRING equal LBRAC QUOTED(val) RBRAC.                          { pParser->addType(id.index, PARSER_FEEDBACK_STRING) = uint32_t(val.index); }
+typedecl1 ::= ident(id) colon TYPE_PKGNAME.                                                       { pParser->addType(id.index, PARSER_FEEDBACK_PKGNAME); }
+typedecl1 ::= ident(id) colon TYPE_PKGNAME equal LBRAC pkgname(val) RBRAC.                        { pParser->addType(id.index, PARSER_FEEDBACK_PKGNAME) = uint32_t(val.index); }
+typedecl1 ::= ident(id) colon TYPE_IDENT.                                                         { pParser->addType(id.index, PARSER_FEEDBACK_IDENT); }
+typedecl1 ::= ident(id) colon TYPE_IDENT equal LBRAC ident(val) RBRAC.                            { pParser->addType(id.index, PARSER_FEEDBACK_IDENT) = uint32_t(val.index); }
+typedecl1 ::= ident(id) colon TYPE_VPKG.                                                          { pParser->addType(id.index, PARSER_FEEDBACK_VPKG); }
+typedecl1 ::= ident(id) colon TYPE_VPKG equal LBRAC vpkg RBRAC.                                   { pParser->addType(id.index, PARSER_FEEDBACK_VPKG) = pParser->pkgRef; }
+typedecl1 ::= ident(id) colon TYPE_VEQPKG.                                                        { pParser->addType(id.index, PARSER_FEEDBACK_VEQPKG); }
+typedecl1 ::= ident(id) colon TYPE_VEQPKG equal LBRAC veqpkg RBRAC.                               { pParser->addType(id.index, PARSER_FEEDBACK_VEQPKG) = pParser->pkgRef; }
+typedecl1 ::= ident(id) colon TYPE_VPKGFORMULA.                                                   { pParser->addType(id.index, PARSER_FEEDBACK_VPKGFORMULA); }
+typedecl1 ::= ident(id) colon TYPE_VPKGFORMULA equal LBRAC vpkgformula RBRAC.                     { Cudf::Value &val = pParser->addType(id.index, PARSER_FEEDBACK_VPKGFORMULA) = Cudf::PkgFormula(); std::swap(pParser->pkgFormula, boost::any_cast<Cudf::PkgFormula&>(val)); }
+typedecl1 ::= ident(id) colon TYPE_VPKGLIST.                                                      { pParser->addType(id.index, PARSER_FEEDBACK_VPKGLIST); }
+typedecl1 ::= ident(id) colon TYPE_VPKGLIST equal LBRAC vpkglist RBRAC.                           { Cudf::Value &val = pParser->addType(id.index, PARSER_FEEDBACK_VPKGLIST) = Cudf::PkgList(); std::swap(pParser->pkgList, boost::any_cast<Cudf::PkgList&>(val)); }
+typedecl1 ::= ident(id) colon TYPE_VEQPKGLIST.                                                    { pParser->addType(id.index, PARSER_FEEDBACK_VEQPKGLIST); }
+typedecl1 ::= ident(id) colon TYPE_VEQPKGLIST equal LBRAC veqpkglist RBRAC.                       { Cudf::Value &val = pParser->addType(id.index, PARSER_FEEDBACK_VEQPKGLIST) = Cudf::PkgList(); std::swap(pParser->pkgList, boost::any_cast<Cudf::PkgList&>(val)); }
