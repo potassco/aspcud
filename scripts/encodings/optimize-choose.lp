@@ -1,4 +1,4 @@
-installed    :- 1 { criterion(newpackage;remove,L) }.
+installed    :- 1 { criterion(change;newpackage;remove,L) }.
 installed(P) :- installed(P,X), installed.
 
 % choose optimization criteria violations
