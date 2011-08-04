@@ -105,6 +105,7 @@ repeat:
 			line_++;
 		}
 		void start() { start_ = cursor_; }
+		void unget() { cursor_--; }
 		void reset(std::istream *in)
 		{
 			in_     = in;
@@ -134,6 +135,7 @@ repeat:
 protected:
 	LexerImpl() : states_(1) { }
 	void start() { state().start(); }
+	void unget() { state().unget(); }
 	bool eof() const { return state().cursor_ == state().eof_; }
 	void reset(std::istream *in) { state().reset(in); }
 	std::string &string(uint32_t start = 0, uint32_t end = 0)

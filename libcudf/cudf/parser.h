@@ -107,9 +107,12 @@ public:
 	template <class T>
 	void setProperty(uint32_t name, T &value)
 	{
-		Cudf::Value &val = propMap_[name];
-		if (!val.empty()) { throw std::runtime_error("duplicate property"); }
-		std::swap(boost::any_cast<T&>(val), value);
+		std::pair<PropMap::iterator, bool> res = propMap_.insert(PropMap::value_type(name, T()));
+		if(!res.second)
+		{
+			throw std::runtime_error("duplicate property");
+		}
+		std::swap(boost::any_cast<T&>(res.first->second), value);
 	}
 	template <class T>
 	void setProperty(uint32_t name, const T &value)

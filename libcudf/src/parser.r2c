@@ -144,7 +144,6 @@ Parser::Parser(Dependency &dep)
 	LTH              = [ ]+"<" [ ]+;
 	LBRAC            = "[";
 	RBRAC            = "]";
-	STRING           = [^\n^\r]*;
 	ANY              = [\000-\377];
 */
 
@@ -213,9 +212,11 @@ int Parser::lex()
 int Parser::lexString()
 {
 	start();
+start:
 	/*!re2c
-		STRING { return PARSER_STRING; }
-		ANY    { syntaxError(); }
+		[^\n\r] { goto start; }
+		[\n\r]  { unget(); token_.index = dep_.index(string()); return PARSER_STRING; }
+		ANY     { syntaxError(); }
 	*/
 	return 0;
 }
