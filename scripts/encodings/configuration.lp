@@ -1,13 +1,13 @@
 % analyze package relationships
 
-pconflict(P,D)   :- conflict(P,X,D).
-conflict(P,D)    :- pconflict(P,D),   conflict(P,X,D) : unit(P,X).
+pconflict(P,D)  :- conflict(P,X,D).
+conflict(P,D)   :- pconflict(P,D),   conflict(P,X,D) : unit(P,X).
 
-pdepends(P,D)    :- depends(P,X,D).
-depends(P,D)     :- pdepends(P,D),     depends(P,X,D) : unit(P,X).
+pdepends(P,D)   :- depends(P,X,D).
+depends(P,D)    :- pdepends(P,D),     depends(P,X,D) : unit(P,X).
 
-psatisfies(P,D)  :- satisfies(P,X,D).
-satisfies(P,D)   :- psatisfies(P,D), satisfies(P,X,D) : unit(P,X).
+psatisfies(P,D) :- satisfies(P,X,D).
+satisfies(P,D)  :- psatisfies(P,D), satisfies(P,X,D) : unit(P,X).
 
 % generate installation
 
