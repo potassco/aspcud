@@ -39,10 +39,10 @@ bool Parser::Type::intType() const
 }
 
 Parser::Parser(Dependency &dep)
-	: parser_(parserAlloc(malloc))
-	, lexString_(false)
-	, dep_(dep)
+	: dep_(dep)
 	, doc_(0)
+	, parser_(parserAlloc(malloc))
+	, lexString_(false)
 	, shiftToken_(0)
 {
 	versionStr_    = dep_.index("version");
@@ -150,7 +150,6 @@ Parser::Parser(Dependency &dep)
 
 int Parser::lex()
 {
-start:
 	start();
 	/*!re2c
 		EOF              { return 0; }
