@@ -209,7 +209,7 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
 		out << "conflict(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
 	}
 	// recommends(VP,D)
-	if (!recommends.empty())
+	if ((dep->addAll() || dep->criteria.unsat_recommends) != 0 && !recommends.empty())
 	{
 		typedef std::map<uint32_t, uint32_t> OccurMap;
 		OccurMap occur;
@@ -305,9 +305,10 @@ Dependency::Criteria::Criteria()
 {
 }
 
-Dependency::Dependency(const Criteria &criteria, bool verbose)
+Dependency::Dependency(const Criteria &criteria, bool addAll, bool verbose)
 	: criteria(criteria)
 	, verbose_(verbose)
+	, addAll_(addAll)
 {
 }
 
@@ -528,10 +529,10 @@ void Dependency::initClosure()
 	}
 }
 
-void Dependency::closure(bool addAll)
+void Dependency::closure()
 {
 	rewriteRequests();
-	if (addAll)
+	if (addAll_)
 	{
 		foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
 		{
@@ -562,6 +563,11 @@ uint32_t Dependency::addClause(PackageList &clause, std::ostream &out)
 		}
 	}
 	return res.first->second;
+}
+
+bool Dependency::addAll() const
+{
+	return addAll_;
 }
 
 void Dependency::dumpAsFacts(std::ostream &out)
@@ -626,7 +632,7 @@ void Dependency::dumpAsFacts(std::ostream &out)
 				if (!max || max->version < pkg->version) { max = pkg; }
 			}
 		}
-		if (visited && max)
+		if ((addAll_ || criteria.notuptodate != 0) && visited && max)
 		{
 			out << "newestversion(\"" << string(max->name) << "\"," << max->version << ").\n";
 		}

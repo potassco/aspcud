@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
 				<< "There is NO WARRANTY, to the extent permitted by law." << std::endl;
 			return EXIT_SUCCESS;
 		}
-		Dependency d(opts.criteria, opts.generic.verbose > 0);
+		Dependency d(opts.criteria, opts.addAll, opts.generic.verbose > 0);
 		Parser p(d);
 		if(opts.generic.input.empty() || opts.generic.input.front() == "-") { p.parse(std::cin); }
 		else
@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
 			std::ifstream in(opts.generic.input.front().c_str());
 			p.parse(in);
 		}
-		d.closure(opts.addAll);
+		d.closure();
 		d.dumpAsFacts(std::cout);
 		return EXIT_SUCCESS;
 	}

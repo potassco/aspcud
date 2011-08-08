@@ -149,16 +149,17 @@ private:
 	> StringSet;
 
 public:
-	Dependency(const Criteria &criteria, bool verbose = true);
+	Dependency(const Criteria &criteria, bool addAll, bool verbose = true);
 	uint32_t index(const std::string &s);
 	uint32_t index(const char *s);
 	const std::string &string(uint32_t index);
 	void init(const Cudf::Document &doc);
-	void closure(bool addAll);
+	void closure();
 	void add(Entity *ent);
 	void addMaxVersion(uint32_t name, Package *reason = 0);
 	uint32_t addClause(PackageList &list, std::ostream &out);
 	void dumpAsFacts(std::ostream &out);
+	bool addAll() const;
 
 private:
 	void initClosure();
@@ -178,4 +179,5 @@ private:
 	EntityList  closure_;
 	ClauseMap   clauses_;
 	bool        verbose_;
+	bool        addAll_;
 };

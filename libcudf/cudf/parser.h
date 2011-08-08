@@ -38,7 +38,8 @@ public:
 		LE  = Cudf::PackageRef::LE,
 		EQ  = Cudf::PackageRef::EQ,
 		NEQ = Cudf::PackageRef::NEQ,
-		LT, GT
+		LT,
+		GT
 	};
 	struct Token
 	{
@@ -89,13 +90,13 @@ public:
 		pkgRef.version = (version == std::numeric_limits<uint32_t>::max()) ? 0 : boost::lexical_cast<int32_t>(dep_.string(version));
 		if (op == GT)
 		{
-			pkgRef.version = version++;
-			pkgRef.op      = Cudf::PackageRef::GE;
+			pkgRef.version++;
+			pkgRef.op = Cudf::PackageRef::GE;
 		}
 		else if (op == LT)
 		{
-			pkgRef.version = version--;
-			pkgRef.op      = Cudf::PackageRef::LE;
+			pkgRef.version--;
+			pkgRef.op = Cudf::PackageRef::LE;
 		}
 		else { pkgRef.op = op; }
 	}
@@ -165,11 +166,26 @@ public:
 		else if (keep == noneStr_)    { pkg.keep = Cudf::Package::NONE; }
 		else                          { throw std::runtime_error("invalid keep value"); }
 
-		BOOST_FOREACH (uint32_t name, optSize_)
+		if (!dep_.addAll())
 		{
-			int32_t value;
-			getProp(name, value);
-			pkg.intProps.insert(Package::IntPropMap::value_type(name, value));
+			BOOST_FOREACH (uint32_t name, optSize_)
+			{
+				int32_t value;
+				getProp(name, value);
+				pkg.intProps.insert(Package::IntPropMap::value_type(name, value));
+			}
+		}
+		else
+		{
+			BOOST_FOREACH (TypeMap::value_type &val, typeMap_)
+			{
+				if (val.second.intType())
+				{
+					int32_t value;
+					getProp(val.first, value);
+					pkg.intProps.insert(Package::IntPropMap::value_type(val.first, value));
+				}
+			}
 		}
 		propMap_.clear();
 	}
