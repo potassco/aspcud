@@ -170,9 +170,12 @@ public:
 		{
 			BOOST_FOREACH (uint32_t name, optSize_)
 			{
-				int32_t value;
-				getProp(name, value);
-				pkg.intProps.insert(Package::IntPropMap::value_type(name, value));
+				if (typeMap_.find(name) != typeMap_.end())
+				{
+					int32_t value;
+					getProp(name, value);
+					pkg.intProps.insert(Package::IntPropMap::value_type(name, value));
+				}
 			}
 		}
 		else

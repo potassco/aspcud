@@ -161,8 +161,8 @@ int Parser::lex()
 			FALSEX           { return PARSER_FALSEX; }
 			COMMENT          { return PARSER_NL; }
 			COMMA            { return PARSER_COMMA; }
-			EQUAL            { return PARSER_EQUAL; }
 			BAR              { return PARSER_BAR; }
+			EQUAL            { token_.index = EQ; return PARSER_EQUAL; }
 			NEQ              { token_.index = NEQ; return PARSER_RELOP; }
 			GEQ              { token_.index = GE; return PARSER_RELOP; }
 			GTH              { token_.index = GT; return PARSER_RELOP; }
