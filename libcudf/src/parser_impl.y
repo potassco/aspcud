@@ -94,6 +94,7 @@ nonkey_ident(res) ::= TYPE_VPKGLIST(tok).    { res.index = tok.index; }
 nonkey_ident(res) ::= TYPE_VEQPKGLIST(tok).  { res.index = tok.index; }
 nonkey_ident(res) ::= TYPE_ENUM(tok).        { res.index = tok.index; }
 nonkey_ident(res) ::= bool(tok).             { res.index = tok.index; }
+nonkey_ident(res) ::= int(tok).              { res.index = tok.index; }
 
 ident(res) ::= REQUEST(tok).      { res.index = tok.index; }
 ident(res) ::= PREAMBLE(tok).     { res.index = tok.index; }
