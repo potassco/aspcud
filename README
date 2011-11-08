@@ -32,3 +32,8 @@ Aspcud is written in mostly Standard-C++ and was successfully built and run
 under Linux (x86, x86_64) using gcc and icc. Other compilers might work but 
 have not been tested.
 
+CUDF solver
+-----------
+
+To obtain the CUDF solver, take the scripts folder and update the executable
+paths in the first lines of scripts/aspcud.sh.
