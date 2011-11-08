@@ -1,6 +1,7 @@
 #!/bin/bash
 
 clasp_bin=clasp-2.0.2-mt
+unclasp_bin=unclasp
 gringo_bin=gringo-3.0.3
 cudf2lp_bin=cudf2lp-banane
 
@@ -35,8 +36,8 @@ function dumperr()
 function die()
 {
 	[[ -n "$wrapper_out" ]] && echo FAIL > "$wrapper_out"
-	echo "error: $1" >&2
 	dumperr
+	echo "error: $1" >&2
 	usrtrap
 	wait
 	exit 0
@@ -49,8 +50,9 @@ function usage()
 	echo "  -c OPT   append clasp option OPT"
 	echo "  -e ENC   append encoding ENC"
 	echo "  -p OPT   append cudf2lp option OPT"
+	echo "  -s SOL   choose solver {clasp,unclasp}"
 	echo
-	echo "Default commandline:"
+	echo "Default commandline for clasp:"
 	echo -n "$(basename "${0}")"
 	for x in "${clasp_opts_def[@]}";  do
 		echo " \\"
@@ -61,14 +63,29 @@ function usage()
 		echo -n "    -e $x"
 	done
 	echo
+	echo
+	echo "Default commandline for unclasp:"
+	echo -n "$(basename "${0}")"
+	for x in "${unclasp_opts_def[@]}";  do
+		echo " \\"
+		echo -n "    -c $x"
+	done
+	for x in "${ungringo_opts_def[@]}";  do
+		echo " \\"
+		echo -n "    -e $x"
+	done
+	echo
 }
 
 base="$(dirname "$(readlink -f "$0")")"
 PATH=".:$base:$base/../build/release/bin:$PATH"
 
 # default options
+solver=""
 clasp_opts_def=( "--opt-heu=1" "--sat-prepro" "--restarts=128" "--heuristic=VSIDS" "--solution-recording" "--opt-hierarch=1" "--local-restarts" )
+unclasp_opts_def=( "--opt-uncore=oll" )
 gringo_opts_def=( "$(enc configuration.lp)" "$(enc optimize-define.lp)" )
+ungringo_opts_def=( "$(enc configuration-plain.lp)" "$(enc optimize-define.lp)" )
 
 cudf_opts=( )
 clasp_opts=( )
@@ -80,12 +97,13 @@ unset gringo_pid
 unset clasp_pid
 unset tmp
 
-while getopts  "hc:e:" flag
+while getopts "hc:e:p:s:" flag
 do
 	case "$flag" in
 		"e") gringo_opts=( "${gringo_opts[@]}" "$(enc "$OPTARG")" ) ;;
 		"c") clasp_opts=( "${clasp_opts[@]}" "$OPTARG" ) ;;
 		"p") cudf_opts=( "${cudf_opts[@]}" "$OPTARG" ) ;;
+		"s") solver="$OPTARG" ;;
 		"h") usage; exit 0 ;;
 		"?") exit 1 ;;
 	esac
@@ -93,8 +111,36 @@ done
 
 shift $((OPTIND-1))
 
+if [[ -z ${solver} ]] then
+	if echo $(basename "$0") | grep -q "aspuncud"; then
+		solver="unclasp"
+	elif echo $(basename "$0") | grep -q "aspcud"; then
+		solver="clasp"
+	fi
+fi
+
+${solver} = "clasp"
+case "${solver}" in 
+	clasp)
+		solver="unclasp"
+		solver_bin="${clasp_bin}"
+		clasp_opts_implicit=( "--stats=2" "--quiet=1,2" )
+		;;
+	unclasp)
+		clasp_opts_def="${unclasp_opts_def[@]}"
+		gringo_opts_def="${ungringo_opts_def[@]}"
+		solver_bin="${unclasp_bin}"
+		clasp_opts_implicit=( "--stats" )
+		;;
+	*)
+		die "error: solver clasp or unclasp expected"
+		;;
+esac
+		
 [[ ${#clasp_opts[*]} -eq 0 ]] && clasp_opts=( "${clasp_opts_def[@]}" )
 [[ ${#gringo_opts[*]} -eq 0 ]] && gringo_opts=( "${gringo_opts_def[@]}" )
+clasp_opts=( "${clasp_opts[@]}" "${clasp_opts_implicit[@]}" )
+
 if [[ $# -eq 3 ]]; then
 	cudf_opts=( "${cudf_opts[@]}" "-c" "$3" )
 elif echo $(basename "$0") | grep -q "trendy"; then
@@ -109,15 +155,13 @@ fi
 
 wrapper_out="$2"
 
-clasp_opts=( "${clasp_opts[@]}" "--stats=2" "--quiet=1,2"  )
-
 trap cleanup EXIT
 #tmp="$(mktemp -d /tmp/outXXXXXX)"
 tmp="$(mktemp -d outXXXXXX)"
 
 mkfifo $tmp/cudf_out $tmp/gringo_out
 
-"${clasp_bin}"   "${clasp_opts[@]}"  > "$tmp/clasp_out"  2> "$tmp/clasp_err"    < "$tmp/gringo_out" &
+"${solver_bin}"  "${clasp_opts[@]}"  > "$tmp/clasp_out"  2> "$tmp/clasp_err"    < "$tmp/gringo_out" &
 clasp_pid=$!
 "${gringo_bin}"  "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" - < "$tmp/cudf_out" &
 gringo_pid=$!
@@ -135,22 +179,10 @@ wait $clasp_pid
 trap "" USR1 TERM INT
 wait
 
-# TODO: could be run in background too
-touch $tmp/parser_err
-found=0
-while read line; do
-	case "$found" in
-		0) echo "$line" | grep -q "^Answer:" && found=1 || echo "$line" >> "$tmp/parser_err" ;;
-		1) 
-			found=2
-			echo -n "$line" | sed -e 's/in("/package: /g' -e 's/",/\nversion: /g' -e 's/)[ ]\?/\ninstalled: true\n\n/g'
-			;;
-		2) echo "$line" >> $tmp/parser_err ;;
-	esac
-done < "$tmp/clasp_out" > "$wrapper_out"
+grep -A 1 ^Answer "$tmp/clasp_out" | tail -n 1 | sed -e 's/in("/package: /g' -e 's/",/\nversion: /g' -e 's/)[ ]\?/\ninstalled: true\n\n/g' > "$wrapper_out"
+cat "$tmp/clasp_out" | colrm 81 > "$tmp/parser_err"
+grep -q ^Answer "$tmp/clasp_out" || die "no answer printed"
 
-(( found != 2 )) && die "no answer printed"
-	
 dumperr
 
 exit 0
