@@ -111,7 +111,7 @@ done
 
 shift $((OPTIND-1))
 
-if [[ -z ${solver} ]] then
+if [[ -z ${solver} ]]; then
 	if echo $(basename "$0") | grep -q "aspuncud"; then
 		solver="unclasp"
 	elif echo $(basename "$0") | grep -q "aspcud"; then
@@ -119,7 +119,6 @@ if [[ -z ${solver} ]] then
 	fi
 fi
 
-${solver} = "clasp"
 case "${solver}" in 
 	clasp)
 		solver="unclasp"
