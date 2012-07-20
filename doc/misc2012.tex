@@ -1,0 +1,60 @@
+\documentclass[a4paper,english]{article}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage[latin9]{inputenc}
+\usepackage{amssymb}
+\usepackage[cm]{fullpage}
+\usepackage{babel}
+
+\begin{document}
+
+\section{Closure Calculation}
+
+\begin{table}
+  \centering{}\begin{tabular}{c||c|c}
+    selector & minimize & maximize\\
+    \hline 
+    solution $S$ & $S^{-}=\emptyset$ & $S^{+}=P$\\
+    changed $C$ & $C^{-}=I$ & $C^{+}=P\backslash I$\\
+    new $N$ & $N^{-}=\emptyset$ & $N^{+}=\{p\in P\mid p.\mathrm{name}\not\in I.\mathrm{name}\}$\\
+    removed $R$ & $R^{-}=I$ & $R^{+}=\emptyset$\\
+    up $U$ & $U^{-}=\emptyset$ & $U^{+}=\{p\in P\mid p.\mathrm{name}\in I.\mathrm{name},p.\mathrm{version}>\max(I.\mathrm{version}(p))\}$\\
+    down $D$ & $D^{-}=\emptyset$ & $D^{+}=\{p\in P\mid p.\mathrm{name}\in I.\mathrm{name},p.\mathrm{version}<\min(I.\mathrm{version}(p))\}$\\
+  \end{tabular}\caption{Minimal and Maximal Sets\label{tab:Minimal-and-Maximal}}
+\end{table}
+
+\begin{itemize}
+  \item See: \url{http://www.mancoosi.org/misc-2012/criteria/}
+  \item Alphabet of strings: $\mathcal{A}$
+  \item Installation: $I\subseteq\mathcal{A}\times\mathbb{N}$
+  \item Package universe: $P\subseteq\mathcal{A}\times\mathbb{N}$ 
+  \item Names: $I.\mathrm{name}=\{p.\mathrm{name}\mid p\in I\}$
+  \item Versions: $I.\mathrm{version}(p)=\{q.\mathrm{version}\mid q\in I,p.\mathrm{name}=q.\mathrm{name}\}$
+  \item Closure initialization
+    \begin{itemize}
+      \item Package Selector: $X\in\{S,C,N,R,U,D\}$
+        \begin{itemize}
+          \item for $X^{-}$ and $X^{+}$ see Table \ref{tab:Minimal-and-Maximal}
+        \end{itemize}
+      \item Measurements
+        \begin{itemize}
+          \item $\mathrm{init}({-}\mathit{count}(X))=X^{-}$
+          \item $\mathrm{init}({+}\mathit{count}(X))=X^{+}$
+          \item $\mathrm{init}({-}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}>0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}<0\}$
+          \item $\mathrm{init}({+}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}<0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}>0\}$
+          \item $\mathrm{init}({-}\mathit{notuptodate}(X))=\{p\in X^{-}\mid p.\mathrm{version}=\max(P.\mathrm{version}(p))\}$
+          \item $\mathrm{init}({+}\mathit{notuptodate}(X))=\{p\in X^{+}\mid p.\mathrm{version}\not=\max(P.\mathrm{version}(p))\}$
+          \item $\mathrm{init}({-}\mathit{unsat\_recommends}(X))=X^{-}$
+          \item $\mathrm{init}({+}\mathit{unsat\_recommends}(X))=X^{+}$
+          \item $\mathrm{init}({-}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=X^{-}$
+          \item $\mathrm{init}({+}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=X^{+}$
+        \end{itemize}
+    \end{itemize}
+  \item Closure calculation
+    \begin{itemize}
+      \item Collect dependencies
+      \item Collect recommendations if minimized
+    \end{itemize}
+\end{itemize}
+
+\end{document}
