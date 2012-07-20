@@ -52,8 +52,11 @@
     \end{itemize}
   \item Closure calculation
     \begin{itemize}
-      \item Collect dependencies
-      \item Collect recommendations if minimized
+      \item if ${-}\mathit{unsat\_recommends}(X)$
+        \begin{itemize}
+            \item $c\in \mathcal{C}$ and $c$ satisfies selector $X$ implies $c.\mathrm{recommends}\subseteq\mathcal{C}$
+        \end{itemize}
+        \item $c\in \mathcal{C}$ implies $c.\mathrm{depends}\subseteq\mathcal{C}$
     \end{itemize}
 \end{itemize}
 
