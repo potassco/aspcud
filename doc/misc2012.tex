@@ -15,8 +15,8 @@
     selector & minimize & maximize\\
     \hline 
     solution $S$ & $S^{-}=\emptyset$ & $S^{+}=P$\\
-    changed $C$ & $C^{-}=I$ & $C^{+}=P\backslash I$\\
-    new $N$ & $N^{-}=\emptyset$ & $N^{+}=\{p\in P\mid p.\mathrm{name}\not\in I.\mathrm{name}\}$\\
+    changed $C$ & $C^{-}=I$ & $C^{+}=P\setminus I$\\
+    new $N$ & $N^{-}=\emptyset$ & $N^{+}=\{p\in P\mid p.\mathrm{name}\notin I.\mathrm{name}\}$\\
     removed $R$ & $R^{-}=I$ & $R^{+}=\emptyset$\\
     up $U$ & $U^{-}=\emptyset$ & $U^{+}=\{p\in P\mid p.\mathrm{name}\in I.\mathrm{name},p.\mathrm{version}>\max(I.\mathrm{version}(p))\}$\\
     down $D$ & $D^{-}=\emptyset$ & $D^{+}=\{p\in P\mid p.\mathrm{name}\in I.\mathrm{name},p.\mathrm{version}<\min(I.\mathrm{version}(p))\}$\\
@@ -44,10 +44,10 @@
           \item $\mathrm{init}({+}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}<0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}>0\}$
           \item $\mathrm{init}({-}\mathit{notuptodate}(X))=\{p\in X^{-}\mid p.\mathrm{version}=\max(P.\mathrm{version}(p))\}$
           \item $\mathrm{init}({+}\mathit{notuptodate}(X))=\{p\in X^{+}\mid p.\mathrm{version}\not=\max(P.\mathrm{version}(p))\}$
-          \item $\mathrm{init}({-}\mathit{unsat\_recommends}(X))=X^{-}$
-          \item $\mathrm{init}({+}\mathit{unsat\_recommends}(X))=X^{+}$
-          \item $\mathrm{init}({-}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=X^{-}$
-          \item $\mathrm{init}({+}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=X^{+}$
+          \item $\mathrm{init}({-}\mathit{unsat\_recommends}(X))=\{p\in X^{-}\mid p.\mathrm{recommends}\neq\emptyset\}$
+          \item $\mathrm{init}({+}\mathit{unsat\_recommends}(X))=\{p\in X^{+}\mid p.\mathrm{recommends}\neq\emptyset\}$
+          \item $\mathrm{init}({-}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{-}\mid q\in P, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
+          \item $\mathrm{init}({+}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{+}\mid q\in P, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
         \end{itemize}
     \end{itemize}
   \item Closure calculation
