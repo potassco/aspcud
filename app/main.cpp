@@ -117,7 +117,7 @@ namespace ProgramOptions
             unary %= SIGN >> (COUNT | NOTUPTODATE | UNSAT_RECOMMENDS) >> '(' >> SELECTOR >> ')';
             binary %= SIGN >> SUM >> '(' >> SELECTOR >> ',' >> ATTR >> ')';
             ternary %= SIGN >> ALIGNED >> '(' >> SELECTOR >> ',' >> ATTR >> ',' >> ATTR >> ')';
-            crits %= (unary | binary | ternary) > *(',' > (unary | binary | ternary)) > eoi;
+            crits %= lit("") > (unary | binary | ternary) > *(',' > (unary | binary | ternary)) > eoi;
 
             on_error<fail>
             (
