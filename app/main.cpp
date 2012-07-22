@@ -87,13 +87,13 @@ namespace ProgramOptions
         CritParser()
             : CritParser::base_type(crits)
         {
-            using qi::lexeme;
             using qi::lit;
-            using ascii::char_;
-            using boost::spirit::_val;
-            using boost::spirit::eoi;
-            using qi::on_error;
             using qi::fail;
+            using qi::lexeme;
+            using qi::on_error;
+            using ascii::char_;
+            using boost::spirit::eoi;
+            using boost::spirit::_val;
             using boost::phoenix::val;
             using boost::phoenix::construct;
 
