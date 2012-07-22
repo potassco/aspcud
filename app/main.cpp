@@ -28,6 +28,14 @@
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
 
+#include <boost/config/warning_disable.hpp>
+#include <boost/spirit/include/qi.hpp>
+#include <boost/spirit/include/phoenix_core.hpp>
+#include <boost/spirit/include/phoenix_operator.hpp>
+#include <boost/spirit/include/phoenix_object.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
+#include <boost/fusion/include/io.hpp>
+
 
 #define CUDF_EXECUTABLE "cudf"
 #define CUDF_USAGE "[options] [file]"
@@ -49,67 +57,141 @@ public:
 
 namespace ProgramOptions
 {
-	bool setCrit(char sign, int &crit, int prio)
-	{
-		if     (crit != 0)   { return false; }
-		else if(sign == '-') { crit = -prio; }
-		else if(sign == '+') { crit =  prio; }
-		else                 { return false; }
-		return true;
-	}
+    struct Crit
+    {
+        bool optimize;
+        unsigned measurement;
+        unsigned selector;
+        std::string attr1;
+        std::string attr2;
+    };
+}
+
+BOOST_FUSION_ADAPT_STRUCT(
+    ProgramOptions::Crit,
+    (bool, optimize)
+    (unsigned, measurement)
+    (unsigned, selector)
+    (std::string, attr1)
+    (std::string, attr2)
+)
+
+namespace ProgramOptions
+{
+    namespace qi = boost::spirit::qi;
+    namespace ascii = boost::spirit::ascii;
+
+    template <typename Iterator>
+    struct CritParser : qi::grammar<Iterator, std::vector<Crit>()>
+    {
+        CritParser()
+            : CritParser::base_type(crits)
+        {
+            using qi::lexeme;
+            using qi::lit;
+            using ascii::char_;
+            using boost::spirit::_val;
+            using boost::spirit::eoi;
+            using qi::on_error;
+            using qi::fail;
+            using boost::phoenix::val;
+            using boost::phoenix::construct;
+
+            SELECTOR = 
+                lit("solution") [ _val = 0 ] | 
+                lit("changed") [ _val = 1 ] |
+                lit("new") [ _val = 2 ] |
+                lit("removed") [ _val = 3 ] |
+                lit("up") [ _val = 4 ] |
+                lit("down") [ _val = 5 ];
+            SIGN = 
+                char_('+') [ _val = true ] |
+                char_('-') [ _val = false ];
+            COUNT = lit("count") [_val = 0];
+            SUM = lit("sum") [_val = 1];
+            NOTUPTODATE = lit("notuptodate") [_val = 2];
+            UNSAT_RECOMMENDS = lit("unsat_recommends") [_val = 3];
+            ALIGNED = lit("aligned") [_val = 4];
+            ATTR %= lexeme[char_('a', 'z') >> *char_("[a-z][0-9]\\-")];
+
+            unary %= SIGN >> (COUNT | NOTUPTODATE | UNSAT_RECOMMENDS) >> '(' >> SELECTOR >> ')';
+            binary %= SIGN >> SUM >> '(' >> SELECTOR >> ',' >> ATTR >> ')';
+            ternary %= SIGN >> ALIGNED >> '(' >> SELECTOR >> ',' >> ATTR >> ',' >> ATTR >> ')';
+            crits %= (unary | binary | ternary) > *(',' > (unary | binary | ternary)) > eoi;
+
+            on_error<fail>
+            (
+                crits,
+                std::cerr
+                    << val("Error: could not parse: ")
+                    << construct<std::string>(qi::_3, qi::_2)
+                    << val("\"")
+                    << std::endl
+            );        
+        }
+        qi::rule<Iterator, unsigned()> SELECTOR;
+        qi::rule<Iterator, bool()> SIGN;
+        qi::rule<Iterator, unsigned()> COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED;
+        qi::rule<Iterator, std::string()> ATTR; 
+
+        qi::rule<Iterator, Crit()> unary, binary, ternary;
+        qi::rule<Iterator, std::vector<Crit>()> crits;
+    };
 
 	template <>
 	bool parseValue(const std::string& s, Dependency::Criteria& criteria, double)
 	{
 		std::string lower = toLower(s);
+        std::vector<Crit> crits;
 		if(lower == "paranoid")
 		{
 			criteria.removed = -2;
 			criteria.changed = -1;
-		}
-		else if(lower == "trendy")
-		{
-			criteria.removed          = -4;
-			criteria.notuptodate      = -3;
-			criteria.unsat_recommends = -2;
-			criteria.newpkg           = -1;
+            crits.push_back(Crit());
+            crits.back().optimize = false;
+            crits.back().measurement = 0;
+            crits.back().selector = 3;
+            crits.push_back(Crit());
+            crits.back().optimize = false;
+            crits.back().measurement = 0;
+            crits.back().selector = 1;
 		}
 		else if(lower == "none") { }
-		else
-		{
-			std::vector<std::string> strs;
-			boost::split(strs, s, boost::is_any_of(","));
-			if(strs.empty()) { return false; }
-			int prio = 1;
-			foreach(const std::string &tok, strs | boost::adaptors::reversed)
-			{
-				if(tok.empty()) { return false; }
-				std::string sub = tok.substr(1);
-				if     (sub == "removed")          { if(!setCrit(tok[0], criteria.removed, prio))          { return false; } }
-				else if(sub == "new")              { if(!setCrit(tok[0], criteria.newpkg, prio))           { return false; } }
-				else if(sub == "changed")          { if(!setCrit(tok[0], criteria.changed, prio))          { return false; } }
-				else if(sub == "notuptodate")      { if(!setCrit(tok[0], criteria.notuptodate, prio))      { return false; } }
-				else if(sub == "unsat_recommends") { if(!setCrit(tok[0], criteria.unsat_recommends, prio)) { return false; } }
-				else
-				{
-					bool fail = true;
-					if (sub.size() > strlen("sum()") && boost::algorithm::starts_with(sub, "sum(") && *(sub.end() - 1) == ')')
-					{
-						std::string opt = sub.substr(strlen("sum("), sub.size() - strlen("sum()"));
-						if(tok[0] == '+')
-						{
-							fail = !criteria.optSize.insert(Dependency::Criteria::OptSizeMap::value_type(opt, prio)).second;
-						}
-						else if(tok[0] == '-')
-						{
-							fail = !criteria.optSize.insert(Dependency::Criteria::OptSizeMap::value_type(opt, -prio)).second;
-						}
-					}
-					if (fail) { return false; }
-				}
-				prio++;
-			}
-		}
+		else if (!qi::parse(lower.begin(), lower.end(), CritParser<std::string::iterator>(), crits))
+        {
+            return false; 
+        }
+        std::cerr << "criteria read: " << std::endl;
+        foreach(Crit &crit, crits)
+        {
+            std::cerr << "\t" << (crit.optimize ? "+" : "-");
+            switch (crit.measurement)
+            {
+                case 0: { std::cerr << "count("; break; }
+                case 1: { std::cerr << "sum("; break; }
+                case 2: { std::cerr << "notuptodate("; break; }
+                case 3: { std::cerr << "unsat_recommends("; break; }
+                case 4: { std::cerr << "aligned("; break; }
+            }
+            switch (crit.selector)
+            {
+                case 0: { std::cerr << "solution"; break; }
+                case 1: { std::cerr << "changed"; break; }
+                case 2: { std::cerr << "new"; break; }
+                case 3: { std::cerr << "removed"; break; }
+                case 4: { std::cerr << "up"; break; }
+                case 5: { std::cerr << "down"; break; }
+            }
+            if (!crit.attr1.empty())
+            {
+                std::cerr << "," << crit.attr1;
+            }
+            if (!crit.attr2.empty())
+            {
+                std::cerr << "," << crit.attr2;
+            }
+            std::cerr << ")" << std::endl;
+        }
 		return true;
 	}
 }
