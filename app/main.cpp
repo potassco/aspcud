@@ -43,32 +43,21 @@
 class CudfOptions : public AppOptions
 {
 public:
-	CudfOptions();
+    CudfOptions();
 
 private:
-	virtual void initOptions(ProgramOptions::OptionGroup& root, ProgramOptions::OptionGroup& hidden);
-	virtual void addDefaults(std::string& defaults);
-	virtual bool validateOptions(ProgramOptions::OptionValues&, Messages&);
+    virtual void initOptions(ProgramOptions::OptionGroup& root, ProgramOptions::OptionGroup& hidden);
+    virtual void addDefaults(std::string& defaults);
+    virtual bool validateOptions(ProgramOptions::OptionValues&, Messages&);
 
 public:
-	Dependency::Criteria criteria;
-	bool                 addAll;
+    Criteria criteria;
+    bool     addAll;
 };
 
-namespace ProgramOptions
-{
-    struct Crit
-    {
-        bool optimize;
-        unsigned measurement;
-        unsigned selector;
-        std::string attr1;
-        std::string attr2;
-    };
-}
-
-BOOST_FUSION_ADAPT_STRUCT(
-    ProgramOptions::Crit,
+BOOST_FUSION_ADAPT_STRUCT
+(
+    Criterion,
     (bool, optimize)
     (unsigned, measurement)
     (unsigned, selector)
@@ -82,7 +71,7 @@ namespace ProgramOptions
     namespace ascii = boost::spirit::ascii;
 
     template <typename Iterator>
-    struct CritParser : qi::grammar<Iterator, std::vector<Crit>()>
+    struct CritParser : qi::grammar<Iterator, Criteria::CritVec()>
     {
         CritParser()
             : CritParser::base_type(crits)
@@ -97,27 +86,27 @@ namespace ProgramOptions
             using boost::phoenix::val;
             using boost::phoenix::construct;
 
-            SELECTOR = 
-                lit("solution") [ _val = 0 ] | 
-                lit("changed") [ _val = 1 ] |
-                lit("new") [ _val = 2 ] |
-                lit("removed") [ _val = 3 ] |
-                lit("up") [ _val = 4 ] |
-                lit("down") [ _val = 5 ];
             SIGN = 
                 char_('+') [ _val = true ] |
                 char_('-') [ _val = false ];
-            COUNT = lit("count") [_val = 0];
-            SUM = lit("sum") [_val = 1];
-            NOTUPTODATE = lit("notuptodate") [_val = 2];
-            UNSAT_RECOMMENDS = lit("unsat_recommends") [_val = 3];
-            ALIGNED = lit("aligned") [_val = 4];
+            COUNT            = lit("count")            [ _val = Criterion::COUNT ];
+            SUM              = lit("sum")              [ _val = Criterion::SUM ];
+            NOTUPTODATE      = lit("notuptodate")      [ _val = Criterion::NOTUPTODATE ];
+            UNSAT_RECOMMENDS = lit("unsat_recommends") [ _val = Criterion::UNSAT_RECOMMENDS ];
+            ALIGNED          = lit("aligned")          [ _val = Criterion::ALIGNED ];
+            SELECTOR =
+                lit("solution") [ _val = Criterion::SOLUTION ] |
+                lit("changed")  [ _val = Criterion::CHANGED ] |
+                lit("new")      [ _val = Criterion::NEW ] |
+                lit("removed")  [ _val = Criterion::REMOVED ] |
+                lit("up")       [ _val = Criterion::UP ] |
+                lit("down")     [ _val = Criterion::DOWN ];
             ATTR %= lexeme[char_('a', 'z') >> *char_("[a-z][0-9]\\-")];
 
-            unary %= SIGN >> (COUNT | NOTUPTODATE | UNSAT_RECOMMENDS) >> '(' >> SELECTOR >> ')';
-            binary %= SIGN >> SUM >> '(' >> SELECTOR >> ',' >> ATTR >> ')';
+            unary   %= SIGN >> (COUNT | NOTUPTODATE | UNSAT_RECOMMENDS) >> '(' >> SELECTOR >> ')';
+            binary  %= SIGN >> SUM >> '(' >> SELECTOR >> ',' >> ATTR >> ')';
             ternary %= SIGN >> ALIGNED >> '(' >> SELECTOR >> ',' >> ATTR >> ',' >> ATTR >> ')';
-            crits %= lit("") > (unary | binary | ternary) > *(',' > (unary | binary | ternary)) > eoi;
+            crits   %= lit("") > (unary | binary | ternary) > *(',' > (unary | binary | ternary)) > eoi;
 
             on_error<fail>
             (
@@ -127,159 +116,127 @@ namespace ProgramOptions
                     << construct<std::string>(qi::_3, qi::_2)
                     << val("\"")
                     << std::endl
-            );        
+            );
         }
-        qi::rule<Iterator, unsigned()> SELECTOR;
+        qi::rule<Iterator, Criterion::Selector()> SELECTOR;
         qi::rule<Iterator, bool()> SIGN;
-        qi::rule<Iterator, unsigned()> COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED;
+        qi::rule<Iterator, Criterion::Measurement()> COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED;
         qi::rule<Iterator, std::string()> ATTR; 
 
-        qi::rule<Iterator, Crit()> unary, binary, ternary;
-        qi::rule<Iterator, std::vector<Crit>()> crits;
+        qi::rule<Iterator, Criterion()> unary, binary, ternary;
+        qi::rule<Iterator, Criteria::CritVec()> crits;
     };
 
-	template <>
-	bool parseValue(const std::string& s, Dependency::Criteria& criteria, double)
-	{
-		std::string lower = toLower(s);
-        std::vector<Crit> crits;
-		if(lower == "paranoid")
-		{
-			criteria.removed = -2;
-			criteria.changed = -1;
-            crits.push_back(Crit());
+    template <>
+    bool parseValue(const std::string& s, Criteria& criteria, double)
+    {
+        std::string lower = toLower(s);
+        Criteria::CritVec crits;
+        if(lower == "paranoid")
+        {
+            crits.push_back(Criterion());
             crits.back().optimize = false;
             crits.back().measurement = 0;
             crits.back().selector = 3;
-            crits.push_back(Crit());
+            crits.push_back(Criterion());
             crits.back().optimize = false;
             crits.back().measurement = 0;
             crits.back().selector = 1;
-		}
-		else if(lower == "none") { }
-		else if (!qi::parse(lower.begin(), lower.end(), CritParser<std::string::iterator>(), crits))
+        }
+        else if(lower == "none") { }
+        else if (!qi::parse(lower.begin(), lower.end(), CritParser<std::string::iterator>(), crits))
         {
             return false; 
         }
-        std::cerr << "criteria read: " << std::endl;
-        foreach(Crit &crit, crits)
-        {
-            std::cerr << "\t" << (crit.optimize ? "+" : "-");
-            switch (crit.measurement)
-            {
-                case 0: { std::cerr << "count("; break; }
-                case 1: { std::cerr << "sum("; break; }
-                case 2: { std::cerr << "notuptodate("; break; }
-                case 3: { std::cerr << "unsat_recommends("; break; }
-                case 4: { std::cerr << "aligned("; break; }
-            }
-            switch (crit.selector)
-            {
-                case 0: { std::cerr << "solution"; break; }
-                case 1: { std::cerr << "changed"; break; }
-                case 2: { std::cerr << "new"; break; }
-                case 3: { std::cerr << "removed"; break; }
-                case 4: { std::cerr << "up"; break; }
-                case 5: { std::cerr << "down"; break; }
-            }
-            if (!crit.attr1.empty())
-            {
-                std::cerr << "," << crit.attr1;
-            }
-            if (!crit.attr2.empty())
-            {
-                std::cerr << "," << crit.attr2;
-            }
-            std::cerr << ")" << std::endl;
-        }
-		return true;
-	}
+        criteria.init(crits);
+        return true;
+    }
 }
 
 CudfOptions::CudfOptions()
-	: addAll(false)
+    : addAll(false)
 {
 }
 
 void CudfOptions::addDefaults(std::string& defaults)
 {
-	defaults += "--criteria=none\n";
+    defaults += "--criteria=none\n";
 }
 
 void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions::OptionGroup& hidden)
 {
-	using namespace ProgramOptions;
-	OptionGroup prepro("Preprocessing Options");
-	prepro.addOptions()
-		("criteria,c", storeTo(criteria),
-			"Preprocess for specific optimization criteria\n"
-			"      Default: none\n"
-			"      Valid:   none, paranoid, trendy, -|+<crit>(,-|+<crit>)*\n"
-			"        <crit>: removed, new, changed, notuptodate, or unsat_recommends\n")
-		("addall", bool_switch(&addAll),
-			"Disable preprocessing and add all packages\n");
+    using namespace ProgramOptions;
+    OptionGroup prepro("Preprocessing Options");
+    prepro.addOptions()
+        ("criteria,c", storeTo(criteria),
+            "Preprocess for specific optimization criteria\n"
+            "      Default: none\n"
+            "      Valid:   none, paranoid, trendy, -|+<crit>(,-|+<crit>)*\n"
+            "        <crit>: removed, new, changed, notuptodate, or unsat_recommends\n")
+        ("addall", bool_switch(&addAll),
+            "Disable preprocessing and add all packages\n");
 
-	root.addOptions(prepro);
+    root.addOptions(prepro);
 }
 
 bool CudfOptions::validateOptions(ProgramOptions::OptionValues&, Messages&msg)
 {
-	if(generic.input.size() > 1)
-	{
-		msg.error = "at most one file may be given";
-		return false;
-	}
-	return true;
+    if(generic.input.size() > 1)
+    {
+        msg.error = "at most one file may be given";
+        return false;
+    }
+    return true;
 }
 
 bool parsePositional(const std::string&, std::string& out)
 {
-	out = "file";
-	return true;
+    out = "file";
+    return true;
 }
 
 int main(int argc, char *argv[])
 {
-	try
-	{
-		CudfOptions opts;
-		if(!opts.parse(argc, argv, parsePositional)) { throw std::runtime_error( opts.messages.error.c_str() ); }
-		if(opts.generic.help)
-		{
-			std::cout
-				<< CUDF_EXECUTABLE << " version " << CUDF_VERSION << "\n\n"
-				<< "Usage: " << CUDF_EXECUTABLE << " " << CUDF_USAGE << "\n"
-				<< opts.getHelp() << "\n"
-				<< "Usage: " << CUDF_EXECUTABLE << " " << CUDF_USAGE << "\n\n"
-				<< "Default commandline: \n"
-				<< "  " << CUDF_EXECUTABLE << " " << opts.getDefaults() << std::endl;
-			return EXIT_SUCCESS;
-		}
-		if(opts.generic.version)
-		{
-			std::cout
-				<< CUDF_EXECUTABLE << " " << CUDF_VERSION << "\n\n"
-				<< "Copyright (C) Roland Kaminski" << "\n"
-				<< "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n"
-				<< "Gringo is free software: you are free to change and redistribute it.\n"
-				<< "There is NO WARRANTY, to the extent permitted by law." << std::endl;
-			return EXIT_SUCCESS;
-		}
-		Dependency d(opts.criteria, opts.addAll, opts.generic.verbose > 0);
-		Parser p(d);
-		if(opts.generic.input.empty() || opts.generic.input.front() == "-") { p.parse(std::cin); }
-		else
-		{
-			std::ifstream in(opts.generic.input.front().c_str());
-			p.parse(in);
-		}
-		d.closure();
-		d.dumpAsFacts(std::cout);
-		return EXIT_SUCCESS;
-	}
-	catch(const std::exception& e)
-	{
-		std::cerr << "\nERROR: " << e.what() << std::endl;
-		return EXIT_FAILURE;
-	}
+    try
+    {
+        CudfOptions opts;
+        if(!opts.parse(argc, argv, parsePositional)) { throw std::runtime_error( opts.messages.error.c_str() ); }
+        if(opts.generic.help)
+        {
+            std::cout
+                << CUDF_EXECUTABLE << " version " << CUDF_VERSION << "\n\n"
+                << "Usage: " << CUDF_EXECUTABLE << " " << CUDF_USAGE << "\n"
+                << opts.getHelp() << "\n"
+                << "Usage: " << CUDF_EXECUTABLE << " " << CUDF_USAGE << "\n\n"
+                << "Default commandline: \n"
+                << "  " << CUDF_EXECUTABLE << " " << opts.getDefaults() << std::endl;
+            return EXIT_SUCCESS;
+        }
+        if(opts.generic.version)
+        {
+            std::cout
+                << CUDF_EXECUTABLE << " " << CUDF_VERSION << "\n\n"
+                << "Copyright (C) Roland Kaminski" << "\n"
+                << "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n"
+                << "Gringo is free software: you are free to change and redistribute it.\n"
+                << "There is NO WARRANTY, to the extent permitted by law." << std::endl;
+            return EXIT_SUCCESS;
+        }
+        Dependency d(opts.criteria, opts.addAll, opts.generic.verbose > 0);
+        Parser p(d);
+        if(opts.generic.input.empty() || opts.generic.input.front() == "-") { p.parse(std::cin); }
+        else
+        {
+            std::ifstream in(opts.generic.input.front().c_str());
+            p.parse(in);
+        }
+        d.closure();
+        d.dumpAsFacts(std::cout);
+        return EXIT_SUCCESS;
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << "\nERROR: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
 }

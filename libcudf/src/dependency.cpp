@@ -174,6 +174,8 @@ void Package::doAdd(Dependency *dep)
 	{
 		foreach(Entity *ent, clause) { ent->add(dep); }
 	}
+    // TODO: fixme!!!
+    /*
 	if (dep->criteria.unsat_recommends < 0)
 	{
 		foreach(EntityList &clause, recommends)
@@ -186,6 +188,7 @@ void Package::doAdd(Dependency *dep)
 	{
 		dep->addMaxVersion(name, this);
 	}
+    */
 }
 
 void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
@@ -209,6 +212,7 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
 		out << "conflict(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
 	}
 	// recommends(VP,D)
+    /*
 	if ((dep->addAll() || dep->criteria.unsat_recommends) != 0 && !recommends.empty())
 	{
 		typedef std::map<uint32_t, uint32_t> OccurMap;
@@ -226,6 +230,7 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
 		}
 
 	}
+    */
 	// attributes(VP,K,V)
 	if (!intProps.empty())
 	{
@@ -294,16 +299,23 @@ void Request::add(Dependency *dep)
 	foreach(Entity *ent, requests) { ent->add(dep); }
 }
 
-//////////////////// Dependency ////////////////////
-
-Dependency::Criteria::Criteria()
-	: removed(0)
-	, newpkg(0)
-	, changed(0)
-	, unsat_recommends(0)
-	, notuptodate(0)
+//////////////////// Criteria ////////////////////
+	
+Criteria::Criteria()
 {
 }
+
+void Criteria::init(CritVec &vec)
+{
+    std::swap(criteria, vec);
+    foreach(Criterion &crit, criteria)
+    {
+        if (!crit.attr1.empty()) { optProps.push_back(crit.attr1); }
+        if (!crit.attr2.empty()) { optProps.push_back(crit.attr2); }
+    }
+}
+
+//////////////////// Dependency ////////////////////
 
 Dependency::Dependency(const Criteria &criteria, bool addAll, bool verbose)
 	: criteria(criteria)
@@ -448,6 +460,8 @@ void Dependency::rewriteRequests()
 
 void Dependency::initClosure()
 {
+    // TODO: FIXME
+    /*
 	foreach(Request &request, upgrade_) { request.add(this); }
 	foreach(Request &request, install_) { request.add(this); }
 	foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
@@ -527,6 +541,7 @@ void Dependency::initClosure()
 			}
 		}
 	}
+    */
 }
 
 void Dependency::closure()
@@ -632,11 +647,16 @@ void Dependency::dumpAsFacts(std::ostream &out)
 				if (!max || max->version < pkg->version) { max = pkg; }
 			}
 		}
+        // TODO: FIXME
+        /*
 		if ((addAll_ || criteria.notuptodate != 0) && visited && max)
 		{
 			out << "newestversion(\"" << string(max->name) << "\"," << max->version << ").\n";
 		}
+        */
 	}
+    // TODO: FIXME
+    /*
 	if (criteria.changed)          { out << "criterion(change," << criteria.changed << ").\n"; }
 	if (criteria.removed)          { out << "criterion(remove," << criteria.removed << ").\n"; }
 	if (criteria.newpkg)           { out << "criterion(newpackage," << criteria.newpkg << ").\n"; }
@@ -646,4 +666,5 @@ void Dependency::dumpAsFacts(std::ostream &out)
 	{
 		out << "criterion(sum(\"" << val.first << "\")," << val.second << ").\n";
 	}
+    */
 }

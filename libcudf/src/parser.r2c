@@ -30,6 +30,11 @@ Parser::Type::Type(uint32_t type)
 	: type(type)
 { }
 
+bool Parser::Type::stringType() const
+{
+	return type == PARSER_FEEDBACK_STRING;
+}
+
 bool Parser::Type::intType() const
 {
 	return
@@ -95,9 +100,9 @@ Parser::Parser(Dependency &dep)
 	addType(removeStr_,  PARSER_FEEDBACK_VPKGLIST) = pkgList;
 	addType(upgradeStr_, PARSER_FEEDBACK_VPKGLIST) = pkgList;
 
-	BOOST_FOREACH (Dependency::Criteria::OptSizeMap::value_type &val, dep_.criteria.optSize)
+	BOOST_FOREACH (std::string &str, dep_.criteria.optProps)
 	{
-		optSize_.push_back(dep_.index(val.first));
+		optProps_.push_back(dep_.index(str));
 	}
 }
 

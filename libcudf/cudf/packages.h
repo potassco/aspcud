@@ -47,6 +47,7 @@ namespace Cudf
 	struct Package
 	{
 		typedef std::map<uint32_t, int32_t> IntPropMap;
+		typedef std::map<uint32_t, uint32_t> StringPropMap;
 		enum Keep { VERSION, PACKAGE, FEATURE, NONE };
 
 		Package(uint32_t name = std::numeric_limits<uint32_t>::max(), int32_t version = 0)
@@ -60,13 +61,14 @@ namespace Cudf
 
 		uint32_t      name;
 		int32_t       version;
-		PkgList       conflicts;  // default empty
-		PkgFormula    depends;    // default true
-		PkgFormula    recommends; // default empty
-		PkgList       provides;   // default empty
-		Keep          keep;       // default NONE
-		bool          installed;  // default false
-		IntPropMap    intProps;   // default empty
+		PkgList       conflicts;   // default empty
+		PkgFormula    depends;     // default true
+		PkgFormula    recommends;  // default empty
+		PkgList       provides;    // default empty
+		Keep          keep;        // default NONE
+		bool          installed;   // default false
+		IntPropMap    intProps;    // default empty
+		StringPropMap stringProps; // default empty
 	};
 
 	struct Request

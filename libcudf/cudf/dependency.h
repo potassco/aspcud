@@ -29,6 +29,7 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <iostream>
 #include <map>
+#include <set>
 
 #define CUDF_VERSION "0.9.0"
 
@@ -73,6 +74,7 @@ struct Package : public Entity
 {
 	typedef Cudf::Package::Keep Keep;
 	typedef std::vector<std::pair<uint32_t, int32_t> > IntPropMap;
+	typedef std::vector<std::pair<uint32_t, uint32_t> > StringPropMap;
 
 	Package(const Cudf::Package &pkg);
 	void dumpAsFacts(Dependency *dep, std::ostream &out);
@@ -116,25 +118,37 @@ struct Request
 
 };
 
+struct Criterion
+{
+	enum Selector { SOLUTION, CHANGED, NEW, REMOVED, UP, DOWN };
+	enum Measurement { COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED };
+	bool optimize;
+	unsigned measurement;
+	unsigned selector;
+	std::string attr1;
+	std::string attr2;
+};
+
+struct Criteria
+{
+	typedef std::vector<std::string> OptProps;
+	typedef std::map<std::string, int> OptSizeMap;
+	typedef std::map<std::string, std::string> OptNumMap;
+	typedef std::vector<Criterion> CritVec;
+	
+	Criteria();
+	void init(CritVec &vec);
+
+	CritVec criteria;
+	OptProps optProps;
+};
+
 class Dependency
 {
 public:
 	typedef boost::unordered_map<uint32_t, EntityList>  EntityMap;
 	typedef std::vector<Request>                        RequestList;
 	typedef boost::unordered_map<PackageList, uint32_t> ClauseMap;
-	struct Criteria
-	{
-		typedef std::map<std::string, int> OptSizeMap;
-
-		Criteria();
-
-		int        removed;
-		int        newpkg;
-		int        changed;
-		int        unsat_recommends;
-		int        notuptodate;
-		OptSizeMap optSize;
-	};
 
 private:
 	typedef boost::ptr_vector<Package>    PackageSet;

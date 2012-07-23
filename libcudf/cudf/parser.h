@@ -49,6 +49,7 @@ public:
 	{
 		Type(uint32_t type);
 		bool intType() const;
+		bool stringType() const;
 
 		uint32_t    type;
 		Cudf::Value value;
@@ -168,13 +169,23 @@ public:
 
 		if (!dep_.addAll())
 		{
-			BOOST_FOREACH (uint32_t name, optSize_)
+			BOOST_FOREACH (uint32_t name, optProps_)
 			{
-				if (typeMap_.find(name) != typeMap_.end())
+				TypeMap::iterator it = typeMap_.find(name);
+				if (it != typeMap_.end())
 				{
-					int32_t value;
-					getProp(name, value);
-					pkg.intProps.insert(Package::IntPropMap::value_type(name, value));
+					if (it->second.intType())
+					{
+						int32_t value;
+						getProp(name, value);
+						pkg.intProps.insert(Package::IntPropMap::value_type(name, value));
+					}
+					else if (it->second.stringType())
+					{
+						uint32_t value;
+						getProp(name, value);
+						pkg.stringProps.insert(Package::StringPropMap::value_type(name, value));
+					}
 				}
 			}
 		}
@@ -187,6 +198,12 @@ public:
 					int32_t value;
 					getProp(val.first, value);
 					pkg.intProps.insert(Package::IntPropMap::value_type(val.first, value));
+				}
+				if (val.second.stringType())
+				{
+					uint32_t value;
+					getProp(val.first, value);
+					pkg.stringProps.insert(Package::StringPropMap::value_type(val.first, value));
 				}
 			}
 		}
@@ -204,34 +221,34 @@ private:
 	typedef boost::unordered_map<uint32_t, Type>        TypeMap;
 	typedef boost::unordered_map<uint32_t, Cudf::Value> PropMap;
 	typedef std::vector<uint32_t>                       EnumValues;
-	typedef std::vector<uint32_t>                       OptSizeVec;
+	typedef std::vector<uint32_t>                       OptPropVec;
 
-	Dependency      &dep_;
-	Cudf::Document  *doc_;
-	void            *parser_;
-	Token            token_;
-	bool             lexString_;
-	uint32_t         shiftToken_;
+	Dependency     &dep_;
+	Cudf::Document *doc_;
+	void           *parser_;
+	Token           token_;
+	bool            lexString_;
+	uint32_t        shiftToken_;
 
-	OptSizeVec       optSize_;
-	TypeMap          typeMap_;
-	PropMap          propMap_;
+	OptPropVec      optProps_;
+	TypeMap         typeMap_;
+	PropMap         propMap_;
 
-	uint32_t         versionStr_;
-	uint32_t         conflictsStr_;
-	uint32_t         dependsStr_;
-	uint32_t         recommendsStr_;
-	uint32_t         providesStr_;
-	uint32_t         keepStr_;
-	uint32_t         installedStr_;
-	uint32_t         installStr_;
-	uint32_t         removeStr_;
-	uint32_t         upgradeStr_;
-	uint32_t         packageStr_;
-	uint32_t         featureStr_;
-	uint32_t         noneStr_;
-	uint32_t         trueStr_;
-	uint32_t         falseStr_;
+	uint32_t        versionStr_;
+	uint32_t        conflictsStr_;
+	uint32_t        dependsStr_;
+	uint32_t        recommendsStr_;
+	uint32_t        providesStr_;
+	uint32_t        keepStr_;
+	uint32_t        installedStr_;
+	uint32_t        installStr_;
+	uint32_t        removeStr_;
+	uint32_t        upgradeStr_;
+	uint32_t        packageStr_;
+	uint32_t        featureStr_;
+	uint32_t        noneStr_;
+	uint32_t        trueStr_;
+	uint32_t        falseStr_;
 
 public:
 	Cudf::PackageRef pkgRef;
