@@ -43,155 +43,159 @@ typedef std::vector<EntityList> EntityFormula;
 typedef std::vector<Feature*>   FeatureList;
 typedef std::vector<Package*>   PackageList;
 
+struct Criterion
+{
+    enum Selector { SOLUTION, CHANGED, NEW, REMOVED, UP, DOWN };
+    enum Measurement { COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED };
+    bool optimize;
+    Measurement measurement;
+    Selector selector;
+    std::string attr1;
+    std::string attr2;
+    uint32_t attrUid1;
+    uint32_t attrUid2;
+};
+
+struct Criteria
+{
+    typedef std::vector<uint32_t> OptProps;
+    typedef std::vector<Criterion> CritVec;
+
+    Criteria();
+    void init(Dependency *dep, CritVec &vec);
+
+    CritVec criteria;
+    OptProps optProps;
+};
+
 struct Entity
 {
-	Entity(uint32_t name, int32_t version, bool installed = false);
-	bool operator<(const Entity &ent) const;
-	bool operator==(const Entity &ent) const;
-	void remove(Dependency *dep);
-	void add(Dependency *dep);
+    Entity(uint32_t name, int32_t version, bool installed = false);
+    bool operator<(const Entity &ent) const;
+    bool operator==(const Entity &ent) const;
+    void remove(Dependency *dep);
+    void add(Dependency *dep);
 
-	uint32_t addClause();
-	virtual void doAdd(Dependency *dep) = 0;
-	virtual void dumpAsFacts(Dependency *dep, std::ostream &out) = 0;
-	virtual void addToClause(PackageList &clause, Package *self = 0) = 0;
-	bool allVersions() const;
+    uint32_t addClause();
+    virtual void doAdd(Dependency *dep) = 0;
+    virtual void dumpAsFacts(Dependency *dep, std::ostream &out) = 0;
+    virtual void addToClause(PackageList &clause, Package *self = 0) = 0;
+    bool allVersions() const;
 
-	virtual ~Entity() = 0;
+    virtual ~Entity() = 0;
 
-	uint32_t name;
-	int32_t  version;
-	bool     visited;
-	bool     installed;
+    uint32_t name;
+    int32_t  version;
+    bool     visited;
+    bool     installed;
 
 protected:
-	virtual void doRemove(Dependency *dep) = 0;
+    virtual void doRemove(Dependency *dep) = 0;
 
-	bool remove_;
+    bool remove_;
 };
 
 struct Package : public Entity
 {
-	typedef Cudf::Package::Keep Keep;
-	typedef std::vector<std::pair<uint32_t, int32_t> > IntPropMap;
-	typedef std::vector<std::pair<uint32_t, uint32_t> > StringPropMap;
+    typedef Cudf::Package::Keep Keep;
+    typedef std::map<uint32_t, int32_t> IntPropMap;
+    typedef std::map<uint32_t, uint32_t> StringPropMap;
 
-	Package(const Cudf::Package &pkg);
-	void dumpAsFacts(Dependency *dep, std::ostream &out);
-	void addToClause(PackageList &clause, Package *self = 0);
-	void doAdd(Dependency *dep);
+    Package(const Cudf::Package &pkg);
+    void dumpAsFacts(Dependency *dep, std::ostream &out);
+    void addToClause(PackageList &clause, Package *self = 0);
+    bool satisfies(EntityList &list, Criterion::Selector sel);
+    bool satisfies(Dependency *dep, EntityList &list, Criterion &crit);
+    bool satisfies(EntityList &list, bool optimize, Criterion::Selector sel);
+    uint32_t getProp(uint32_t uid) const;
+    void doAdd(Dependency *dep);
 
-	EntityList    conflicts;
-	EntityFormula depends;
-	EntityFormula recommends;
-	FeatureList   provides;
-	Keep          keep;
-	IntPropMap    intProps;
+    EntityList    conflicts;
+    EntityFormula depends;
+    EntityFormula recommends;
+    FeatureList   provides;
+    Keep          keep;
+    IntPropMap    intProps;
+    StringPropMap stringProps;
 
 protected:
-	void doRemove(Dependency *dep);
-
+    void doRemove(Dependency *dep);
 };
 
 struct Feature : public Entity
 {
-	Feature(const Cudf::PackageRef &ftr);
-	void dumpAsFacts(Dependency *dep, std::ostream &out);
-	void addToClause(PackageList &clause, Package *self = 0);
-	void doAdd(Dependency *dep);
+    Feature(const Cudf::PackageRef &ftr);
+    void dumpAsFacts(Dependency *dep, std::ostream &out);
+    void addToClause(PackageList &clause, Package *self = 0);
+    void doAdd(Dependency *dep);
 
-	PackageList providedBy;
+    PackageList providedBy;
 
 protected:
-	void doRemove(Dependency *dep);
+    void doRemove(Dependency *dep);
 };
 
 size_t hash_value(const Feature &ftr);
 
 struct Request
 {
-	Request(uint32_t name);
-	void add(Dependency *dep);
+    Request(uint32_t name);
+    void add(Dependency *dep);
 
-	uint32_t   name;
-	EntityList requests;
-
-};
-
-struct Criterion
-{
-	enum Selector { SOLUTION, CHANGED, NEW, REMOVED, UP, DOWN };
-	enum Measurement { COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED };
-	bool optimize;
-	unsigned measurement;
-	unsigned selector;
-	std::string attr1;
-	std::string attr2;
-};
-
-struct Criteria
-{
-	typedef std::vector<std::string> OptProps;
-	typedef std::map<std::string, int> OptSizeMap;
-	typedef std::map<std::string, std::string> OptNumMap;
-	typedef std::vector<Criterion> CritVec;
-	
-	Criteria();
-	void init(CritVec &vec);
-
-	CritVec criteria;
-	OptProps optProps;
+    uint32_t   name;
+    EntityList requests;
 };
 
 class Dependency
 {
 public:
-	typedef boost::unordered_map<uint32_t, EntityList>  EntityMap;
-	typedef std::vector<Request>                        RequestList;
-	typedef boost::unordered_map<PackageList, uint32_t> ClauseMap;
-
+    typedef boost::unordered_map<uint32_t, EntityList>  EntityMap;
+    typedef std::vector<Request>                        RequestList;
+    typedef boost::unordered_map<PackageList, uint32_t> ClauseMap;
+    friend class Package;
 private:
-	typedef boost::ptr_vector<Package>    PackageSet;
-	typedef boost::unordered_set<Feature> FeatureSet;
-	typedef boost::multi_index::multi_index_container
-	<
-		std::string, boost::multi_index::indexed_by
-		<
-			boost::multi_index::random_access<>,
-			boost::multi_index::hashed_unique<boost::multi_index::identity<std::string> >
-		>
-	> StringSet;
+    typedef boost::ptr_vector<Package>    PackageSet;
+    typedef boost::unordered_set<Feature> FeatureSet;
+    typedef boost::multi_index::multi_index_container
+    <
+        std::string, boost::multi_index::indexed_by
+        <
+            boost::multi_index::random_access<>,
+            boost::multi_index::hashed_unique<boost::multi_index::identity<std::string> >
+        >
+    > StringSet;
+    typedef boost::unordered_map<std::pair<std::pair<uint32_t, uint32_t>, uint32_t>, std::set<uint32_t> > AlignedMap;
 
 public:
-	Dependency(const Criteria &criteria, bool addAll, bool verbose = true);
-	uint32_t index(const std::string &s);
-	uint32_t index(const char *s);
-	const std::string &string(uint32_t index);
-	void init(const Cudf::Document &doc);
-	void closure();
-	void add(Entity *ent);
-	void addMaxVersion(uint32_t name, Package *reason = 0);
-	uint32_t addClause(PackageList &list, std::ostream &out);
-	void dumpAsFacts(std::ostream &out);
-	bool addAll() const;
+    Dependency(Criteria::CritVec &crits, bool addAll, bool verbose = true);
+    uint32_t index(const std::string &s);
+    uint32_t index(const char *s);
+    const std::string &string(uint32_t index);
+    void init(const Cudf::Document &doc);
+    void closure();
+    void add(Entity *ent);
+    uint32_t addClause(PackageList &list, std::ostream &out);
+    void dumpAsFacts(std::ostream &out);
+    bool addAll() const;
 
 private:
-	void initClosure();
-	void rewriteRequests();
+    void initClosure();
+    void rewriteRequests();
 
 public:
-	Criteria    criteria;
+    Criteria    criteria;
 
 private:
-	StringSet   strings_;
-	PackageSet  packages_;
-	FeatureSet  features_;
-	EntityMap   entityMap_;
-	EntityList  remove_;
-	RequestList install_;
-	RequestList upgrade_;
-	EntityList  closure_;
-	ClauseMap   clauses_;
-	bool        verbose_;
-	bool        addAll_;
+    StringSet   strings_;
+    PackageSet  packages_;
+    FeatureSet  features_;
+    EntityMap   entityMap_;
+    EntityList  remove_;
+    RequestList install_;
+    RequestList upgrade_;
+    EntityList  closure_;
+    ClauseMap   clauses_;
+    AlignedMap  aligned_;
+    bool        verbose_;
+    bool        addAll_;
 };

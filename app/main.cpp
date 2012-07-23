@@ -51,16 +51,16 @@ private:
     virtual bool validateOptions(ProgramOptions::OptionValues&, Messages&);
 
 public:
-    Criteria criteria;
-    bool     addAll;
+	Criteria::CritVec crits;
+    bool              addAll;
 };
 
 BOOST_FUSION_ADAPT_STRUCT
 (
     Criterion,
     (bool, optimize)
-    (unsigned, measurement)
-    (unsigned, selector)
+    (Criterion::Measurement, measurement)
+    (Criterion::Selector, selector)
     (std::string, attr1)
     (std::string, attr2)
 )
@@ -128,27 +128,25 @@ namespace ProgramOptions
     };
 
     template <>
-    bool parseValue(const std::string& s, Criteria& criteria, double)
+    bool parseValue(const std::string& s, Criteria::CritVec& crits, int)
     {
         std::string lower = toLower(s);
-        Criteria::CritVec crits;
         if(lower == "paranoid")
         {
             crits.push_back(Criterion());
             crits.back().optimize = false;
-            crits.back().measurement = 0;
-            crits.back().selector = 3;
+            crits.back().measurement = Criterion::COUNT;
+            crits.back().selector = Criterion::REMOVED;
             crits.push_back(Criterion());
             crits.back().optimize = false;
-            crits.back().measurement = 0;
-            crits.back().selector = 1;
+            crits.back().measurement = Criterion::COUNT;
+            crits.back().selector = Criterion::CHANGED;
         }
         else if(lower == "none") { }
         else if (!qi::parse(lower.begin(), lower.end(), CritParser<std::string::iterator>(), crits))
         {
             return false; 
         }
-        criteria.init(crits);
         return true;
     }
 }
@@ -168,7 +166,7 @@ void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions:
     using namespace ProgramOptions;
     OptionGroup prepro("Preprocessing Options");
     prepro.addOptions()
-        ("criteria,c", storeTo(criteria),
+        ("criteria,c", storeTo(crits),
             "Preprocess for specific optimization criteria\n"
             "      Default: none\n"
             "      Valid:   none, paranoid, trendy, -|+<crit>(,-|+<crit>)*\n"
@@ -222,7 +220,7 @@ int main(int argc, char *argv[])
                 << "There is NO WARRANTY, to the extent permitted by law." << std::endl;
             return EXIT_SUCCESS;
         }
-        Dependency d(opts.criteria, opts.addAll, opts.generic.verbose > 0);
+        Dependency d(opts.crits, opts.addAll, opts.generic.verbose > 0);
         Parser p(d);
         if(opts.generic.input.empty() || opts.generic.input.front() == "-") { p.parse(std::cin); }
         else

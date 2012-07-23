@@ -100,9 +100,9 @@ Parser::Parser(Dependency &dep)
 	addType(removeStr_,  PARSER_FEEDBACK_VPKGLIST) = pkgList;
 	addType(upgradeStr_, PARSER_FEEDBACK_VPKGLIST) = pkgList;
 
-	BOOST_FOREACH (std::string &str, dep_.criteria.optProps)
+	BOOST_FOREACH (uint32_t uid, dep_.criteria.optProps)
 	{
-		optProps_.push_back(dep_.index(str));
+		optProps_.push_back(uid);
 	}
 }
 
