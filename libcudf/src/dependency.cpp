@@ -169,7 +169,58 @@ void Package::doRemove(Dependency *)
 {
 }
 
-bool Package::satisfies(EntityList &list, Criterion::Selector sel)
+bool Package::mightSatisfy(EntityList &list, Criterion::Selector sel)
+{
+    // Note: check if the package can satisfy a criterion
+    // considering if it has been pulled into the closure
+    // or if it has been explicitely deleted
+    bool installable = visited && !remove_;
+    switch(sel)
+    {
+        case Criterion::SOLUTION: { return installable; }
+        case Criterion::CHANGED:  { return installed || installable; }
+        case Criterion::NEW:
+        {
+            foreach (Entity *ent, list)
+            {
+                if (dynamic_cast<Package*>(ent) && ent->installed) { return false; }
+            }
+            return installable;
+        }
+        case Criterion::REMOVED:
+        {
+            foreach (Entity *ent, list)
+            {
+                if (dynamic_cast<Package*>(ent) && ent->installed) { return true; }
+            }
+            return false; 
+        }
+        case Criterion::UP:
+        {
+            foreach (Entity *ent, list)
+            {
+                if (dynamic_cast<Package*>(ent) && ent->version >= version && ent->installed)
+                {
+                    return false;
+                }
+            }
+            return installable;
+        }
+        case Criterion::DOWN:    
+        {
+            foreach (Entity *ent, list)
+            {
+                if (dynamic_cast<Package*>(ent) && ent->version <= version && ent->installed)
+                {
+                    return false;
+                }
+            }
+            return installable; 
+        }
+    }
+}
+
+bool Package::installSatisfies(EntityList &list, Criterion::Selector sel)
 {
     // Note: check if installing the package would satisfy the selector
     switch(sel)
@@ -305,7 +356,7 @@ void Package::doAdd(Dependency *dep)
         }
         foreach (Criterion &crit, dep->criteria.criteria)
         {
-            if (crit.measurement == Criterion::UNSAT_RECOMMENDS && !crit.optimize && satisfies(dep->entityMap_[name], crit.selector))
+            if (crit.measurement == Criterion::UNSAT_RECOMMENDS && !crit.optimize && installSatisfies(dep->entityMap_[name], crit.selector))
             {
                 foreach(EntityList &clause, recommends)
                 {
@@ -702,7 +753,7 @@ void Dependency::dumpAsFacts(std::ostream &out)
             }
         }
     }
-    // TODO: fix the blub conditions ...
+    // additional attributes
     foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
     {
         foreach(Entity *ent, list)
@@ -710,15 +761,17 @@ void Dependency::dumpAsFacts(std::ostream &out)
             Package *pkg = dynamic_cast<Package*>(ent);
             if(pkg)
             {
-                bool addedUnsatRecom = false;
+                bool addedRecom = false;
+                std::set<uint32_t> addedAttr;
                 foreach (Criterion &crit, criteria.criteria)
                 {
                     if (crit.measurement == Criterion::UNSAT_RECOMMENDS)
                     {
                         // recommends(VP,D)
-                        bool blub = true;
-                        if (!addedUnsatRecom && !pkg->recommends.empty() && (addAll_ || blub))
+                        bool relevant = !pkg->recommends.empty();
+                        if (!addedRecom && relevant && (addAll_ || pkg->mightSatisfy(list, crit.selector)))
                         {
+                            addedRecom = true;
                             typedef std::map<uint32_t, uint32_t> OccurMap;
                             OccurMap occur;
                             foreach(EntityList &clause, pkg->recommends)
@@ -736,23 +789,21 @@ void Dependency::dumpAsFacts(std::ostream &out)
                     }
                     else if (crit.measurement == Criterion::ALIGNED)
                     {
-                        // TODO: add align attributes
-                        bool blub = true;
-                        // TODO: check to not print out an attribute twice ...
-                        if (blub)
+                        // attributes(VP,K,V)
+                        bool relevant = aligned_[std::make_pair(std::make_pair(crit.attrUid1, crit.attrUid2), pkg->getProp(crit.attrUid1))].size() > 1;
+                        if (relevant && (addAll_ || pkg->mightSatisfy(list, crit.selector)))
                         {
-                            pkg->dumpAttr(this, out, crit.attrUid1);
-                            pkg->dumpAttr(this, out, crit.attrUid2);
+                            if (addedAttr.insert(crit.attrUid1).second) { pkg->dumpAttr(this, out, crit.attrUid1); }
+                            if (addedAttr.insert(crit.attrUid2).second) { pkg->dumpAttr(this, out, crit.attrUid2); }
                         }
                     }
                     else if (crit.measurement == Criterion::SUM && pkg->visited)
                     {
                         // attributes(VP,K,V)
-                        bool blub = true;
-                        // TODO: check to not print out an attribute twice ...
-                        if (blub)
+                        bool relevant = pkg->intProps[crit.attrUid1] != 0;
+                        if (relevant && (addAll_ || pkg->mightSatisfy(list, crit.selector)))
                         {
-                            pkg->dumpAttr(this, out, crit.attrUid1);
+                            if (addedAttr.insert(crit.attrUid1).second) { pkg->dumpAttr(this, out, crit.attrUid1); }
                         }
                     }
                 }

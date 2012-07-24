@@ -105,7 +105,8 @@ struct Package : public Entity
     void dumpAsFacts(Dependency *dep, std::ostream &out);
     void dumpAttr(Dependency *dep, std::ostream &out, unsigned uid);
     void addToClause(PackageList &clause, Package *self = 0);
-    bool satisfies(EntityList &list, Criterion::Selector sel);
+    bool mightSatisfy(EntityList &list, Criterion::Selector sel);
+    bool installSatisfies(EntityList &list, Criterion::Selector sel);
     bool satisfies(Dependency *dep, EntityList &list, Criterion &crit);
     bool satisfies(EntityList &list, bool optimize, Criterion::Selector sel);
     uint32_t getProp(uint32_t uid) const;
