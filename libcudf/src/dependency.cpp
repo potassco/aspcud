@@ -350,6 +350,20 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
     }
 }
 
+void Package::dumpAttr(Dependency *dep, std::ostream &out, unsigned uid)
+{
+    out << "attribute(\"" << dep->string(name) << "\"," << version << ",\"" << dep->string(uid) << "\",";
+    IntPropMap::const_iterator it = intProps.find(uid);
+    if (it != intProps.end()) { out << it->second; }
+    else
+    {
+        StringPropMap::const_iterator jt = stringProps.find(uid);
+        // Note: we do not care for the value at all
+        if (jt != stringProps.end()) { out << jt->second; }
+    }
+    out << ").\n";
+}
+
 void Package::addToClause(PackageList &clause, Package *self)
 {
     if (!remove_ && this != self) { clause.push_back(this); }
@@ -723,6 +737,13 @@ void Dependency::dumpAsFacts(std::ostream &out)
                     else if (crit.measurement == Criterion::ALIGNED)
                     {
                         // TODO: add align attributes
+                        bool blub = true;
+                        // TODO: check to not print out an attribute twice ...
+                        if (blub)
+                        {
+                            pkg->dumpAttr(this, out, crit.attrUid1);
+                            pkg->dumpAttr(this, out, crit.attrUid2);
+                        }
                     }
                     else if (crit.measurement == Criterion::SUM && pkg->visited)
                     {
@@ -731,7 +752,7 @@ void Dependency::dumpAsFacts(std::ostream &out)
                         // TODO: check to not print out an attribute twice ...
                         if (blub)
                         {
-                            out << "attribute(\"" << string(pkg->name) << "\"," << pkg->version << ",\"" << crit.attr1 << "\"," << pkg->intProps[crit.attrUid1] << ").\n";
+                            pkg->dumpAttr(this, out, crit.attrUid1);
                         }
                     }
                 }
