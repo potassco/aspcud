@@ -62,22 +62,22 @@
         \end{itemize}
       \item Measurements
         \begin{itemize}
-          \item $\mathrm{init}({-}\mathit{count}(X))=X^{-}$
-          \item $\mathrm{init}({+}\mathit{count}(X))=X^{+}$
-          \item $\mathrm{init}({-}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}>0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}<0\}$
-          \item $\mathrm{init}({+}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}<0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}>0\}$
-          \item $\mathrm{init}({-}\mathit{notuptodate}(X))=\{p\in X^{-}\mid p.\mathrm{version}=\max(P.\mathrm{version}(p))\}$
-          \item $\mathrm{init}({+}\mathit{notuptodate}(X))=\{p\in X^{+}\mid p.\mathrm{version}\not=\max(P.\mathrm{version}(p))\}$
-          \item $\mathrm{init}({-}\mathit{unsat\_recommends}(X))=\{p\in X^{-}\mid p.\mathrm{recommends}\neq\emptyset\}$
-          \item $\mathrm{init}({+}\mathit{unsat\_recommends}(X))=\{p\in X^{+}\mid p.\mathrm{recommends}\neq\emptyset\}$
-          \item $\mathrm{init}({-}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{-}\mid q\in P, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
-          \item $\mathrm{init}({+}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{+}\mid q\in P, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
+          \item $\mathrm{init}({-}\mathit{count}(X))=X^{-}\backslash\mathcal{R}$
+          \item $\mathrm{init}({+}\mathit{count}(X))=X^{+}\backslash\mathcal{R}$
+          \item $\mathrm{init}({-}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}>0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}<0\}\backslash\mathcal{R}$
+          \item $\mathrm{init}({+}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}<0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}>0\}\backslash\mathcal{R}$
+          \item $\mathrm{init}({-}\mathit{notuptodate}(X))=\{p\in X^{-}\mid p.\mathrm{version}=\max(P.\mathrm{version}(p))\}\backslash\mathcal{R}$
+          \item $\mathrm{init}({+}\mathit{notuptodate}(X))=\{p\in X^{+}\mid p.\mathrm{version}\not=\max(P.\mathrm{version}(p))\}\backslash\mathcal{R}$
+          \item $\mathrm{init}({-}\mathit{unsat\_recommends}(X))=\{p\in X^{-}\mid p.\mathrm{recommends}\neq\emptyset\}\backslash\mathcal{R}$
+          \item $\mathrm{init}({+}\mathit{unsat\_recommends}(X))=\{p\in X^{+}\mid p.\mathrm{recommends}\neq\emptyset\}\backslash\mathcal{R}$
+          \item $\mathrm{init}({-}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{-}\mid q\in P, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}\backslash\mathcal{R}$
+          \item $\mathrm{init}({+}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{+}\mid q\in P, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}\backslash\mathcal{R}$
         \end{itemize}
     \end{itemize}
   \item Closure calculation
     \begin{itemize}
-      \item $p\in \mathcal{C}$ and ${-}\mathit{unsat\_recommends}(X)$ and $p.\mathrm{installMightSatisfy}(X)$ implies $p.\mathrm{recommends}\subseteq\mathcal{C}$
-      \item $p\in \mathcal{C}$ implies $p.\mathrm{depends}\subseteq\mathcal{C}$
+      \item $p\in \mathcal{C}$ and ${-}\mathit{unsat\_recommends}(X)$ and $p.\mathrm{installMightSatisfy}(X)$ implies $p.\mathrm{recommends}\backslash\mathcal{R}\subseteq\mathcal{C}$
+      \item $p\in \mathcal{C}$ implies $p.\mathrm{depends}\backslash\mathcal{R}\subseteq\mathcal{C}$
     \end{itemize}
 \end{itemize}
 
