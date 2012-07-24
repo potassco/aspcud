@@ -30,6 +30,30 @@
   \item Package universe: $P\subseteq\mathcal{A}\times\mathbb{N}$ 
   \item Names: $I.\mathrm{name}=\{p.\mathrm{name}\mid p\in I\}$
   \item Versions: $I.\mathrm{version}(p)=\{q.\mathrm{version}\mid q\in I,p.\mathrm{name}=q.\mathrm{name}\}$
+  \item Closure: $\mathcal{C}$
+  \item Removed (by explicit request): $\mathcal{R}$
+  \item Possible Satisfaction of Selector
+    \begin{itemize}
+      \item let $p$ be a package
+      \item $p.\mathrm{installable}$ if $p\in \mathcal{C}$ and $p \not\in\mathcal{R}$
+      \item $p.\mathrm{mightSatisfy}(\mathrm{solution})$ if $p.\mathrm{installable}$
+      \item $p.\mathrm{mightSatisfy}(\mathrm{changed})$ if $p\in I$ or $p.\mathrm{installable}$
+      \item $p.\mathrm{mightSatisfy}(\mathrm{new})$ if $p.\mathrm{installable}$ and $p.\mathrm{name}\not\in I.\mathrm{name}$
+      \item $p.\mathrm{mightSatisfy}(\mathrm{removed})$ if $p.\mathrm{name}\in I.\mathrm{name}$
+      \item $p.\mathrm{mightSatisfy}(\mathrm{up})$ if $p.\mathrm{installable}$ and $p.\mathrm{version}>\max(I.\mathrm{version}(p))$
+      \item $p.\mathrm{mightSatisfy}(\mathrm{down})$ if $p.\mathrm{installable}$ and $p.\mathrm{version}<\min(I.\mathrm{version}(p))$
+    \end{itemize}
+  \item Possible Satisfaction of Selector if Installed
+    \begin{itemize}
+      \item let $p$ be a package
+      \item $p.\mathrm{installable}$ if $p \not\in\mathcal{R}$ (there is no closure here)
+      \item $p.\mathrm{installMightSatisfy}(\mathrm{solution})$ if $p.\mathrm{installable}$
+      \item $p.\mathrm{installMightSatisfy}(\mathrm{changed})$ if $p\in I$ or $p.\mathrm{installable}$
+      \item $p.\mathrm{installMightSatisfy}(\mathrm{new})$ if $p.\mathrm{installable}$ and $p.\mathrm{name}\not\in I.\mathrm{name}$
+      \item $p.\mathrm{installMightSatisfy}(\mathrm{removed})$ does not hold
+      \item $p.\mathrm{installMightSatisfy}(\mathrm{up})$ if $p.\mathrm{installable}$ and $p.\mathrm{version}>\max(I.\mathrm{version}(p))$
+      \item $p.\mathrm{installMightSatisfy}(\mathrm{down})$ if $p.\mathrm{installable}$ and $p.\mathrm{version}<\min(I.\mathrm{version}(p))$
+    \end{itemize}
   \item Closure initialization
     \begin{itemize}
       \item Package Selector: $X\in\{S,C,N,R,U,D\}$
@@ -52,7 +76,7 @@
     \end{itemize}
   \item Closure calculation
     \begin{itemize}
-      \item $p\in \mathcal{C}$ and ${-}\mathit{unsat\_recommends}(X)$ and $p$ satisfies selector $X$ implies $p.\mathrm{recommends}\subseteq\mathcal{C}$
+      \item $p\in \mathcal{C}$ and ${-}\mathit{unsat\_recommends}(X)$ and $p.\mathrm{installMightSatisfy}(X)$ implies $p.\mathrm{recommends}\subseteq\mathcal{C}$
       \item $p\in \mathcal{C}$ implies $p.\mathrm{depends}\subseteq\mathcal{C}$
     \end{itemize}
 \end{itemize}
@@ -89,7 +113,7 @@
     \end{itemize}
   \item \texttt{recommends(Name,Version,Condition,Weight).}
     \begin{itemize}
-      \item packages subject to unsat\_recommends (*)
+      \item given package $p$ and $\mathrm{unsat\_recommends}(X)$, add if $p.\mathrm{recommends}\not=\emptyset$ and $p.\mathrm{mightSatisfy}(X)$
     \end{itemize}
   \item \texttt{request(Condition).}
     \begin{itemize}
@@ -98,7 +122,11 @@
     \end{itemize}
   \item \texttt{attribute(Name,Version,Attribute,Value).}
     \begin{itemize}
-      \item packages subject to sum or aligned (*)
+      \item given package $p$ and
+        \begin{itemize}
+          \item sum(X,attr), add if $p.\mathrm{attr}\not=0$ and $p.\mathrm{mightSatisfy}(X)$
+          \item aligned(X,group,value), add if $\{q\in P \mid q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}\not=\emptyset$ and $p.\mathrm{mightSatisfy}(X)$
+        \end{itemize}
     \end{itemize}
   \item \texttt{criterion(Maximize,count(Selector),Priority).}
   \item \texttt{criterion(Maximize,sum(Selector,Attribute),Priority).}
@@ -106,8 +134,5 @@
   \item \texttt{criterion(Maximize,unsat\_recommends(Selector),Priority).}
   \item \texttt{criterion(Maximize,aligned(Selector,Group,Value),Priority).}
 \end{itemize}
-
-Facts marked with (*) are a bit problematic because they affect packgaes outside the closure.
-
 
 \end{document}
