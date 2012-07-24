@@ -59,6 +59,55 @@
 
 \section{Fact Format}
 
-Put the fact format here + conditions when which facts are necessary.
+\begin{itemize}
+  \item \texttt{unit(Name,Version).}
+    \begin{itemize}
+      \item for each package in closure
+    \end{itemize}
+  \item \texttt{installed(Name,Version).}
+    \begin{itemize}
+      \item for each package previously installed (not necessarily in closure?)
+    \end{itemize}
+  \item \texttt{satisfies(Name,Version,Condition).}
+    \begin{itemize}
+      \item for various parts in the CUDF-document
+        \begin{itemize}
+          \item dependencies
+          \item conflicts
+          \item requests
+          \item recommendations
+          \item keep flags
+        \end{itemize}
+    \end{itemize}
+  \item \texttt{depends(Name,Version,Condition).}
+    \begin{itemize}
+      \item for each package in closure
+    \end{itemize}
+  \item \texttt{conflict(Name,Version,Condition).}
+    \begin{itemize}
+      \item for each package in closure
+    \end{itemize}
+  \item \texttt{recommends(Name,Version,Condition,Weight).}
+    \begin{itemize}
+      \item packages subject to unsat\_recommends (*)
+    \end{itemize}
+  \item \texttt{request(Condition).}
+    \begin{itemize}
+      \item requests
+      \item keep flags
+    \end{itemize}
+  \item \texttt{attribute(Name,Version,Attribute,Value).}
+    \begin{itemize}
+      \item packages subject to sum or aligned (*)
+    \end{itemize}
+  \item \texttt{criterion(Maximize,count(Selector),Priority).}
+  \item \texttt{criterion(Maximize,sum(Selector,Attribute),Priority).}
+  \item \texttt{criterion(Maximize,notuptodate(Selector),Priority).}
+  \item \texttt{criterion(Maximize,unsat\_recommends(Selector),Priority).}
+  \item \texttt{criterion(Maximize,aligned(Selector,Group,Value),Priority).}
+\end{itemize}
+
+Facts marked with (*) are a bit problematic because they affect packgaes outside the closure.
+
 
 \end{document}

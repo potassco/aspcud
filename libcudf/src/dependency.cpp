@@ -348,34 +348,6 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
         uint32_t condition = dep->addClause(pkgClause, out);
         out << "conflict(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
     }
-    // recommends(VP,D)
-    /*
-    if ((dep->addAll() || dep->criteria.unsat_recommends) != 0 && !recommends.empty())
-    {
-        typedef std::map<uint32_t, uint32_t> OccurMap;
-        OccurMap occur;
-        foreach(EntityList &clause, recommends)
-        {
-            PackageList pkgClause;
-            foreach(Entity *ent, clause) { ent->addToClause(pkgClause); }
-            uint32_t condition = dep->addClause(pkgClause, out);
-            occur[condition]++;
-        }
-        foreach(OccurMap::value_type val, occur)
-        {
-            out << "recommends(\"" << dep->string(name) << "\"," << version << "," << val.first << "," << val.second << ").\n";
-        }
-
-    }
-    */
-    // attributes(VP,K,V)
-    if (!intProps.empty())
-    {
-        foreach (IntPropMap::value_type &val, intProps)
-        {
-            out << "attribute(\"" << dep->string(name) << "\"," << version << ",\"" << dep->string(val.first) << "\"," << val.second << ").\n";
-        }
-    }
 }
 
 void Package::addToClause(PackageList &clause, Package *self)
@@ -716,37 +688,79 @@ void Dependency::dumpAsFacts(std::ostream &out)
             }
         }
     }
+    // TODO: fix the blub conditions ...
     foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
     {
-        bool visited = false;
-        Entity *max = 0;
         foreach(Entity *ent, list)
         {
             Package *pkg = dynamic_cast<Package*>(ent);
-            if (pkg)
+            if(pkg)
             {
-                if (pkg->visited) { visited = true; }
-                if (!max || max->version < pkg->version) { max = pkg; }
+                bool addedUnsatRecom = false;
+                foreach (Criterion &crit, criteria.criteria)
+                {
+                    if (crit.measurement == Criterion::UNSAT_RECOMMENDS)
+                    {
+                        // recommends(VP,D)
+                        bool blub = true;
+                        if (!addedUnsatRecom && !pkg->recommends.empty() && (addAll_ || blub))
+                        {
+                            typedef std::map<uint32_t, uint32_t> OccurMap;
+                            OccurMap occur;
+                            foreach(EntityList &clause, pkg->recommends)
+                            {
+                                PackageList pkgClause;
+                                foreach(Entity *ent, clause) { ent->addToClause(pkgClause); }
+                                uint32_t condition = addClause(pkgClause, out);
+                                occur[condition]++;
+                            }
+                            foreach(OccurMap::value_type val, occur)
+                            {
+                                out << "recommends(\"" << string(pkg->name) << "\"," << pkg->version << "," << val.first << "," << val.second << ").\n";
+                            }
+                        }
+                    }
+                    else if (crit.measurement == Criterion::ALIGNED)
+                    {
+                        // TODO: add align attributes
+                    }
+                    else if (crit.measurement == Criterion::SUM && pkg->visited)
+                    {
+                        // attributes(VP,K,V)
+                        bool blub = true;
+                        // TODO: check to not print out an attribute twice ...
+                        if (blub)
+                        {
+                            out << "attribute(\"" << string(pkg->name) << "\"," << pkg->version << ",\"" << crit.attr1 << "\"," << pkg->intProps[crit.attrUid1] << ").\n";
+                        }
+                    }
+                }
             }
         }
-        // TODO: FIXME
-        /*
-        if ((addAll_ || criteria.notuptodate != 0) && visited && max)
-        {
-            out << "newestversion(\"" << string(max->name) << "\"," << max->version << ").\n";
-        }
-        */
     }
-    // TODO: FIXME
-    /*
-    if (criteria.changed)          { out << "criterion(change," << criteria.changed << ").\n"; }
-    if (criteria.removed)          { out << "criterion(remove," << criteria.removed << ").\n"; }
-    if (criteria.newpkg)           { out << "criterion(newpackage," << criteria.newpkg << ").\n"; }
-    if (criteria.notuptodate)      { out << "criterion(uptodate," << criteria.notuptodate << ").\n"; }
-    if (criteria.unsat_recommends) { out << "criterion(recommend," << criteria.unsat_recommends << ").\n"; }
-    foreach (Criteria::OptSizeMap::value_type &val, criteria.optSize)
+    // criteria
+    int priotity = 0;
+    foreach (Criterion &crit, criteria.criteria)
     {
-        out << "criterion(sum(\"" << val.first << "\")," << val.second << ").\n";
+        out << "criterion(" << (crit.optimize ? "maximize" : "minimize") << ",";
+        switch (crit.selector)
+        {
+            case Criterion::SOLUTION: { out << "solution"; break;  }
+            case Criterion::NEW:      { out << "new"; break;  }
+            case Criterion::REMOVED:  { out << "removed"; break;  }
+            case Criterion::CHANGED:  { out << "changed"; break;  }
+            case Criterion::UP:       { out << "up"; break;  }
+            case Criterion::DOWN:     { out << "down"; break;  }
+        }
+        out << ",";
+        switch (crit.measurement)
+        {
+            case Criterion::COUNT:            { out << "count"; break;  }
+            case Criterion::SUM:              { out << "sum(" << crit.attr1 << ")"; break;  }
+            case Criterion::UNSAT_RECOMMENDS: { out << "unsat_recommends"; break;  }
+            case Criterion::NOTUPTODATE:      { out << "notuptodate"; break;  }
+            case Criterion::ALIGNED:          { out << "aligned(" << crit.attr1 << "," << crit.attr2 << ")"; break;  }
+        }
+        out << priotity++ << ").\n";
     }
-    */
 }
