@@ -128,11 +128,11 @@
           \item aligned(X,group,value), add if $\{q\in P \mid q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}\not=\emptyset$ and $p.\mathrm{mightSatisfy}(X)$
         \end{itemize}
     \end{itemize}
-  \item \texttt{criterion(Maximize,count(Selector),Priority).}
-  \item \texttt{criterion(Maximize,sum(Selector,Attribute),Priority).}
-  \item \texttt{criterion(Maximize,notuptodate(Selector),Priority).}
-  \item \texttt{criterion(Maximize,unsat\_recommends(Selector),Priority).}
-  \item \texttt{criterion(Maximize,aligned(Selector,Group,Value),Priority).}
+  \item \texttt{criterion(Maximize,Selector,count,Priority).}
+  \item \texttt{criterion(Maximize,Selector,sum(Attribute),Priority).}
+  \item \texttt{criterion(Maximize,Selector,notuptodate,Priority).}
+  \item \texttt{criterion(Maximize,Selector,unsat\_recommends,Priority).}
+  \item \texttt{criterion(Maximize,Selector,aligned(Group,Value),Priority).}
 \end{itemize}
 
 \end{document}
