@@ -12,13 +12,16 @@ satisfied(D) :- in(P,X), satisfies(P,X,D).
 :- requested(D), not satisfied(D).
 :- forbidden(D),     satisfied(D).
 
+unitp(P,V) :- unit(P,V).
+unitp(P,V) :- attribute(P,V,_,_).
+unitp(P,V) :- recommends(P,V,_,_).
 installed(P) :- installed(P,_).
 
 set(solution,P,V) :-     in(P,V).
 set(changed,P,V)  :-     in(P,V), not installed(P,V).
 set(changed,P,V)  :- not in(P,V),     installed(P,V).
 set(new,P,V)      :-     in(P,V), not installed(P).
-set(removed,P,V)  :- not in(P,V),     installed(P), unit(P,V).
+set(removed,P,V)  :- not in(P,V),     installed(P), unitp(P,V).
 set(up,P,V)       :-     in(P,V), not installed(P,VV) : installed(P,VV) : VV >= V.
 set(down,P,V)     :-     in(P,V), not installed(P,VV) : installed(P,VV) : VV <= V.
 
