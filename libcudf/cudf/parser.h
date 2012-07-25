@@ -149,6 +149,7 @@ public:
 	}
 	void addPackage(uint32_t name)
 	{
+        setProperty(packageStr_, (const uint32_t)name);
 		doc_->packages.push_back(Cudf::Package(name));
 		Cudf::Package &pkg = doc_->packages.back();
 		getProp(versionStr_,    pkg.version);
@@ -234,6 +235,7 @@ private:
 	TypeMap         typeMap_;
 	PropMap         propMap_;
 
+	uint32_t        packageStr_;
 	uint32_t        versionStr_;
 	uint32_t        conflictsStr_;
 	uint32_t        dependsStr_;
@@ -244,7 +246,6 @@ private:
 	uint32_t        installStr_;
 	uint32_t        removeStr_;
 	uint32_t        upgradeStr_;
-	uint32_t        packageStr_;
 	uint32_t        featureStr_;
 	uint32_t        noneStr_;
 	uint32_t        trueStr_;

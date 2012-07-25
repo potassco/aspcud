@@ -2,7 +2,6 @@
 %       without any optimizations
 
 { in(P,X) }  :- unit(P,X).
-in(P)        :- in(P,X), inp.
 
 forbidden(D) :- in(P,X), conflict(P,X,D).
 requested(D) :- in(P,X), depends(P,X,D).
@@ -33,8 +32,8 @@ opt(H,B,1,O, 1,L) :- criterion(O,S,aligned(G,A),L),     set(S,P,V), attribute(P,
 opt(H,1,2,O,-1,L) :- criterion(O,S,aligned(G,A),L),     set(S,P,V), attribute(P,V,G,H).
 
 #minimize [ criterion(_,_,_,L)      = 0 @ L ].
-#minimize [ opt(minimize,P,V,X,W,L) = W @ L ].
-#maximize [ opt(maximize,P,V,X,W,L) = W @ L ].
+#minimize [ opt(P,V,X,minimize,W,L) = W @ L ].
+#maximize [ opt(P,V,X,maximize,W,L) = W @ L ].
 
 % output projection
 

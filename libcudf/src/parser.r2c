@@ -32,7 +32,7 @@ Parser::Type::Type(uint32_t type)
 
 bool Parser::Type::stringType() const
 {
-	return type == PARSER_FEEDBACK_STRING;
+	return type == PARSER_FEEDBACK_STRING || type == PARSER_FEEDBACK_PKGNAME || type == PARSER_FEEDBACK_ENUM || PARSER_FEEDBACK_IDENT;
 }
 
 bool Parser::Type::intType() const
@@ -79,6 +79,7 @@ Parser::Parser(Dependency &dep)
 	addType(dep_.index("req-checksum"),    PARSER_FEEDBACK_STRING)   = uint32_t(emptyStr);
 
 	// package
+	addType(packageStr_,     PARSER_FEEDBACK_PKGNAME);
 	addType(versionStr_,     PARSER_FEEDBACK_POSINT);
 	addType(dependsStr_,     PARSER_FEEDBACK_VPKGFORMULA) = pkgFormula;
 	addType(conflictsStr_,   PARSER_FEEDBACK_VPKGLIST)    = pkgList;

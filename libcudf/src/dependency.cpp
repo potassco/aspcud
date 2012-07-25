@@ -485,13 +485,13 @@ void Criteria::init(Dependency *dep, CritVec &vec)
     {
         if (!crit.attr1.empty()) 
         {
-            uint32_t uid = dep->index(crit.attr1);
-            optProps.push_back(uid); 
+            crit.attrUid1 = dep->index(crit.attr1);
+            optProps.push_back(crit.attrUid1); 
         }
         if (!crit.attr2.empty())
         {
-            uint32_t uid = dep->index(crit.attr2);
-            optProps.push_back(uid);
+            crit.attrUid2 = dep->index(crit.attr2);
+            optProps.push_back(crit.attrUid2);
         }
     }
     sort_uniq(optProps);
@@ -756,11 +756,13 @@ void Dependency::dumpAsFacts(std::ostream &out)
     // additional attributes
     foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
     {
+        Package *max = 0;
         foreach(Entity *ent, list)
         {
             Package *pkg = dynamic_cast<Package*>(ent);
             if(pkg)
             {
+                if (!max || max->version < pkg->version) { max = pkg; }
                 bool addedRecom = false;
                 std::set<uint32_t> addedAttr;
                 foreach (Criterion &crit, criteria.criteria)
@@ -809,9 +811,13 @@ void Dependency::dumpAsFacts(std::ostream &out)
                 }
             }
         }
+        if (max)
+        {
+            out << "maxversion(\"" << string(max->name) << "\"," << max->version << ").\n";
+        }
     }
     // criteria
-    int priotity = 0;
+    int priotity = criteria.criteria.size();
     foreach (Criterion &crit, criteria.criteria)
     {
         out << "criterion(" << (crit.optimize ? "maximize" : "minimize") << ",";
@@ -828,11 +834,11 @@ void Dependency::dumpAsFacts(std::ostream &out)
         switch (crit.measurement)
         {
             case Criterion::COUNT:            { out << "count"; break;  }
-            case Criterion::SUM:              { out << "sum(" << crit.attr1 << ")"; break;  }
+            case Criterion::SUM:              { out << "sum(\"" << crit.attr1 << "\")"; break;  }
             case Criterion::UNSAT_RECOMMENDS: { out << "unsat_recommends"; break;  }
             case Criterion::NOTUPTODATE:      { out << "notuptodate"; break;  }
-            case Criterion::ALIGNED:          { out << "aligned(" << crit.attr1 << "," << crit.attr2 << ")"; break;  }
+            case Criterion::ALIGNED:          { out << "aligned(\"" << crit.attr1 << "\",\"" << crit.attr2 << "\")"; break;  }
         }
-        out << priotity++ << ").\n";
+        out << "," << priotity-- << ").\n";
     }
 }
