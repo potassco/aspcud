@@ -1,11 +1,12 @@
 % Note: simple encoding directly derived from the specification
 %       without any optimizations
 
-{ in(P,X) }  :- unit(P,X,in).
+{ in(P,V) } :- unit(P,V,in).
+in(P)       :- in(P,V).
 
-forbidden(D) :- in(P,X), conflict(P,X,D).
-requested(D) :- in(P,X), depends(P,X,D).
-satisfied(D) :- in(P,X), satisfies(P,X,D).
+forbidden(D) :- in(P,V), conflict(P,V,D).
+requested(D) :- in(P,V), depends(P,V,D).
+satisfied(D) :- in(P,V), satisfies(P,V,D).
 
 :-   request(D), not satisfied(D).
 :- requested(D), not satisfied(D).
