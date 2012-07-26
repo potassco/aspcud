@@ -256,7 +256,7 @@ uint32_t Package::getProp(uint32_t uid) const
 void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
 {
     // unit(VP)
-    out << "unit(\"" << dep->string(name) << "\"," << version << "," << (remove_ ? "in" : "out") << ").\n";
+    out << "unit(\"" << dep->string(name) << "\"," << version << "," << (remove_ ? "out" : "in") << ").\n";
 	// installed(VP)
 	if (installed)
 	{
