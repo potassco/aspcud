@@ -17,7 +17,7 @@ set(solution,P,V) :-     in(P,V).
 set(changed,P,V)  :-     in(P,V), not installed(P,V).
 set(changed,P,V)  :- not in(P,V),     installed(P,V).
 set(new,P,V)      :-     in(P,V), not installed(P).
-set(removed,P,V)  :- not in(P,V),     installed(P), unit(P,V,_).
+set(removed,P,V)  :- not in(P),       installed(P,V).
 set(up,P,V)       :-     in(P,V), not installed(P,W) : installed(P,W) : W >= V.
 set(down,P,V)     :-     in(P,V), not installed(P,W) : installed(P,W) : W <= V.
 
