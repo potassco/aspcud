@@ -2,7 +2,6 @@
 %       without any optimizations
 
 { in(P,V) } :- unit(P,V,in).
-in(P)       :- in(P,V).
 
 forbidden(D) :- in(P,V), conflict(P,V,D).
 requested(D) :- in(P,V), depends(P,V,D).
@@ -12,6 +11,7 @@ satisfied(D) :- in(P,V), satisfies(P,V,D).
 :- requested(D), not satisfied(D).
 :- forbidden(D),     satisfied(D).
 
+in(P)        :- in(P,_).
 installed(P) :- installed(P,_).
 
 set(solution,P,V) :-     in(P,V).
