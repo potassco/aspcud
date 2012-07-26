@@ -8,53 +8,36 @@
 
 \begin{document}
 
-\section{Closure Calculation}
+\section{Preliminaries}
+
+\begin{itemize}
+  \item See: \url{http://www.mancoosi.org/misc-2012/criteria/}
+  \item Package universe: $\mathcal{P}$ 
+  \item Installation: $\mathcal{I}\subseteq\mathcal{P}$
+  \item Closure: $\mathcal{C}\subseteq\mathcal{P}$
+  \item Removed (by explicit request): $\mathcal{R}\subseteq\mathcal{P}$
+  \item Optimization criteria: $\mathcal{O}$
+  \item Names: $X.\mathrm{name}=\{p.\mathrm{name}\mid p\in X\}$
+  \item Versions: $X.\mathrm{version}(p)=\{q.\mathrm{version}\mid q\in X,p.\mathrm{name}=q.\mathrm{name}\}$
+\end{itemize}
+
+\section{Closure}
 
 \begin{table}
   \centering{}\begin{tabular}{c||c|c}
     selector & minimize & maximize\\
     \hline 
-    solution $S$ & $S^{-}=\emptyset$ & $S^{+}=P$\\
-    changed $C$ & $C^{-}=I$ & $C^{+}=P\setminus I$\\
-    new $N$ & $N^{-}=\emptyset$ & $N^{+}=\{p\in P\mid p.\mathrm{name}\notin I.\mathrm{name}\}$\\
-    removed $R$ & $R^{-}=I$ & $R^{+}=\emptyset$\\
-    up $U$ & $U^{-}=\emptyset$ & $U^{+}=\{p\in P\mid p.\mathrm{name}\in I.\mathrm{name},p.\mathrm{version}>\max(I.\mathrm{version}(p))\}$\\
-    down $D$ & $D^{-}=\emptyset$ & $D^{+}=\{p\in P\mid p.\mathrm{name}\in I.\mathrm{name},p.\mathrm{version}<\min(I.\mathrm{version}(p))\}$\\
+    solution $S$ & $S^{-}=\emptyset$ & $S^{+}=\mathcal{P}$\\
+    changed $C$ & $C^{-}=\mathcal{I}$ & $C^{+}=\mathcal{P}\setminus \mathcal{I}$\\
+    new $N$ & $N^{-}=\emptyset$ & $N^{+}=\{p\in \mathcal{P}\mid p.\mathrm{name}\notin \mathcal{I}.\mathrm{name}\}$\\
+    removed $R$ & $R^{-}=\mathcal{I}$ & $R^{+}=\emptyset$\\
+    up $U$ & $U^{-}=\emptyset$ & $U^{+}=\{p\in \mathcal{P}\mid p.\mathrm{name}\in \mathcal{I}.\mathrm{name},p.\mathrm{version}>\max(\mathcal{I}.\mathrm{version}(p))\}$\\
+    down $D$ & $D^{-}=\emptyset$ & $D^{+}=\{p\in \mathcal{P}\mid p.\mathrm{name}\in \mathcal{I}.\mathrm{name},p.\mathrm{version}<\min(\mathcal{I}.\mathrm{version}(p))\}$\\
   \end{tabular}\caption{Minimal and Maximal Sets\label{tab:Minimal-and-Maximal}}
 \end{table}
 
 \begin{itemize}
-  \item See: \url{http://www.mancoosi.org/misc-2012/criteria/}
-  \item Alphabet of strings: $\mathcal{A}$
-  \item Installation: $I\subseteq\mathcal{A}\times\mathbb{N}$
-  \item Package universe: $P\subseteq\mathcal{A}\times\mathbb{N}$ 
-  \item Names: $I.\mathrm{name}=\{p.\mathrm{name}\mid p\in I\}$
-  \item Versions: $I.\mathrm{version}(p)=\{q.\mathrm{version}\mid q\in I,p.\mathrm{name}=q.\mathrm{name}\}$
-  \item Closure: $\mathcal{C}$
-  \item Removed (by explicit request): $\mathcal{R}$
-  \item Possible Satisfaction of Selector
-    \begin{itemize}
-      \item let $p$ be a package
-      \item $p.\mathrm{installable}$ if $p\in \mathcal{C}$ and $p \not\in\mathcal{R}$
-      \item $p.\mathrm{mightSatisfy}(\mathrm{solution})$ if $p.\mathrm{installable}$
-      \item $p.\mathrm{mightSatisfy}(\mathrm{changed})$ if $p\in I$ or $p.\mathrm{installable}$
-      \item $p.\mathrm{mightSatisfy}(\mathrm{new})$ if $p.\mathrm{installable}$ and $p.\mathrm{name}\not\in I.\mathrm{name}$
-      \item $p.\mathrm{mightSatisfy}(\mathrm{removed})$ if $p.\mathrm{name}\in I.\mathrm{name}$
-      \item $p.\mathrm{mightSatisfy}(\mathrm{up})$ if $p.\mathrm{installable}$ and $p.\mathrm{version}>\max(I.\mathrm{version}(p))$
-      \item $p.\mathrm{mightSatisfy}(\mathrm{down})$ if $p.\mathrm{installable}$ and $p.\mathrm{version}<\min(I.\mathrm{version}(p))$
-    \end{itemize}
-  \item Possible Satisfaction of Selector if Installed
-    \begin{itemize}
-      \item let $p$ be a package
-      \item $p.\mathrm{installable}$ if $p \not\in\mathcal{R}$ (there is no closure here)
-      \item $p.\mathrm{installMightSatisfy}(\mathrm{solution})$ if $p.\mathrm{installable}$
-      \item $p.\mathrm{installMightSatisfy}(\mathrm{changed})$ if $p\in I$ or $p.\mathrm{installable}$
-      \item $p.\mathrm{installMightSatisfy}(\mathrm{new})$ if $p.\mathrm{installable}$ and $p.\mathrm{name}\not\in I.\mathrm{name}$
-      \item $p.\mathrm{installMightSatisfy}(\mathrm{removed})$ does not hold
-      \item $p.\mathrm{installMightSatisfy}(\mathrm{up})$ if $p.\mathrm{installable}$ and $p.\mathrm{version}>\max(I.\mathrm{version}(p))$
-      \item $p.\mathrm{installMightSatisfy}(\mathrm{down})$ if $p.\mathrm{installable}$ and $p.\mathrm{version}<\min(I.\mathrm{version}(p))$
-    \end{itemize}
-  \item Closure initialization
+  \item Initialization
     \begin{itemize}
       \item Package Selector: $X\in\{S,C,N,R,U,D\}$
         \begin{itemize}
@@ -62,44 +45,35 @@
         \end{itemize}
       \item Measurements
         \begin{itemize}
-          \item $\mathrm{init}({-}\mathit{count}(X))=X^{-}\backslash\mathcal{R}$
-          \item $\mathrm{init}({+}\mathit{count}(X))=X^{+}\backslash\mathcal{R}$
-          \item $\mathrm{init}({-}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}>0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}<0\}\backslash\mathcal{R}$
-          \item $\mathrm{init}({+}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}<0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}>0\}\backslash\mathcal{R}$
-          \item $\mathrm{init}({-}\mathit{notuptodate}(X))=\{p\in X^{-}\mid p.\mathrm{version}=\max(P.\mathrm{version}(p))\}\backslash\mathcal{R}$
-          \item $\mathrm{init}({+}\mathit{notuptodate}(X))=\{p\in X^{+}\mid p.\mathrm{version}\not=\max(P.\mathrm{version}(p))\}\backslash\mathcal{R}$
-          \item $\mathrm{init}({-}\mathit{unsat\_recommends}(X))=\{p\in X^{-}\mid p.\mathrm{recommends}\neq\emptyset\}\backslash\mathcal{R}$
-          \item $\mathrm{init}({+}\mathit{unsat\_recommends}(X))=\{p\in X^{+}\mid p.\mathrm{recommends}\neq\emptyset\}\backslash\mathcal{R}$
-          \item $\mathrm{init}({-}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{-}\mid q\in P, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}\backslash\mathcal{R}$
-          \item $\mathrm{init}({+}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{+}\mid q\in P, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}\backslash\mathcal{R}$
+          \item $\mathrm{init}({-}\mathit{count}(X))=X^{-}$
+          \item $\mathrm{init}({+}\mathit{count}(X))=X^{+}$
+          \item $\mathrm{init}({-}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}>0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}<0\}$
+          \item $\mathrm{init}({+}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}<0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}>0\}$
+          \item $\mathrm{init}({-}\mathit{notuptodate}(X))=\{p\in X^{-}\mid p.\mathrm{version}=\max(\mathcal{P}.\mathrm{version}(p))\}$
+          \item $\mathrm{init}({+}\mathit{notuptodate}(X))=\{p\in X^{+}\mid p.\mathrm{version}\not=\max(\mathcal{P}.\mathrm{version}(p))\}$
+          \item $\mathrm{init}({-}\mathit{unsat\_recommends}(X))=\{p\in X^{-}\mid p.\mathrm{recommends}\neq\emptyset\}$
+          \item $\mathrm{init}({+}\mathit{unsat\_recommends}(X))=\{p\in X^{+}\mid p.\mathrm{recommends}\neq\emptyset\}$
+          \item $\mathrm{init}({-}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{-}\mid q\in \mathcal{P}, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
+          \item $\mathrm{init}({+}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{+}\mid q\in \mathcal{P}, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
         \end{itemize}
     \end{itemize}
-  \item Closure calculation
+  \item Calculation
     \begin{itemize}
-      \item $p\in \mathcal{C}$ and ${-}\mathit{unsat\_recommends}(X)$ and $p.\mathrm{installMightSatisfy}(X)$ implies $p.\mathrm{recommends}\backslash\mathcal{R}\subseteq\mathcal{C}$
-      \item $p\in \mathcal{C}$ implies $p.\mathrm{depends}\backslash\mathcal{R}\subseteq\mathcal{C}$
+      \item $p\in \mathcal{C}$ and ${-}\mathit{unsat\_recommends}(X)\in\mathcal{O}$ and $p \in X^{+}\cup X^{-}$ implies $p.\mathrm{recommends}\backslash\mathcal{R}\subseteq\mathcal{C}$
+      \item $p\in \mathcal{C}\backslash\mathcal{R}$ implies $p.\mathrm{depends}\backslash\mathcal{R}\subseteq\mathcal{C}$
     \end{itemize}
 \end{itemize}
 
 \section{Fact Format}
 
 \begin{itemize}
-  \item \texttt{unit(Name,Version).}
+  \item \texttt{unit($p.\mathrm{name}$,$p.\mathrm{version}$,in).} for $p\in\mathcal{C}\backslash\mathcal{R}$
+  \item \texttt{unit($p.\mathrm{name}$,$p.\mathrm{version}$,out).} for $p\in\mathcal{R}$
+  \item \texttt{installed($p.\mathrm{name}$,$p.\mathrm{version}$).} for $p.\mathrm{name}\in \mathcal{C}.\mathrm{name}$
+  \item \texttt{maxversion($p.\mathrm{name}$,$p.\mathrm{version}$).} for $p.\mathrm{name} \in \mathcal{C}$ and $p.\mathrm{version}=\max(\mathcal{P}.\mathrm{version}(p))$
+  \item \texttt{satisfies(Name,Version,Condition).} for $p\in\mathcal{C}\backslash\mathcal{R}$
     \begin{itemize}
-      \item for each package in closure
-    \end{itemize}
-  \item \texttt{installed(Name,Version).}
-    \begin{itemize}
-      \item for each package previously installed (not necessarily in closure?)
-    \end{itemize}
-  \item \texttt{maxversion(Name,Version).}
-    \begin{itemize}
-      \item the maximum version of a package
-      \item for each package in universe
-    \end{itemize}
-  \item \texttt{satisfies(Name,Version,Condition).}
-    \begin{itemize}
-      \item for various parts in the CUDF-document
+      \item applies to various parts of the CUDF-document
         \begin{itemize}
           \item dependencies
           \item conflicts
@@ -108,29 +82,23 @@
           \item keep flags
         \end{itemize}
     \end{itemize}
-  \item \texttt{depends(Name,Version,Condition).}
+  \item \texttt{depends($p.\mathrm{name}$,$p.\mathrm{version}$,Condition).} for $p\in\mathcal{C}\backslash\mathcal{R}$
+  \item \texttt{conflict($p.\mathrm{name}$,$p.\mathrm{version}$,Condition).} for $p\in\mathcal{C}\backslash\mathcal{R}$
+  \item \texttt{recommends($p.\mathrm{name}$,$p.\mathrm{version}$,Condition,Weight).}
     \begin{itemize}
-      \item for each package in closure
-    \end{itemize}
-  \item \texttt{conflict(Name,Version,Condition).}
-    \begin{itemize}
-      \item for each package in closure
-    \end{itemize}
-  \item \texttt{recommends(Name,Version,Condition,Weight).}
-    \begin{itemize}
-      \item given package $p$ and $\mathrm{unsat\_recommends}(X)$, add if $p.\mathrm{recommends}\not=\emptyset$ and $p.\mathrm{mightSatisfy}(X)$
+      \item for $p\in\mathcal{C}\cap(X^{+}\cup X^{-})$, $\pm\mathrm{unsat\_recommends}(X)\in\mathcal{O}$, and $p.\mathrm{recommends}\not=\emptyset$
     \end{itemize}
   \item \texttt{request(Condition).}
     \begin{itemize}
       \item requests
       \item keep flags
     \end{itemize}
-  \item \texttt{attribute(Name,Version,Attribute,Value).}
+  \item \texttt{attribute($p.\mathrm{name}$,$p.\mathrm{version}$,Attribute,Value).}
     \begin{itemize}
-      \item given package $p$ and
+      \item for $p\in\mathcal{C}\cap(X^{+}\cup X^{-})$, and
         \begin{itemize}
-          \item sum(X,attr), add if $p.\mathrm{attr}\not=0$ and $p.\mathrm{mightSatisfy}(X)$
-          \item aligned(X,group,value), add if $\{q\in P \mid q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}\not=\emptyset$ and $p.\mathrm{mightSatisfy}(X)$
+          \item $\pm\mathrm{sum}(X,\mathrm{attr})\in\mathcal{O}$, $p.\mathrm{attr}\not=0$, or
+          \item $\pm\mathrm{aligned}(X,\mathrm{group},\mathrm{value})\in\mathcal{O}$, $\{q\in \mathcal{P} \mid q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}\not=\emptyset$
         \end{itemize}
     \end{itemize}
   \item \texttt{criterion(Maximize,Selector,count,Priority).}
