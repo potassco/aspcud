@@ -47,6 +47,8 @@ struct Criterion
 {
     enum Selector { SOLUTION, CHANGED, NEW, REMOVED, UP, DOWN };
     enum Measurement { COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED };
+    typedef boost::unordered_map<uint32_t, std::set<uint32_t> > AlignedMap;
+
     bool optimize;
     Measurement measurement;
     Selector selector;
@@ -54,6 +56,7 @@ struct Criterion
     std::string attr2;
     uint32_t attrUid1;
     uint32_t attrUid2;
+    AlignedMap optAligned;
 };
 
 struct Criteria
@@ -105,10 +108,9 @@ struct Package : public Entity
     void dumpAsFacts(Dependency *dep, std::ostream &out);
     void dumpAttr(Dependency *dep, std::ostream &out, unsigned uid);
     void addToClause(PackageList &clause, Package *self = 0);
-    bool mightSatisfy(EntityList &list, Criterion::Selector sel);
-    bool installSatisfies(EntityList &list, Criterion::Selector sel);
-    bool satisfies(Dependency *dep, EntityList &list, Criterion &crit);
-    bool satisfies(EntityList &list, bool optimize, Criterion::Selector sel);
+    bool _satisfies(bool optimize, Criterion &crit);
+    bool _satisfies(bool optimize, Criterion::Selector sel);
+	bool satisfies(Criterion &crit, bool both = false);
     uint32_t getProp(uint32_t uid) const;
     void doAdd(Dependency *dep);
 
@@ -119,6 +121,11 @@ struct Package : public Entity
     Keep          keep;
     IntPropMap    intProps;
     StringPropMap stringProps;
+	// inferred attributes 
+    bool optInstalled;
+    bool optGtMaxInstalled;
+    bool optLtMinInstalled;
+    bool optMaxVersion;
 
 protected:
     void doRemove(Dependency *dep);
@@ -166,7 +173,6 @@ private:
             boost::multi_index::hashed_unique<boost::multi_index::identity<std::string> >
         >
     > StringSet;
-    typedef boost::unordered_map<std::pair<std::pair<uint32_t, uint32_t>, uint32_t>, std::set<uint32_t> > AlignedMap;
 
 public:
     Dependency(Criteria::CritVec &crits, bool addAll, bool verbose = true);
@@ -197,7 +203,6 @@ private:
     RequestList upgrade_;
     EntityList  closure_;
     ClauseMap   clauses_;
-    AlignedMap  aligned_;
     bool        verbose_;
     bool        addAll_;
 };

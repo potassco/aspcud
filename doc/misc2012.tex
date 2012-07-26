@@ -59,19 +59,19 @@
     \end{itemize}
   \item Calculation
     \begin{itemize}
-      \item $p\in \mathcal{C}$ and ${-}\mathit{unsat\_recommends}(X)\in\mathcal{O}$ and $p \in X^{+}\cup X^{-}$ implies $p.\mathrm{recommends}\backslash\mathcal{R}\subseteq\mathcal{C}$
-      \item $p\in \mathcal{C}\backslash\mathcal{R}$ implies $p.\mathrm{depends}\backslash\mathcal{R}\subseteq\mathcal{C}$
+      \item $p\in \mathcal{C}$ and ${-}\mathit{unsat\_recommends}(X)\in\mathcal{O}$ and $p \in X^{+}\cup X^{-}$ implies $p.\mathrm{recommends}\setminus\mathcal{R}\subseteq\mathcal{C}$
+      \item $p\in \mathcal{C}\setminus\mathcal{R}$ implies $p.\mathrm{depends}\setminus\mathcal{R}\subseteq\mathcal{C}$
     \end{itemize}
 \end{itemize}
 
 \section{Fact Format}
 
 \begin{itemize}
-  \item \texttt{unit($p.\mathrm{name}$,$p.\mathrm{version}$,in).} for $p\in\mathcal{C}\backslash\mathcal{R}$
+  \item \texttt{unit($p.\mathrm{name}$,$p.\mathrm{version}$,in).} for $p\in\mathcal{C}\setminus\mathcal{R}$
   \item \texttt{unit($p.\mathrm{name}$,$p.\mathrm{version}$,out).} for $p\in\mathcal{R}$
   \item \texttt{installed($p.\mathrm{name}$,$p.\mathrm{version}$).} for $p.\mathrm{name}\in \mathcal{C}.\mathrm{name}$
   \item \texttt{maxversion($p.\mathrm{name}$,$p.\mathrm{version}$).} for $p.\mathrm{name} \in \mathcal{C}$ and $p.\mathrm{version}=\max(\mathcal{P}.\mathrm{version}(p))$
-  \item \texttt{satisfies(Name,Version,Condition).} for $p\in\mathcal{C}\backslash\mathcal{R}$
+  \item \texttt{satisfies(Name,Version,Condition).} for $p\in\mathcal{C}\setminus\mathcal{R}$
     \begin{itemize}
       \item applies to various parts of the CUDF-document
         \begin{itemize}
@@ -82,11 +82,11 @@
           \item keep flags
         \end{itemize}
     \end{itemize}
-  \item \texttt{depends($p.\mathrm{name}$,$p.\mathrm{version}$,Condition).} for $p\in\mathcal{C}\backslash\mathcal{R}$
-  \item \texttt{conflict($p.\mathrm{name}$,$p.\mathrm{version}$,Condition).} for $p\in\mathcal{C}\backslash\mathcal{R}$
+  \item \texttt{depends($p.\mathrm{name}$,$p.\mathrm{version}$,Condition).} for $p\in\mathcal{C}\setminus\mathcal{R}$
+  \item \texttt{conflict($p.\mathrm{name}$,$p.\mathrm{version}$,Condition).} for $p\in\mathcal{C}\setminus\mathcal{R}$
   \item \texttt{recommends($p.\mathrm{name}$,$p.\mathrm{version}$,Condition,Weight).}
     \begin{itemize}
-      \item for $p\in\mathcal{C}\cap(X^{+}\cup X^{-})$, $\pm\mathrm{unsat\_recommends}(X)\in\mathcal{O}$, and $p.\mathrm{recommends}\not=\emptyset$
+      \item $\pm O\in\mathcal{O}$, $O=\mathrm{unsat\_recommends}(X)$, and $p\in\mathrm{init}({+}O)\cup\mathrm{init}({-}O)$, or
     \end{itemize}
   \item \texttt{request(Condition).}
     \begin{itemize}
@@ -95,11 +95,8 @@
     \end{itemize}
   \item \texttt{attribute($p.\mathrm{name}$,$p.\mathrm{version}$,Attribute,Value).}
     \begin{itemize}
-      \item for $p\in\mathcal{C}\cap(X^{+}\cup X^{-})$, and
-        \begin{itemize}
-          \item $\pm\mathrm{sum}(X,\mathrm{attr})\in\mathcal{O}$, $p.\mathrm{attr}\not=0$, or
-          \item $\pm\mathrm{aligned}(X,\mathrm{group},\mathrm{value})\in\mathcal{O}$, $\{q\in \mathcal{P} \mid q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}\not=\emptyset$
-        \end{itemize}
+      \item $\pm O\in\mathcal{O}$, $O=\mathrm{sum}(X,\mathrm{attr})$, and $p\in\mathrm{init}({+}O)\cup\mathrm{init}({-}O)$, or
+      \item $\pm O\in\mathcal{O}$, $O=\mathrm{aligned}(X,\mathrm{group},\mathrm{value})$, and $p\in\mathrm{init}({+}O)\cup\mathrm{init}({-}O)$, or
     \end{itemize}
   \item \texttt{criterion(Maximize,Selector,count,Priority).}
   \item \texttt{criterion(Maximize,Selector,sum(Attribute),Priority).}

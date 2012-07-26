@@ -117,7 +117,7 @@ bool Entity::operator<(const Entity &ent) const
     //       see Feature::allVersions()
     if (version != ent.version) { return version < ent.version; }
     else if (name != ent.name)  { return name    < ent.name; }
-    else                       { return typeid(this).before(typeid(&ent)); }
+    else                        { return typeid(this).before(typeid(&ent)); }
 }
 
 bool Entity::operator==(const Entity &ent) const
@@ -139,7 +139,7 @@ void Entity::remove(Dependency *dep)
 
 void Entity::add(Dependency *dep)
 {
-    if (!visited && !remove_)
+    if (!visited)
     {
         visited = true;
         dep->add(this);
@@ -169,198 +169,72 @@ void Package::doRemove(Dependency *)
 {
 }
 
-bool Package::mightSatisfy(EntityList &list, Criterion::Selector sel)
-{
-    // Note: check if the package can satisfy a criterion
-    // considering if it has been pulled into the closure
-    // or if it has been explicitely deleted
-    bool installable = visited && !remove_;
-    switch(sel)
-    {
-        case Criterion::SOLUTION: { return installable; }
-        case Criterion::CHANGED:  { return installed || installable; }
-        case Criterion::NEW:
-        {
-            foreach (Entity *ent, list)
-            {
-                if (dynamic_cast<Package*>(ent) && ent->installed) { return false; }
-            }
-            return installable;
-        }
-        case Criterion::REMOVED:
-        {
-            foreach (Entity *ent, list)
-            {
-                if (dynamic_cast<Package*>(ent) && ent->installed) { return true; }
-            }
-            return false; 
-        }
-        case Criterion::UP:
-        {
-            foreach (Entity *ent, list)
-            {
-                if (dynamic_cast<Package*>(ent) && ent->version >= version && ent->installed)
-                {
-                    return false;
-                }
-            }
-            return installable;
-        }
-        case Criterion::DOWN:    
-        {
-            foreach (Entity *ent, list)
-            {
-                if (dynamic_cast<Package*>(ent) && ent->version <= version && ent->installed)
-                {
-                    return false;
-                }
-            }
-            return installable; 
-        }
-    }
-}
-
-bool Package::installSatisfies(EntityList &list, Criterion::Selector sel)
-{
-    // Note: check if installing the package would satisfy the selector
-    switch(sel)
-    {
-        case Criterion::SOLUTION: { return true; }
-        case Criterion::CHANGED:  { return !installed; }
-        case Criterion::NEW:
-        {
-            foreach (Entity *ent, list)
-            {
-                if (dynamic_cast<Package*>(ent) && ent->installed) { return false; }
-            }
-            return true;
-        }
-        case Criterion::REMOVED: { return false; }
-        case Criterion::UP:
-        {
-            foreach (Entity *ent, list)
-            {
-                if (dynamic_cast<Package*>(ent) && ent->version >= version && ent->installed)
-                {
-                    return false;
-                }
-            }
-            return true; 
-        }
-        case Criterion::DOWN:    
-        {
-            foreach (Entity *ent, list)
-            {
-                if (dynamic_cast<Package*>(ent) && ent->version <= version && ent->installed)
-                {
-                    return false;
-                }
-            }
-            return true; 
-        }
-    }
-}
-
-bool Package::satisfies(EntityList &list, bool optimize, Criterion::Selector sel)
+bool Package::_satisfies(bool optimize, Criterion::Selector sel)
 {
     switch(sel)
     {
         case Criterion::SOLUTION: { return optimize; }
         case Criterion::CHANGED:  { return optimize != installed; }
-        case Criterion::NEW:
+        case Criterion::NEW:      { return optimize && !optInstalled; }
+        case Criterion::REMOVED:  { return !optimize && installed; }
+        case Criterion::UP:       { return !optimize && optGtMaxInstalled; }
+        case Criterion::DOWN:     { return !optimize && optLtMinInstalled; }
+    }
+}
+
+bool Package::_satisfies(bool optimize, Criterion &crit)
+{
+    switch (crit.measurement)
+    {
+        case Criterion::COUNT:            { return _satisfies(optimize, crit.selector); }
+        case Criterion::NOTUPTODATE:      { return _satisfies(optimize, crit.selector) && optimize != optMaxVersion; }
+        case Criterion::UNSAT_RECOMMENDS: { return _satisfies(optimize, crit.selector) && !recommends.empty(); }
+        case Criterion::ALIGNED:          { return _satisfies(optimize, crit.selector) && crit.optAligned[getProp(crit.attrUid1)].size() > 1; }
+        case Criterion::SUM:
         {
-            if (optimize) { return false; }
-            foreach (Entity *ent, list)
+            int attr = intProps[crit.attrUid1];
+            if (attr > 0 && !optimize || attr < 0 && optimize)
             {
-                if (dynamic_cast<Package*>(ent) && ent->installed) { return false; }
+                return _satisfies(false, crit.selector);
             }
-            return true;
-        }
-        case Criterion::REMOVED: { return optimize && installed; }
-        case Criterion::UP:
-        {
-            if (!optimize) { return false; }
-            foreach (Entity *ent, list)
+            else if (attr < 0 && !optimize || attr > 0 && optimize)
             {
-                if (dynamic_cast<Package*>(ent) && ent->version >= version && ent->installed)
-                {
-                    return false;
-                }
+                return _satisfies(true, crit.selector);
             }
-            return true; 
-        }
-        case Criterion::DOWN:    
-        {
-            if (!optimize) { return false; }
-            foreach (Entity *ent, list)
-            {
-                if (dynamic_cast<Package*>(ent) && ent->version <= version && ent->installed)
-                {
-                    return false;
-                }
-            }
-            return true; 
+            return false;
         }
     }
 }
 
-bool Package::satisfies(Dependency *dep, EntityList &list, Criterion &crit)
+bool Package::satisfies(Criterion &crit, bool both)
 {
-    if (remove_) { return false; }
-    switch (crit.measurement)
-    {
-        case Criterion::COUNT: { return satisfies(list, crit.optimize, crit.selector); }
-        case Criterion::SUM:
-        {
-            int attr = intProps[crit.attrUid1];
-            if (attr > 0 && !crit.optimize || attr < 0 && crit.optimize)
-            {
-                return satisfies(list, false, crit.selector);
-            }
-            else if (attr < 0 && !crit.optimize || attr > 0 && crit.optimize)
-            {
-                return satisfies(list, true, crit.selector);
-            }
-            return false;
-        }
-        case Criterion::NOTUPTODATE:
-        {
-            if (!satisfies(list, crit.optimize, crit.selector)) { return false; }
-            foreach (Entity *ent, list)
-            {
-                if (dynamic_cast<Package*>(ent) && ent->version > version)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-        case Criterion::UNSAT_RECOMMENDS:
-        {
-            return !recommends.empty() && satisfies(list, crit.optimize, crit.selector);
-        }
-        case Criterion::ALIGNED:
-        {
-            return dep->aligned_[std::make_pair(std::make_pair(crit.attrUid1, crit.attrUid2), getProp(crit.attrUid1))].size() > 1 && satisfies(list, crit.optimize, crit.selector);
-        }
-    }
+	return both ? _satisfies(true, crit) || _satisfies(false, crit) : _satisfies(crit.optimize, crit);
 }
 
 void Package::doAdd(Dependency *dep)
 {
     if (!dep->addAll())
     {
-        foreach(EntityList &clause, depends)
-        {
-            foreach(Entity *ent, clause) { ent->add(dep); }
-        }
+		if (!remove_)
+		{
+			foreach(EntityList &clause, depends)
+			{
+				foreach(Entity *ent, clause) 
+				{ 
+					if (!remove_) { ent->add(dep); }
+				}
+			}
+		}
         foreach (Criterion &crit, dep->criteria.criteria)
         {
-            if (crit.measurement == Criterion::UNSAT_RECOMMENDS && !crit.optimize && installSatisfies(dep->entityMap_[name], crit.selector))
+            if (!crit.optimize && crit.measurement == Criterion::UNSAT_RECOMMENDS && satisfies(crit, true))
             {
                 foreach(EntityList &clause, recommends)
                 {
-                    foreach(Entity *ent, clause) { ent->add(dep); }
+                    foreach(Entity *ent, clause) 
+					{ 
+						if (!remove_) { ent->add(dep); }
+					}
                 }
             }
         }
@@ -382,37 +256,100 @@ uint32_t Package::getProp(uint32_t uid) const
 void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
 {
     // unit(VP)
-    out << "unit(\"" << dep->string(name) << "\"," << version << ").\n";
-    // satisfies(VP,D)
-    // depends(VP,D)
-    foreach(EntityList &clause, depends)
-    {
-        PackageList pkgClause;
-        foreach(Entity *ent, clause) { ent->addToClause(pkgClause); }
-        uint32_t condition = dep->addClause(pkgClause, out);
-        out << "depends(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
-    }
-    // conflicts(VP, D)
-    if (!conflicts.empty()) {
-        PackageList pkgClause;
-        foreach(Entity *ent, conflicts) { ent->addToClause(pkgClause, this); }
-        uint32_t condition = dep->addClause(pkgClause, out);
-        out << "conflict(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
-    }
-}
-
-void Package::dumpAttr(Dependency *dep, std::ostream &out, unsigned uid)
-{
-    out << "attribute(\"" << dep->string(name) << "\"," << version << ",\"" << dep->string(uid) << "\",";
-    IntPropMap::const_iterator it = intProps.find(uid);
-    if (it != intProps.end()) { out << it->second; }
-    else
-    {
-        StringPropMap::const_iterator jt = stringProps.find(uid);
-        // Note: we do not care for the value at all
-        if (jt != stringProps.end()) { out << jt->second; }
-    }
-    out << ").\n";
+    out << "unit(\"" << dep->string(name) << "\"," << version << "," << (remove_ ? "in" : "out") << ").\n";
+	// installed(VP)
+	if (installed)
+	{
+		out << "installed(\"" << dep->string(name) << "\"," << version << ").\n";
+	}
+	// maxversion(VP)
+	if (optMaxVersion)
+	{
+		out << "maxversion(\"" << dep->string(name) << "\"," << version << ").\n";
+	}
+	if (!remove_)
+	{
+		// satisfies(VP,D)
+		// depends(VP,D)
+		foreach(EntityList &clause, depends)
+		{
+			PackageList pkgClause;
+			foreach(Entity *ent, clause) { ent->addToClause(pkgClause); }
+			uint32_t condition = dep->addClause(pkgClause, out);
+			out << "depends(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
+		}
+		// conflicts(VP, D)
+		if (!conflicts.empty())
+		{
+			PackageList pkgClause;
+			foreach(Entity *ent, conflicts) { ent->addToClause(pkgClause, this); }
+			uint32_t condition = dep->addClause(pkgClause, out);
+			out << "conflict(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
+		}
+	}
+    // additional attributes
+	bool recom = false;
+	std::set<uint32_t> attr;
+	foreach (Criterion &crit, dep->criteria.criteria)
+	{
+		switch (crit.measurement)
+		{
+			case Criterion::UNSAT_RECOMMENDS:
+			{
+				if (dep->addAll() || satisfies(crit, true)) { recom = true; }
+				break;
+			}
+			case Criterion::ALIGNED: 
+			{
+				if (dep->addAll() || satisfies(crit, true))
+				{
+					attr.insert(crit.attrUid1);
+					attr.insert(crit.attrUid2);
+				}
+				break;
+			}
+			case Criterion::SUM:
+			{
+				if (dep->addAll() || satisfies(crit, true))
+				{
+					attr.insert(crit.attrUid1);
+				}
+				break;
+			}
+			default: { break; }
+		}
+	}
+	// recommends(VP,D)
+	if (recom)
+	{
+		typedef std::map<uint32_t, uint32_t> OccurMap;
+		OccurMap occur;
+		foreach(EntityList &clause, recommends)
+		{
+			PackageList pkgClause;
+			foreach(Entity *ent, clause) { ent->addToClause(pkgClause); }
+			uint32_t condition = dep->addClause(pkgClause, out);
+			occur[condition]++;
+		}
+		foreach(OccurMap::value_type val, occur)
+		{
+			out << "recommends(\"" << dep->string(name) << "\"," << version << "," << val.first << "," << val.second << ").\n";
+		}
+	}
+	// attributes(VP,K,V)
+	foreach (uint32_t uid, attr)
+	{
+		out << "attribute(\"" << dep->string(name) << "\"," << version << ",\"" << dep->string(uid) << "\",";
+		IntPropMap::const_iterator it = intProps.find(uid);
+		if (it != intProps.end()) { out << it->second; }
+		else
+		{
+			StringPropMap::const_iterator jt = stringProps.find(uid);
+			// Note: we do not care for the value at all
+			if (jt != stringProps.end()) { out << jt->second; }
+		}
+		out << ").\n";
+	}
 }
 
 void Package::addToClause(PackageList &clause, Package *self)
@@ -627,40 +564,48 @@ void Dependency::initClosure()
 {
     foreach(Request &request, upgrade_) { request.add(this); }
     foreach(Request &request, install_) { request.add(this); }
-
-    foreach(Criterion &crit, criteria.criteria)
-    {
-        if (crit.measurement == Criterion::ALIGNED)
-        {
-            foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
-            {
-                foreach(Entity *ent, list)
-                {
-                    Package *pkg = dynamic_cast<Package*>(ent);
-                    if (pkg)
-                    {
-                        // performance: a pair<uint32_t,bool> as value would be sufficient
-                        aligned_[std::make_pair(std::make_pair(crit.attrUid1, crit.attrUid2), pkg->getProp(crit.attrUid1))].insert(pkg->getProp(crit.attrUid2));
-                    }
-                }
-            }
-        }
-    }
-
-    foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
-    {
-        foreach(Entity *ent, list)
-        {
-            Package *pkg = dynamic_cast<Package*>(ent);
-            if(pkg)
-            {
-                foreach(Criterion &crit, criteria.criteria)
-                {
-                    if (pkg->satisfies(this, list, crit)) { pkg->add(this); }
-                }
-            }
-        }
-    }
+	// intialize opt... members to make satisfies calls constant time
+	foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
+	{
+		bool installed        = false;
+		Package *max          = 0;
+		Package *minInstalled = 0;
+		Package *maxInstalled = 0;
+		foreach(Entity *ent, list)
+		{
+			Package *pkg = dynamic_cast<Package*>(ent);
+			if (pkg)
+			{
+				if (!max || max->version < pkg->version) { max = pkg; }
+				if (pkg->installed) { installed = true; }
+				if (pkg->installed)
+				{
+					if (!minInstalled || minInstalled->version > pkg->version) { minInstalled = pkg; }
+					if (!maxInstalled || maxInstalled->version < pkg->version) { maxInstalled = pkg; }
+				}
+			}
+		}
+		foreach(Entity *ent, list)
+		{
+			Package *pkg = dynamic_cast<Package*>(ent);
+			if (pkg)
+			{
+				pkg->optMaxVersion     = pkg == max;
+				pkg->optInstalled      = installed;
+				pkg->optLtMinInstalled = minInstalled && pkg->version < minInstalled->version;
+				pkg->optGtMaxInstalled = maxInstalled && pkg->version > maxInstalled->version;
+				foreach(Criterion &crit, criteria.criteria)
+				{
+					if (crit.measurement == Criterion::ALIGNED)
+					{
+						// NOTE: a pair<uint32_t,bool> as value would be sufficient
+						crit.optAligned[pkg->getProp(crit.attrUid1)].insert(pkg->getProp(crit.attrUid2));
+					}
+					if (pkg->satisfies(crit)) { pkg->add(this); }
+				}
+			}
+		}
+	}
 }
 
 void Dependency::closure()
@@ -707,14 +652,6 @@ bool Dependency::addAll() const
 void Dependency::dumpAsFacts(std::ostream &out)
 {
     foreach(Entity *ent, closure_) { ent->dumpAsFacts(this, out); }
-    // installed(VP)
-    foreach(Package &pkg, packages_)
-    {
-        if (pkg.installed)
-        {
-            out << "installed(\"" << string(pkg.name) << "\"," << pkg.version << ").\n";
-        }
-    }
     // requests according to install request
     foreach(Request &request, install_)
     {
@@ -753,69 +690,6 @@ void Dependency::dumpAsFacts(std::ostream &out)
             }
         }
     }
-    // additional attributes
-    foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
-    {
-        Package *max = 0;
-        foreach(Entity *ent, list)
-        {
-            Package *pkg = dynamic_cast<Package*>(ent);
-            if(pkg)
-            {
-                if (!max || max->version < pkg->version) { max = pkg; }
-                bool addedRecom = false;
-                std::set<uint32_t> addedAttr;
-                foreach (Criterion &crit, criteria.criteria)
-                {
-                    if (crit.measurement == Criterion::UNSAT_RECOMMENDS)
-                    {
-                        // recommends(VP,D)
-                        bool relevant = !pkg->recommends.empty();
-                        if (!addedRecom && relevant && (addAll_ || pkg->mightSatisfy(list, crit.selector)))
-                        {
-                            addedRecom = true;
-                            typedef std::map<uint32_t, uint32_t> OccurMap;
-                            OccurMap occur;
-                            foreach(EntityList &clause, pkg->recommends)
-                            {
-                                PackageList pkgClause;
-                                foreach(Entity *ent, clause) { ent->addToClause(pkgClause); }
-                                uint32_t condition = addClause(pkgClause, out);
-                                occur[condition]++;
-                            }
-                            foreach(OccurMap::value_type val, occur)
-                            {
-                                out << "recommends(\"" << string(pkg->name) << "\"," << pkg->version << "," << val.first << "," << val.second << ").\n";
-                            }
-                        }
-                    }
-                    else if (crit.measurement == Criterion::ALIGNED)
-                    {
-                        // attributes(VP,K,V)
-                        bool relevant = aligned_[std::make_pair(std::make_pair(crit.attrUid1, crit.attrUid2), pkg->getProp(crit.attrUid1))].size() > 1;
-                        if (relevant && (addAll_ || pkg->mightSatisfy(list, crit.selector)))
-                        {
-                            if (addedAttr.insert(crit.attrUid1).second) { pkg->dumpAttr(this, out, crit.attrUid1); }
-                            if (addedAttr.insert(crit.attrUid2).second) { pkg->dumpAttr(this, out, crit.attrUid2); }
-                        }
-                    }
-                    else if (crit.measurement == Criterion::SUM && pkg->visited)
-                    {
-                        // attributes(VP,K,V)
-                        bool relevant = pkg->intProps[crit.attrUid1] != 0;
-                        if (relevant && (addAll_ || pkg->mightSatisfy(list, crit.selector)))
-                        {
-                            if (addedAttr.insert(crit.attrUid1).second) { pkg->dumpAttr(this, out, crit.attrUid1); }
-                        }
-                    }
-                }
-            }
-        }
-        if (max)
-        {
-            out << "maxversion(\"" << string(max->name) << "\"," << max->version << ").\n";
-        }
-    }
     // criteria
     int priotity = criteria.criteria.size();
     foreach (Criterion &crit, criteria.criteria)
@@ -842,3 +716,4 @@ void Dependency::dumpAsFacts(std::ostream &out)
         out << "," << priotity-- << ").\n";
     }
 }
+
