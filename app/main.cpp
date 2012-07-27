@@ -229,6 +229,7 @@ int main(int argc, char *argv[])
             p.parse(in);
         }
         d.closure();
+        d.conflicts();
         d.dumpAsFacts(std::cout);
         return EXIT_SUCCESS;
     }

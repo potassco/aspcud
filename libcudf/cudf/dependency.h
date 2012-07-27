@@ -37,6 +37,7 @@ struct Entity;
 struct Package;
 struct Feature;
 class Dependency;
+class ConflictGraph;
 
 typedef std::vector<Entity*>    EntityList;
 typedef std::vector<EntityList> EntityFormula;
@@ -83,6 +84,7 @@ struct Entity
     virtual void doAdd(Dependency *dep) = 0;
     virtual void dumpAsFacts(Dependency *dep, std::ostream &out) = 0;
     virtual void addToClause(PackageList &clause, Package *self = 0) = 0;
+	virtual void addConflictEdges(ConflictGraph &g) = 0;
     bool allVersions() const;
 
     virtual ~Entity() = 0;
@@ -108,6 +110,7 @@ struct Package : public Entity
     void dumpAsFacts(Dependency *dep, std::ostream &out);
     void dumpAttr(Dependency *dep, std::ostream &out, unsigned uid);
     void addToClause(PackageList &clause, Package *self = 0);
+	void addConflictEdges(ConflictGraph &g);
     bool _satisfies(bool optimize, Criterion &crit);
     bool _satisfies(bool optimize, Criterion::Selector sel);
 	bool satisfies(Criterion &crit, bool both = false);
@@ -126,6 +129,7 @@ struct Package : public Entity
     bool optGtMaxInstalled;
     bool optLtMinInstalled;
     bool optMaxVersion;
+	bool dfsVisited;
 
 protected:
     void doRemove(Dependency *dep);
@@ -137,6 +141,7 @@ struct Feature : public Entity
     void dumpAsFacts(Dependency *dep, std::ostream &out);
     void addToClause(PackageList &clause, Package *self = 0);
     void doAdd(Dependency *dep);
+	void addConflictEdges(ConflictGraph &g);
 
     PackageList providedBy;
 
@@ -153,6 +158,35 @@ struct Request
 
     uint32_t   name;
     EntityList requests;
+};
+
+class ConflictGraph
+{
+public:
+	void addEdges(Package *a, PackageList const &neighbors);
+	void init(bool verbose);
+	void dump(Dependency *dep, std::ostream &out);
+private:
+	void components_(bool verbose);
+	void cliques_(bool verbose);
+private:
+	struct PkgCmp
+	{
+		bool operator()(Package *a, Package *b) const;
+	};
+	struct PkgHash
+	{
+		size_t operator()(Package *pkg) const;
+	};
+	bool edgeSort(Package *a, Package *b);
+	typedef boost::unordered_map<Package*, PackageList, ConflictGraph::PkgHash> Edges;
+	typedef boost::unordered_set<std::pair<Package*, Package*> > EdgeSet;
+	EdgeSet edgeSet_;
+	Edges edges_;
+public:
+	typedef std::vector<PackageList> Components;
+	Components components;
+	Components cliques;
 };
 
 class Dependency
@@ -181,6 +215,7 @@ public:
     const std::string &string(uint32_t index);
     void init(const Cudf::Document &doc);
     void closure();
+    void conflicts();
     void add(Entity *ent);
     uint32_t addClause(PackageList &list, std::ostream &out);
     void dumpAsFacts(std::ostream &out);
@@ -194,15 +229,16 @@ public:
     Criteria    criteria;
 
 private:
-    StringSet   strings_;
-    PackageSet  packages_;
-    FeatureSet  features_;
-    EntityMap   entityMap_;
-    EntityList  remove_;
-    RequestList install_;
-    RequestList upgrade_;
-    EntityList  closure_;
-    ClauseMap   clauses_;
-    bool        verbose_;
-    bool        addAll_;
+    StringSet     strings_;
+    PackageSet    packages_;
+    FeatureSet    features_;
+    EntityMap     entityMap_;
+    EntityList    remove_;
+    RequestList   install_;
+    RequestList   upgrade_;
+    EntityList    closure_;
+    ClauseMap     clauses_;
+	ConflictGraph conflictGraph_;
+    bool          verbose_;
+    bool          addAll_;
 };

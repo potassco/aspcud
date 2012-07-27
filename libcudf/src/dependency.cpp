@@ -162,6 +162,7 @@ Package::Package(const Cudf::Package &pkg)
     , keep(pkg.keep)
     , intProps(pkg.intProps)
     , stringProps(pkg.stringProps)
+	, dfsVisited(false)
 {
 }
 
@@ -193,17 +194,19 @@ bool Package::_satisfies(bool optimize, Criterion &crit)
         case Criterion::SUM:
         {
             int attr = intProps[crit.attrUid1];
-            if (attr > 0 && !optimize || attr < 0 && optimize)
+            if ((attr > 0 && !optimize) || (attr < 0 && optimize))
             {
                 return _satisfies(false, crit.selector);
             }
-            else if (attr < 0 && !optimize || attr > 0 && optimize)
+            else if ((attr < 0 && !optimize) || (attr > 0 && optimize))
             {
                 return _satisfies(true, crit.selector);
             }
             return false;
         }
     }
+	assert(false);
+	return false;
 }
 
 bool Package::satisfies(Criterion &crit, bool both)
@@ -357,6 +360,19 @@ void Package::addToClause(PackageList &clause, Package *self)
     if (!remove_ && this != self) { clause.push_back(this); }
 }
 
+void Package::addConflictEdges(ConflictGraph &g)
+{
+	if (!remove_)
+	{
+		PackageList clause;
+		foreach(Entity *ent, conflicts)
+		{
+			ent->addToClause(clause, this);
+		}
+		g.addEdges(this, clause);
+	}
+}
+
 //////////////////// Feature ////////////////////
 
 Feature::Feature(const Cudf::PackageRef &ftr)
@@ -397,6 +413,11 @@ void Feature::addToClause(PackageList &clause, Package *self)
     }
 }
 
+void Feature::addConflictEdges(ConflictGraph &g)
+{
+	// nothing to do
+}
+
 //////////////////// Request ////////////////////
 
 Request::Request(uint32_t name)
@@ -432,6 +453,172 @@ void Criteria::init(Dependency *dep, CritVec &vec)
         }
     }
     sort_uniq(optProps);
+}
+
+//////////////////// ConflictGraph ////////////////////
+
+bool ConflictGraph::edgeSort(Package *a, Package *b)
+{
+	return edges_[a].size() > edges_[b].size();
+}
+
+bool ConflictGraph::PkgCmp::operator()(Package *a, Package *b) const
+{
+	if (a->name != b->name) { return a->name < b->name; }
+	return a->version < b->version;
+}
+
+size_t ConflictGraph::PkgHash::operator()(Package *pkg) const
+{
+	size_t seed = pkg->name;
+	boost::hash_combine(seed, pkg->version);
+	return seed;
+}
+
+void ConflictGraph::addEdges(Package *a, PackageList const &neighbors)
+{
+	if (!neighbors.empty())
+	{
+		Edges::mapped_type &out = edges_[a];
+		out.insert(out.end(), neighbors.begin(), neighbors.end());
+	}
+}
+
+void ConflictGraph::init(bool verbose)
+{
+	foreach (Edges::value_type &out, edges_)
+	{
+		foreach (Package *pkg, out.second) 
+		{
+			edges_[pkg].push_back(out.first); 
+			edgeSet_.insert(std::make_pair(std::min(pkg, out.first),std::max(pkg, out.first)));
+		}
+	}
+	foreach (Edges::value_type &out, edges_) 
+	{
+		out.second.resize(boost::range::unique(boost::range::sort(out.second, PkgCmp())).size());
+	}
+	components_(verbose);
+	cliques_(verbose);
+}
+
+void ConflictGraph::components_(bool verbose)
+{
+	uint32_t min = 0, max = 0, sum = 0;
+	foreach (Edges::value_type &out, edges_)
+	{
+		if (!out.first->dfsVisited)
+		{
+			components.push_back(PackageList());
+			PackageList &component = components.back();
+			out.first->dfsVisited = true;
+			component.push_back(out.first);
+			for (PackageList::size_type i = 0; i < component.size(); ++i)
+			{
+				foreach (Package *pkg, edges_[component[i]])
+				{
+					if (!pkg->dfsVisited)
+					{
+						pkg->dfsVisited = true;
+						component.push_back(pkg);
+					}
+				}
+			}
+			assert(component.size() > 1);
+			sum+= component.size();
+			if (min == 0 || component.size() < min) { min = component.size(); }
+			if (component.size() > max) { max = component.size(); }
+		}
+	}
+	if (verbose)
+	{
+		std::cerr <<     "components: " << components.size() << std::endl;
+		if (!components.empty())
+		{
+			std::cerr << "  average : " << double(sum) / components.size() << std::endl;
+			std::cerr << "  min size: " << min << std::endl;
+			std::cerr << "  max size: " << max << std::endl;
+		}
+	}
+}
+
+void ConflictGraph::cliques_(bool verbose)
+{
+	uint32_t min = 0, max = 0, sum = 0;
+	foreach(PackageList &component, components)
+	{
+		if (component.size() == 2)
+		{
+			cliques.push_back(component);
+			sum += 2;
+			min  = 2;
+			if (2 > max) { max = 2; }
+		}
+		else
+		{
+			PackageList candidates = component, next;
+			boost::sort(candidates, boost::bind(&ConflictGraph::edgeSort, this, _1, _2));
+			// TODO: sort by out-going edges
+			do
+			{
+				cliques.push_back(PackageList());
+				PackageList &clique = cliques.back();
+				foreach (Package *pkg, candidates)
+				{
+					bool extendsClique = true;
+					foreach (Package *member, clique)
+					{
+						extendsClique = edgeSet_.find(std::make_pair(std::min(pkg, member),std::max(pkg, member))) != edgeSet_.end();
+						if (!extendsClique) { break; }
+					}
+					if (extendsClique) { clique.push_back(pkg); }
+					else { next.push_back(pkg); }
+				}
+				if (clique.size() < 2) { cliques.pop_back(); } 
+				else
+				{
+					sum+= clique.size();
+					if (min == 0 || clique.size() < min) { min = clique.size(); }
+					if (clique.size() > max) { max = clique.size(); }
+				}
+				candidates.clear();
+				std::swap(candidates, next);
+			}
+			while (candidates.size() > 1);
+		}
+	}
+	if (verbose)
+	{
+		std::cerr <<     "cliques   : " << cliques.size() << std::endl;
+		if (!cliques.empty())
+		{
+			std::cerr << "  average : " << double(sum) / cliques.size() << std::endl;
+			std::cerr << "  min size: " << min << std::endl;
+			std::cerr << "  max size: " << max << std::endl;
+		}
+	}
+}
+
+void ConflictGraph::dump(Dependency *dep, std::ostream &out)
+{
+	uint32_t index = 0;
+	foreach(PackageList &component, components)
+	{
+		foreach (Package *pkg, component)
+		{
+			out << "component(" << index << ",\"" << dep->string(pkg->name) << "\"," << pkg->version << ").\n";
+		}
+		++index;
+	}
+	index = 0;
+	foreach(PackageList &clique, cliques)
+	{
+		foreach (Package *pkg, clique)
+		{
+			out << "clique(" << index << ",\"" << dep->string(pkg->name) << "\"," << pkg->version << ").\n";
+		}
+		++index;
+	}
 }
 
 //////////////////// Dependency ////////////////////
@@ -649,6 +836,15 @@ bool Dependency::addAll() const
     return addAll_;
 }
 
+void Dependency::conflicts()
+{
+	foreach (Entity *ent, closure_)
+	{
+		ent->addConflictEdges(conflictGraph_);
+	}
+	conflictGraph_.init(verbose_);
+}
+
 void Dependency::dumpAsFacts(std::ostream &out)
 {
     foreach(Entity *ent, closure_) { ent->dumpAsFacts(this, out); }
@@ -690,6 +886,7 @@ void Dependency::dumpAsFacts(std::ostream &out)
             }
         }
     }
+	conflictGraph_.dump(this, out);
     // criteria
     int priotity = criteria.criteria.size();
     foreach (Criterion &crit, criteria.criteria)
