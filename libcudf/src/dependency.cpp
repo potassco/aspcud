@@ -181,6 +181,8 @@ bool Package::_satisfies(bool optimize, Criterion::Selector sel)
         case Criterion::UP:       { return !optimize && optGtMaxInstalled; }
         case Criterion::DOWN:     { return !optimize && optLtMinInstalled; }
     }
+	assert(false);
+	return false;
 }
 
 bool Package::_satisfies(bool optimize, Criterion &crit)
