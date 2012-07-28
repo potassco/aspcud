@@ -98,6 +98,26 @@
       \item $\pm O\in\mathcal{O}$, $O=\mathrm{sum}(X,\mathrm{attr})$, and $p\in\mathrm{init}({+}O)\cup\mathrm{init}({-}O)$, or
       \item $\pm O\in\mathcal{O}$, $O=\mathrm{aligned}(X,\mathrm{group},\mathrm{value})$, and $p\in\mathrm{init}({+}O)\cup\mathrm{init}({-}O)$, or
     \end{itemize}
+  \item \texttt{component($\mathtt{Index}$,$p.\mathrm{name}$,$p.\mathrm{version})$}
+    \begin{itemize}
+      \item $\mathtt{Index}$ is a subset-minimal set, s.t.:
+      \begin{itemize}
+        \item $p\in C\setminus\mathcal{R}\cap\mathtt{Index}$
+        \item $q\in C\setminus\mathcal{R}\cap\mathtt{Index}$ if exists $r\in\mathtt{Index}$ s.t. $r\in q.\mathrm{conflicts}$ or $q\in r.\mathrm{conflicts}$
+        \item $|\mathtt{Index}|>1$
+      \end{itemize}
+    \end{itemize}
+  \item \texttt{clique($\mathtt{Index}$,$p.\mathrm{name}$,$p.\mathrm{version})$}
+    \begin{itemize}
+      \item $\mathtt{Index}$ is a subset-minimal set, s.t.:
+      \begin{itemize}
+        \item $p\in C\setminus\mathcal{R}\cap\mathtt{Index}$
+        \item $q\in C\setminus\mathcal{R}\cap\mathtt{Index}$ if for all $r\in\mathtt{Index}$ holds $r\in q.\mathrm{conflicts}$ or $q\in r.\mathrm{conflicts}$, and\\$q$ is not a member of a previously printed clique
+        \item $|\mathtt{Index}|>1$
+
+      \end{itemize}
+    \end{itemize}
+
   \item \texttt{criterion(Maximize,Selector,count,Priority).}
   \item \texttt{criterion(Maximize,Selector,sum(Attribute),Priority).}
   \item \texttt{criterion(Maximize,Selector,notuptodate,Priority).}
