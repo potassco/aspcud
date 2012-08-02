@@ -19,8 +19,8 @@ set(changed,P,V)  :-     in(P,V), not installed(P,V).
 set(changed,P,V)  :- not in(P,V),     installed(P,V).
 set(new,P,V)      :-     in(P,V), not installed(P).
 set(removed,P,V)  :- not in(P),       installed(P,V).
-set(up,P,V)       :-     in(P,V), not installed(P,W) : installed(P,W) : W >= V.
-set(down,P,V)     :-     in(P,V), not installed(P,W) : installed(P,W) : W <= V.
+set(up,P,V)       :-     in(P,V), not installed(P,W) : installed(P,W) : W >= V, installed(P).
+set(down,P,V)     :-     in(P,V), not installed(P,W) : installed(P,W) : W <= V, installed(P).
 
 opt(P,V,1,O, 1,L) :- criterion(O,S,count,L),            set(S,P,V).
 opt(P,V,1,O, W,L) :- criterion(O,S,sum(A),L),           set(S,P,V), attribute(P,V,A,W).
