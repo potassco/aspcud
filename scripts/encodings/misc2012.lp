@@ -2,7 +2,7 @@
 % options (values: 0 for off, 1 for on) %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% group dependencies shared by clique elements
+% group clique elements sharing relations
 #const cliqueRelations = 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -77,7 +77,7 @@ oneval(T,A,X,B,Y) :- target(sol,T,P,V), criterion(_,T,aligned(A,B),_),
                      attribute(P,V,A,X), attribute(P,V,B,Y),
                      attribute(Q,W,B,Y) : attribute(Q,W,A,X) : target(sol,T,Q,W) :
                      realClique(I,Q,W) : realClique(I,P,V).
-oneval(T,A,X,B,Y) :- target(sol,T,P,V), oneval(T,A,X,B), realClique(I,P,V),
+oneval(T,A,X,B,Y) :- target(sol,T,P,V), oneval(T,A,X,B), realClique(_,P,V),
                      attribute(P,V,A,X), attribute(P,V,B,Y).
 oneval(T,A,X,B)   :- oneval(T,A,X,B,_).
 
@@ -97,3 +97,8 @@ object(unsat_recommends,S,T,P,V) :- target(S,T,P,V), criterion(_,T,unsat_recomme
                                     recommends(P,V,_,_).
 object(aligned(A,B)    ,S,T,P,V) :- target(S,T,P,V), criterion(_,T,aligned(A,B),_),
                                     attribute(P,V,A,X), keyval(T,A,X,B).
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+% calculate objectives %
+%%%%%%%%%%%%%%%%%%%%%%%%
+
