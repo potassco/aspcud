@@ -98,7 +98,60 @@ object(unsat_recommends,S,T,P,V) :- target(S,T,P,V), criterion(_,T,unsat_recomme
 object(aligned(A,B)    ,S,T,P,V) :- target(S,T,P,V), criterion(_,T,aligned(A,B),_),
                                     attribute(P,V,A,X), keyval(T,A,X,B).
 
-%%%%%%%%%%%%%%%%%%%%%%%%
-% calculate objectives %
-%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% calculate constituents of objectives %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+optClique(I,C,S,T,P,V) :- object(C,S,T,P,V), clique(I,P,V).
+optClique(I,C,S,T)     :- optClique(I,C,S,T,_,_).
+
+one(count;notuptodate).
+
+hasClique(I,C               ,S,T,P,V,1)        :- optClique(I,C               ,S,T,P,V), one(C).
+hasClique(I,sum(A)          ,S,T,P,V,X)        :- optClique(I,sum(A)          ,S,T,P,V),
+                                                  attribute(P,V,A,X).
+hasClique(I,unsat_recommends,S,T,P,V,rec(D,W)) :- optClique(I,unsat_recommends,S,T,P,V),
+                                                  recommends(P,V,D,W).
+hasClique(I,aligned(A,B)    ,S,T,P,V,ali(X,Y)) :- optClique(I,aligned(A,B)    ,S,T,P,V),
+                                                  attribute(P,V,A,X), attribute(P,V,B,Y).
+hasClique(I,C,S,T,Z)                           :- hasClique(I,C,S,T,_,_,Z).
+
+offClique(I,aligned(A,B),sub,T,Z) :- hasClique(I,aligned(A,B),sub,T,Z),
+                                     2 { hasClique(I,aligned(A,B),sub,T,_,_,Z) }.
+
+resClique(I,C,S,T,P,V,Z) :- hasClique(I,C,S,T,P,V,Z), not offClique(I,C,S,T,Z).
+resClique(I,C,S,T,P,V)   :- resClique(I,C,S,T,P,V,_).
+resClique(I,C,S,T)       :- optClique(I,C,S,T), 2 { resClique(I,C,S,T,_,_) }.
+resClique(I,C,S,T,Z)     :- resClique(I,C,S,T,_,_,Z), resClique(I,C,S,T).
+
+nonClique(C,S,T,P,V)     :- object(C,S,T,P,V), not clique(I,P,V) : clique(I,P,V).
+nonClique(I,C,S,T,P,V,Z) :- resClique(I,C,S,T,P,V,Z), not resClique(I,C,S,T).
+
+simClique(I,C,S,T,Z) :- resClique(I,C,S,T,Z), resClique(I,C,S,T,P,V,Z) : resClique(I,C,S,T,P,V).
+simClique(I,C,S,T)   :- resClique(I,C,S,T), simClique(I,C,S,T,Z) : resClique(I,C,S,T,Z).
+
+eleClique(I,C,S,T,N) :- simClique(I,C,S,T), N = { resClique(I,C,S,T,_,_) }.
+
+uniClique(I,C1,S1,T1,C2,S2,T2) :- eleClique(I,C1,S1,T1,N), eleClique(I,C2,S2,T2,N),
+                                  (C1,S1,T1) < (C2,S2,T2),
+                                  resClique(I,C1,S1,T1,P,V) : resClique(I,C2,S2,T2,P,V).
+
+mapClique(I,C1,S1,T1,C1,S1,T1) :- resClique(I,C1,S1,T1), not simClique(I,C1,S1,T1).
+mapClique(I,C1,S1,T1,C1,S1,T1) :- simClique(I,C1,S1,T1),
+                                  not uniClique(I,C,S,T,C1,S1,T1) : uniClique(I,C,S,T,C1,S1,T1).
+mapClique(I,C1,S1,T1,C2,S2,T2) :- uniClique(I,C1,S1,T1,C2,S2,T2), mapClique(I,C1,S1,T1,C1,S1,T1).
+
+%%%%%%%%%%%%%%
+% objectives %
+%%%%%%%%%%%%%%
+
+mult(minimize, 1).
+mult(maximize,-1).
+
+sign(sol, 1).
+sign(sub,-1).
+
+% count & notuptodate
+#minimize[ in(P,V) = E*F @ L :
+           nonClique(C,S,T,P,V) : criterion(M,T,C,L) : mult(M,E) : sign(S,F) : one(C) %, ...
+         ].
