@@ -24,16 +24,18 @@ realClique(I,P,V) :- realClique(I), clique(I,P,V), unit(P,V,in).
 
 relaClique(I,P,V,R,D) :- realClique(I,P,V), relate(P,V,R,D), cliqueRelations == 1.
 relaClique(I,R,D)     :- relaClique(I,_,_,R,D).
-relaClique(I,R,D,N)   :- relaClique(I,R,D), N = { relaClique(I,_,_,R,D) }, 1 < N.
 
-dropClique(P,V,R,D) :- relaClique(I,P,V,R,D), relaClique(I,R,D,_).
+joinClique(I,R,D)   :- relaClique(I,R,D), 2 { relaClique(I,_,_,R,D) }.
+joinClique(I,R,D,N) :- joinClique(I,R,D), N = { relaClique(I,_,_,R,D) }.
 
-equiClique(I,R1,D1,R2,D2) :- relaClique(I,R1,D1,N), relaClique(I,R2,D2,N), (R1,D1) < (R2,D2),
+dropClique(P,V,R,D) :- relaClique(I,P,V,R,D), joinClique(I,R,D).
+
+equiClique(I,R1,D1,R2,D2) :- joinClique(I,R1,D1,N), joinClique(I,R2,D2,N), (R1,D1) < (R2,D2),
                              relaClique(I,P,V,R1,D1) : relaClique(I,P,V,R2,D2).
 
-mapsClique(I,R1,D1,R1,D1) :- relaClique(I,R1,D1,_),
+mapsClique(I,R1,D1,R1,D1) :- joinClique(I,R1,D1),
                              not equiClique(I,R,D,R1,D1) : equiClique(I,R,D,R1,D1).
-mapsClique(I,R1,D1,R2,D2) :- mapsClique(I,R1,D1,R1,D1), equiClique(I,R1,D1,R2,D2).
+mapsClique(I,R1,D1,R2,D2) :- equiClique(I,R1,D1,R2,D2), mapsClique(I,R1,D1,R1,D1).
 
 %%%%%%%%%%%%%%%%%%%%%
 % generate solution %
@@ -69,17 +71,22 @@ target(sub,removed ,P,V) :- installed(P,V), target(removed).
 target(sol,up      ,P,V) :- unit(P,V,in),     up(P,M), M < V.
 target(sol,down    ,P,V) :- unit(P,V,in),   down(P,M), V < M.
 
-keyval(T,A,X,B,Y) :- target(sub,T,P,V), criterion(_,T,aligned(A,B),_),
+oneval(T,A,X,B,Y) :- target(sub,T,P,V), criterion(_,T,aligned(A,B),_),
                      attribute(P,V,A,X), attribute(P,V,B,Y).
-keyval(T,A,X,B,Y) :- target(sol,T,P,V), criterion(_,T,aligned(A,B),_),
-                     attribute(P,V,A,X), attribute(P,V,B,Y), attribute(Q,W,B,Y) :
-                     attribute(Q,W,A,X) : realClique(I,Q,W) : realClique(I,P,V).
-keyval(T,A,X,B,Y) :- target(sol,T,P,V), keyval(T,A,X,B), realClique(I,P,V),
+oneval(T,A,X,B,Y) :- target(sol,T,P,V), criterion(_,T,aligned(A,B),_),
+                     attribute(P,V,A,X), attribute(P,V,B,Y),
+                     attribute(Q,W,B,Y) : attribute(Q,W,A,X) : target(sol,T,Q,W) :
+                     realClique(I,Q,W) : realClique(I,P,V).
+oneval(T,A,X,B,Y) :- target(sol,T,P,V), oneval(T,A,X,B), realClique(I,P,V),
                      attribute(P,V,A,X), attribute(P,V,B,Y).
-keyval(T,A,X,B)   :- keyval(T,A,X,B,_).
+oneval(T,A,X,B)   :- oneval(T,A,X,B,_).
 
 twoval(T,A,X,B,I) :- target(sol,T,P,V), criterion(_,T,aligned(A,B),_), realClique(I,P,V),
-                     attribute(P,V,A,X), not keyval(T,A,X,B).
+                     attribute(P,V,A,X), not oneval(T,A,X,B).
+twoval(T,A,X,B)   :- twoval(T,A,X,B,_).
+
+keyval(T,A,X,B) :- oneval(T,A,X,B), 2 { oneval(T,A,X,B,_) }.
+keyval(T,A,X,B) :- twoval(T,A,X,B), 2 { twoval(T,A,X,B,_) }.
 
 object(count           ,S,T,P,V) :- target(S,T,P,V), criterion(_,T,count,_).
 object(sum(A)          ,S,T,P,V) :- target(S,T,P,V), criterion(_,T,sum(A),_),
@@ -89,5 +96,4 @@ object(notuptodate     ,S,T,P,V) :- target(S,T,P,V), criterion(_,T,notuptodate,_
 object(unsat_recommends,S,T,P,V) :- target(S,T,P,V), criterion(_,T,unsat_recommends,_),
                                     recommends(P,V,_,_).
 object(aligned(A,B)    ,S,T,P,V) :- target(S,T,P,V), criterion(_,T,aligned(A,B),_),
-                                    attribute(P,V,A,X),
-                                    2 { keyval(T,A,X,B,_), twoval(T,A,X,B,_) }.
+                                    attribute(P,V,A,X), keyval(T,A,X,B).
