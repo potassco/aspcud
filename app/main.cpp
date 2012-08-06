@@ -195,7 +195,7 @@ bool parsePositional(const std::string&, std::string& out)
 
 int main(int argc, char *argv[])
 {
-    try
+    //try
     {
         CudfOptions opts;
         if(!opts.parse(argc, argv, parsePositional)) { throw std::runtime_error( opts.messages.error.c_str() ); }
@@ -233,9 +233,11 @@ int main(int argc, char *argv[])
         d.dumpAsFacts(std::cout);
         return EXIT_SUCCESS;
     }
+	/*
     catch(const std::exception& e)
     {
         std::cerr << "\nERROR: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
+	*/
 }

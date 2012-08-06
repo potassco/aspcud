@@ -200,7 +200,7 @@ public:
 					getProp(val.first, value);
 					pkg.intProps.insert(Package::IntPropMap::value_type(val.first, value));
 				}
-				if (val.second.stringType())
+				else if (val.second.stringType())
 				{
 					uint32_t value;
 					getProp(val.first, value);

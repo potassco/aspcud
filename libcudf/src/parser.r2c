@@ -32,7 +32,7 @@ Parser::Type::Type(uint32_t type)
 
 bool Parser::Type::stringType() const
 {
-	return type == PARSER_FEEDBACK_STRING || type == PARSER_FEEDBACK_PKGNAME || type == PARSER_FEEDBACK_ENUM || PARSER_FEEDBACK_IDENT;
+	return type == PARSER_FEEDBACK_STRING || type == PARSER_FEEDBACK_PKGNAME || type == PARSER_FEEDBACK_ENUM || type == PARSER_FEEDBACK_IDENT;
 }
 
 bool Parser::Type::intType() const

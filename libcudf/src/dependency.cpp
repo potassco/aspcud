@@ -792,8 +792,18 @@ void Dependency::initClosure()
 						// NOTE: a pair<uint32_t,bool> as value would be sufficient
 						crit.optAligned[pkg->getProp(crit.attrUid1)].insert(pkg->getProp(crit.attrUid2));
 					}
-					if (pkg->satisfies(crit)) { pkg->add(this); }
 				}
+			}
+		}
+	}
+	foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
+	{
+		foreach(Entity *ent, list)
+		{
+			foreach(Criterion &crit, criteria.criteria)
+			{
+				Package *pkg = dynamic_cast<Package*>(ent);
+				if (pkg && pkg->satisfies(crit)) { pkg->add(this); }
 			}
 		}
 	}
