@@ -461,6 +461,8 @@ void Criteria::init(Dependency *dep, CritVec &vec)
 
 bool ConflictGraph::edgeSort(Package *a, Package *b)
 {
+	// Note: prefer self-conflicts
+	if (a->name != b->name) { return a->name < b->name; }
 	return edges_[a].size() > edges_[b].size();
 }
 
