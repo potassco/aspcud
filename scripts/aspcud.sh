@@ -141,9 +141,6 @@ clasp_opts=( "${clasp_opts[@]}" "${clasp_opts_implicit[@]}" )
 
 if [[ $# -eq 3 ]]; then
 	cudf_opts=( "${cudf_opts[@]}" "-c" "$3" )
-elif echo $(basename "$0") | grep -q "trendy"; then
-	[[ $# -ne 2 ]] && { die "error: exactly two arguments expected"; }
-	cudf_opts=( "${cudf_opts[@]}" "-c" "trendy" )
 elif echo $(basename "$0") | grep -q "paranoid"; then
 	[[ $# -ne 2 ]] && { die "error: exactly two arguments expected"; }
 	cudf_opts=( "${cudf_opts[@]}" "-c" "paranoid" )
