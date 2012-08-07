@@ -1,9 +1,9 @@
 #!/bin/bash
 
-clasp_bin=clasp-2.0.2-mt
+clasp_bin=clasp
 unclasp_bin=unclasp
 gringo_bin=gringo-3.0.3
-cudf2lp_bin=cudf2lp-banane
+cudf2lp_bin=cudf2lp
 
 function usrtrap()
 {
@@ -83,7 +83,7 @@ PATH=".:$base:$base/../build/release/bin:$PATH"
 # default options
 solver=""
 clasp_opts_def=( "--opt-heu=1" "--sat-prepro" "--restarts=128" "--heuristic=VSIDS" "--solution-recording" "--opt-hierarch=1" "--local-restarts" )
-unclasp_opts_def=( "--opt-uncore=oll" )
+unclasp_opts_def=( )
 gringo_opts_def=( "$(enc configuration.lp)" "$(enc optimize-define.lp)" )
 ungringo_opts_def=( "$(enc configuration-plain.lp)" "$(enc optimize-define.lp)" )
 
@@ -121,13 +121,12 @@ fi
 
 case "${solver}" in 
 	clasp)
-		solver="unclasp"
 		solver_bin="${clasp_bin}"
 		clasp_opts_implicit=( "--stats=2" "--quiet=1,2" )
 		;;
 	unclasp)
-		clasp_opts_def="${unclasp_opts_def[@]}"
-		gringo_opts_def="${ungringo_opts_def[@]}"
+		clasp_opts_def=( "${unclasp_opts_def[@]}" )
+		gringo_opts_def=( "${ungringo_opts_def[@]}" )
 		solver_bin="${unclasp_bin}"
 		clasp_opts_implicit=( "--stats" )
 		;;
@@ -135,7 +134,7 @@ case "${solver}" in
 		die "error: solver clasp or unclasp expected"
 		;;
 esac
-		
+
 [[ ${#clasp_opts[*]} -eq 0 ]] && clasp_opts=( "${clasp_opts_def[@]}" )
 [[ ${#gringo_opts[*]} -eq 0 ]] && gringo_opts=( "${gringo_opts_def[@]}" )
 clasp_opts=( "${clasp_opts[@]}" "${clasp_opts_implicit[@]}" )
@@ -155,8 +154,8 @@ fi
 wrapper_out="$2"
 
 trap cleanup EXIT
-#tmp="$(mktemp -d /tmp/outXXXXXX)"
-tmp="$(mktemp -d outXXXXXX)"
+test -n "${TMPDIR}" && tmpdir="${TMPDIR}/"
+tmp="$(mktemp -d "${tmpdir}outXXXXXX")"
 
 mkfifo $tmp/cudf_out $tmp/gringo_out
 
