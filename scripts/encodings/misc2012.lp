@@ -56,9 +56,9 @@ active(R,D) :- in(P,V), relate(P,V,R,D), not dropClique(P,V,R,D).
  :- active(dep,D), not active(sat,D).
  :-    request(D), not active(sat,D).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% calculate target sets and elements of objectives %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% precalculate target sets and elements of objectives %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 installed(P) :- installed(P,_).
 
@@ -81,17 +81,11 @@ target(sub,changed,P,V) :- installed(P,V), target(changed).
 target(sub,removed,P,V) :- installed(P,V), target(removed).
 target(sub,removed,P)   :- target(sub,removed,P,_), solution(P).
 
-remClique(P)   :- target(sub,removed,P), 1 { realClique(_,P) } 1.
+remClique(P)   :- target(sub,removed,P), realClique(I,P), realClique(I,P,V) : unit(P,V,in).
 remClique(I,P) :- realClique(I,P), remClique(P).
 
 delete(changed,P,V) :- target(sub,changed,P,V), not unit(P,V,in).
 delete(removed,P,V) :- target(sub,removed,P,V), not solution(P).
-
-delrec(T,D) :- target(sub,T,P,V), criterion(T,unsat_recommends), delete(T,P,V),
-               recommends(P,V,D,_).
-
-static(T,unsat_recommends(D),W) :- delrec(T,D),
-                                   W := [ recommends(P,V,D,U) = U : delete(T,P,V) ].
 
 oneval(T,A,X,B,Y) :- target(sub,T,P,V), criterion(T,aligned(A,B)),
                      attribute(P,V,A,X), attribute(P,V,B,Y).
@@ -120,6 +114,12 @@ static(T,aligned(A,X,B,Y)) :- remval(I,T,A,X,B,Y), 2 { remval(I,T,_,_,A,X,B,Y) }
 static(T,aligned(A,X,B,Y)) :- target(sub,T,P,V), delete(T,P,V),
                               keyval(T,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y).
 
+delrec(T,D) :- target(sub,T,P,V), criterion(T,unsat_recommends), delete(T,P,V),
+               relate(P,V,rec,D).
+
+static(T,unsat_recommends(D),W) :- delrec(T,D),
+                                   W := [ recommends(P,V,D,U) = U : delete(T,P,V) ], W != 0.
+
 remrec(P,D) :- target(sub,removed,P), criterion(removed,unsat_recommends),
                installed(P,V), relate(P,V,rec,D).
 
@@ -129,25 +129,28 @@ remove(notuptodate        ,P,N) :- target(sub,removed,P), criterion(removed,notu
                                    N := { not maxversion(P,V) : installed(P,V) }, 0 < N.
 remove(sum(A)             ,P,N) :- target(sub,removed,P), criterion(removed,sum(A)),
                                    N := [ attribute(P,V,A,X) = X : installed(P,V) ], N != 0.
-remove(unsat_recommends(D),P,N) :- remrec(P,D), criterion(removed,unsat_recommends),
+remove(unsat_recommends(D),P,N) :- remrec(P,D),
                                    N := [ recommends(P,V,D,W) = W : installed(P,V) ], N != 0.
 
 remove(C,P)                :- remove(C,P,_).
-remove(aligned(A,X,B,Y),P) :- target(sub,removed,P), criterion(removed,aligned(A,B)),
-                              keyval(T,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y),
-                              installed(P,V), not static(removed,aligned(A,X,B,Y)).
+remove(aligned(A,X,B,Y),P) :- target(sub,removed,P), installed(P,V),
+                              keyval(removed,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y),
+                              not static(removed,aligned(A,X,B,Y)).
 
-object(count              ,S,T,P,V) :- target(S,T,P,V), T != removed, not delete(T,P,V),
-                                       criterion(T,count).
-object(notuptodate        ,S,T,P,V) :- target(S,T,P,V), T != removed, not delete(T,P,V),
-                                       criterion(T,notuptodate), not maxversion(P,V).
-object(sum(A)             ,S,T,P,V) :- target(S,T,P,V), T != removed, not delete(T,P,V),
-                                       criterion(T,sum(A)), attribute(P,V,A,X), X != 0.
-object(unsat_recommends(D),S,T,P,V) :- target(S,T,P,V), T != removed, not delete(T,P,V),
-                                       criterion(T,unsat_recommends), recommends(P,V,D,W), W != 0.
-object(aligned(A,X,B,Y)   ,S,T,P,V) :- target(S,T,P,V), T != removed,
-                                       criterion(T,aligned(A,B)), not static(T,aligned(A,X,B,Y)),
-                                       keyval(T,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y).
+object(count              ,S,T,P,V,1) :- target(S,T,P,V), T != removed, not delete(T,P,V),
+                                         criterion(T,count).
+object(notuptodate        ,S,T,P,V,1) :- target(S,T,P,V), T != removed, not delete(T,P,V),
+                                         criterion(T,notuptodate), not maxversion(P,V).
+object(sum(A)             ,S,T,P,V,X) :- target(S,T,P,V), T != removed, not delete(T,P,V),
+                                         criterion(T,sum(A)), attribute(P,V,A,X), X != 0.
+object(unsat_recommends(D),S,T,P,V,W) :- target(S,T,P,V), T != removed, not delete(T,P,V),
+                                         criterion(T,unsat_recommends),
+                                         recommends(P,V,D,W), W != 0.
+
+object(C               ,S,T,P,V) :- object(C,S,T,P,V,_).
+object(aligned(A,X,B,Y),S,T,P,V) :- target(S,T,P,V), T != removed,
+                                    keyval(T,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y),
+                                    not static(T,aligned(A,X,B,Y)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % analyze objectives' conflict cliques %
