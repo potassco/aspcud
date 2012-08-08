@@ -82,10 +82,10 @@ PATH=".:$base:$base/../build/release/bin:$PATH"
 
 # default options
 solver=""
-clasp_opts_def=( "--opt-heu=1" "--sat-prepro" "--restarts=128" "--heuristic=VSIDS" "--solution-recording" "--opt-hierarch=1" "--local-restarts" )
+clasp_opts_def=( "--opt-heu=1" "--sat-prepro" "--restarts=L,128" "--heuristic=VSIDS" "--opt-hierarch=1" "--local-restarts" )
 unclasp_opts_def=( )
-gringo_opts_def=( "$(enc configuration.lp)" "$(enc optimize-define.lp)" )
-ungringo_opts_def=( "$(enc configuration-plain.lp)" "$(enc optimize-define.lp)" )
+gringo_opts_def=( "$(enc specification.lp)" )
+ungringo_opts_def=( "$(enc specification.lp)" )
 
 cudf_opts=( )
 clasp_opts=( )
