@@ -114,23 +114,23 @@ static(T,aligned(A,X,B,Y)) :- remval(I,T,A,X,B,Y), 2 { remval(I,T,_,_,A,X,B,Y) }
 static(T,aligned(A,X,B,Y)) :- target(sub,T,P,V), delete(T,P,V),
                               keyval(T,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y).
 
-delrec(T,D) :- target(sub,T,P,V), criterion(T,unsat_recommends), delete(T,P,V),
+delrec(T,D) :- target(sub,T,P,V), delete(T,P,V), criterion(T,unsat_recommends),
                relate(P,V,rec,D).
 
-static(T,unsat_recommends(D),W) :- delrec(T,D),
-                                   W := [ recommends(P,V,D,U) = U : delete(T,P,V) ], W != 0.
+static(T,unsat_recommends(D),M) :- delrec(T,D),
+                                   M := [ recommends(P,V,D,W) = W : delete(T,P,V) ], M != 0.
 
 remrec(P,D) :- target(sub,removed,P), criterion(removed,unsat_recommends),
                installed(P,V), relate(P,V,rec,D).
 
-remove(count              ,P,N) :- target(sub,removed,P), criterion(removed,count),
-                                   N := { installed(P,_) }.
-remove(notuptodate        ,P,N) :- target(sub,removed,P), criterion(removed,notuptodate),
-                                   N := { not maxversion(P,V) : installed(P,V) }, 0 < N.
-remove(sum(A)             ,P,N) :- target(sub,removed,P), criterion(removed,sum(A)),
-                                   N := [ attribute(P,V,A,X) = X : installed(P,V) ], N != 0.
-remove(unsat_recommends(D),P,N) :- remrec(P,D),
-                                   N := [ recommends(P,V,D,W) = W : installed(P,V) ], N != 0.
+remove(count              ,P,M) :- target(sub,removed,P), criterion(removed,count),
+                                   M := { installed(P,_) }.
+remove(notuptodate        ,P,M) :- target(sub,removed,P), criterion(removed,notuptodate),
+                                   M := { not maxversion(P,V) : installed(P,V) }, 0 < M.
+remove(sum(A)             ,P,M) :- target(sub,removed,P), criterion(removed,sum(A)),
+                                   M := [ attribute(P,V,A,X) = X : installed(P,V) ], M != 0.
+remove(unsat_recommends(D),P,M) :- remrec(P,D),
+                                   M := [ recommends(P,V,D,W) = W : installed(P,V) ], M != 0.
 
 remove(C,P)                :- remove(C,P,_).
 remove(aligned(A,X,B,Y),P) :- target(sub,removed,P), installed(P,V),
@@ -186,23 +186,43 @@ mapClique(I,C1,S1,T1,C2,S2,T2) :- simClique(I,C1,S1,T1,C2,S2,T2), mapClique(I,C1
 % calculate constituents of objectives %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-valClique(I,C,sub,removed,P,0,N) :- resClique(I,C,sub,removed), conClique(I,C,P), remove(C,P,N).
-valClique(I,C,S,T        ,P,V,N) :- resClique(I,C,S,T,P,V), object(C,S,T,P,V,N).
+valClique(I,C,sub,removed,P,0,M) :- resClique(I,C,sub,removed), conClique(I,C,P), remove(C,P,M).
+valClique(I,C,S,T        ,P,V,M) :- resClique(I,C,S,T,P,V), object(C,S,T,P,V,M).
 valClique(I,C,S,T,P,V)           :- valClique(I,C,S,T,P,V,_).
-valClique(I,C,S,T,N)             :- valClique(I,C,S,T,_,_,N).
+valClique(I,C,S,T,M)             :- valClique(I,C,S,T,_,_,M).
 valClique(I,C,S,T)               :- valClique(I,C,S,T,_).
 
-uniClique(I,C,S,T) :- valClique(I,C,S,T), { valClique(I,C,S,T,_) } 1.
+uniClique(I,C,S,T)                :- valClique(I,C,S,T), { valClique(I,C,S,T,_) } 1.
+% uniClique(I,aligned(A,X,B,Y),S,T) :- resClique(I,aligned(A,X,B,Y),S,T).
 
-ordClique(I,C,S,T,N2,N1) :- valClique(I,C,S,T,N1;N2), |N1| < |N2|, 0 < N1*N2,
-                            |N| <= |N1| : valClique(I,C,S,T,N) : |N| < |N2| : 0 < N*N2,
+ordClique(I,C,S,T,M2,M1) :- valClique(I,C,S,T,M1;M2), |M1| < |M2|, 0 < M1*M2,
+                            |M| <= |M1| : valClique(I,C,S,T,M) : |M| < |M2| : 0 < M*M2,
                             not uniClique(I,C,S,T).
-ordClique(I,C,S,T,N2,0)  :- valClique(I,C,S,T,N2), not uniClique(I,C,S,T),
-                            N1*N2 <= 0 : valClique(I,C,S,T,N1) : |N1| < |N2|.
+ordClique(I,C,S,T,M2,0)  :- valClique(I,C,S,T,M2), not uniClique(I,C,S,T),
+                            M1*M2 <= 0 : valClique(I,C,S,T,M1) : |M1| < |M2|.
 
-brkClique(c(I,C,S,T))                :- uniClique(I,C,S,T).
-brkClique(c(I,aligned(A,X,B,Y),S,T)) :- resClique(I,aligned(A,X,B,Y),S,T).
-brkClique(c(I,C,S,T,N))              :- valClique(I,C,S,T,N), not uniClique(I,C,S,T).
+brkClique(c(I,C,S,T)  ,P,V) :- resClique(I,C,S,T,P,V).
+brkClique(c(I,C,S,T,M),P,V) :- valClique(I,C,S,T,P,V,M), not uniClique(I,C,S,T).
+
+brkClique(J)   :- brkClique(J,_,_).
+brkClique(J,N) :- brkClique(J), N := { brkClique(J,_,_) }.
+
+donClique(c(I,C,S,T,M),unit(P,V)) :- brkClique(c(I,C,S,T,M),P,V), brkClique(c(I,C,S,T,M),1).
+donClique(J,rela(I,R,D))          :- brkClique(J,N), joinClique(I,R,D,N), mapsClique(I,R,D,R,D),
+                                     brkClique(J,P,V) : relaClique(I,P,V,R,D).
+donClique(J)                      :- donClique(J,_).
+
+pkgClique(J,P)   :- brkClique(J,P,_), not donClique(J).
+pkgClique(J,P,N) :- pkgClique(J,P), N := { brkClique(J,P,_) }.
+
+pkgRelate(I,R,D,P)   :- relaClique(I,P,_,R,D), mapsClique(I,R,D,R,D).
+pkgSingle(I,R,D)     :- mapsClique(I,R,D,R,D), { pkgRelate(I,R,D,_) } 1.
+pkgSingle(I,R,D,P,N) :- pkgRelate(I,R,D,P), pkgSingle(I,R,D), joinClique(I,R,D,N).
+
+pkgLookup(J,P,unit(P,V))   :- brkClique(J,P,V), pkgClique(J,P,1).
+pkgLookup(J,P,rela(I,R,D)) :- pkgClique(J,P,N), pkgSingle(I,R,D,P,N),
+                              brkClique(J,P,V) : relaClique(I,P,V,R,D).
+
 
 %*
 
