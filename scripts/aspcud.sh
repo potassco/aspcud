@@ -154,6 +154,7 @@ function usrtrap() {
 
 trap usrtrap USR1 TERM INT
 wait
+trap "" USR1 TERM INT
 
 grep -A 1 ^Answer "$tmp/clasp_out" | tail -n 1 | sed -e 's/in("/package: /g' -e 's/",/\nversion: /g' -e 's/)[ ]\?/\ninstalled: true\n\n/g' > "$wrapper_out"
 cat "$tmp/clasp_out" | colrm 81 > "$tmp/parser_err"
