@@ -34,13 +34,12 @@ for system in "aspcud" "aspuncud"; do
 		echo "Solver for ${ftrack} track." > "${dst}/README"
 		tar -cf "${dst}.tar" "${dst}"
 		cp "${dst}.tar" /home/wv/WWW/aspcud/files/
-		# send the mail automatically???
-		echo "To: misc-competition@inria.fr"
-		echo "Subject: Submission of '$dst' for track '$ftrack'"
-		echo "http://www.cs.uni-potsdam.de/aspcud/files/${dst}.tar"
-		md5sum "${dst}.tar"
-		echo "${ftrack}"
-		echo
+		mail="kaminski@cs.uni-potsdam.de"
+		mail "$mail" -s "Submission of '$dst' for track '$ftrack'" <<q
+http://www.cs.uni-potsdam.de/aspcud/files/${dst}.tar
+$(md5sum "${dst}.tar")
+${ftrack}
+q
 	done
 done
 
