@@ -74,7 +74,7 @@ PATH=".:$base:$base/../build/release/bin:$PATH"
 
 # default options
 solver=""
-clasp_opts_def=( "--opt-heu=1" "--sat-prepro" "--restarts=L,128" "--heuristic=VSIDS" "--opt-hierarch=1" "--local-restarts" )
+clasp_opts_def=( "--opt-heu=1" "--sat-prepro" "--restarts=L,128" "--heuristic=VSIDS" "--opt-hierarch=1" "--local-restarts" "--del-max=200000,250" )
 unclasp_opts_def=( )
 gringo_opts_def=( "$(enc specification.lp)" )
 ungringo_opts_def=( "$(enc specification.lp)" )
