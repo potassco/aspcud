@@ -414,7 +414,7 @@ malClique(I,C,S,T      ,P,V)   :- resClique(I,C,S,T,P,V), not outClique(I,C,S,T)
                                   not trace(i(I,n,f(C,S,T)),P,V), trace == 1.
 malClique(I,C,S,T      ,P,V,M) :- valClique(I,C,S,T,P,V,M), not uniClique(I,C,S,T), T != removed,
                                   not trace(i(I,m,f(C,S,T,M)),P,V), trace == 1.
-malClique(I,C,S,removed,P,0,M) :- valClique(I,C,S,removed,P,0,M), unit(P,V,in),
+malClique(I,C,S,removed,P,V,M) :- valClique(I,C,S,removed,P,0,M), unit(P,V,in),
                                   not uniClique(I,C,S,removed), trace == 1,
                                   not trace(i(I,m,f(C,S,removed,M)),P,V).
 
@@ -427,7 +427,7 @@ nalClique(I,C,S,T,P,V,M) :- trace(i(I,m,f(C,S,T,M)),P,V), uniClique(I,C,S,T).
 
 malRemove(P,P,V) :- pkgRemove(P), unit(P,V,in), not trace(rem(P),P,V), trace == 1.
 nalRemove(P,Q,V) :- trace(rem(P),Q,V), P != Q.
-nalRemove(P,Q,V) :- trace(rem(P),Q,V), not pkgRemove(P).
+nalRemove(P,Q,V) :- trace(rem(P),P,V), not pkgRemove(P).
 nalRemove(P,P,V) :- trace(rem(P),P,V), not unit(P,V,in).
 
 #show malClique/6.
