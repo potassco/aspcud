@@ -34,6 +34,8 @@ for system in "aspcud" "aspuncud"; do
 		echo "Solver for ${ftrack} track." > "${dst}/README"
 		tar -cf "${dst}.tar" "${dst}"
 		cp "${dst}.tar" /home/wv/WWW/aspcud/files/
+		chmod g+w "/home/wv/WWW/aspcud/files/${dst}.tar"
+		#mail="misc-competition@inria.fr"
 		mail="kaminski@cs.uni-potsdam.de"
 		mail "$mail" -s "Submission of '$dst' for track '$ftrack'" <<q
 http://www.cs.uni-potsdam.de/aspcud/files/${dst}.tar
