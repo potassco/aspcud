@@ -5,13 +5,6 @@ unclasp_bin=unclasp
 gringo_bin=gringo-3.0.3
 cudf2lp_bin=cudf2lp
 
-function usrtrap()
-{
-	kill $cudf_pid   2> /dev/null
-	kill $gringo_pid 2> /dev/null
-	kill $clasp_pid  2> /dev/null
-}
-
 function enc()
 {
 	for x in "." "$base" "$base/encodings" "$base/../../Encodings"; do
@@ -38,7 +31,6 @@ function die()
 	[[ -n "$wrapper_out" ]] && echo FAIL > "$wrapper_out"
 	dumperr
 	echo "error: $1" >&2
-	usrtrap
 	wait
 	exit 0
 }
@@ -92,9 +84,6 @@ clasp_opts=( )
 gringo_opts=( )
 
 unset wrapper_out
-unset cudf_pid
-unset gringo_pid
-unset clasp_pid
 unset tmp
 
 while getopts "hc:e:p:s:" flag
@@ -151,27 +140,19 @@ fi
 wrapper_out="$2"
 
 trap cleanup EXIT
+
 test -n "${TMPDIR}" && tmpdir="${TMPDIR}/"
 tmp="$(mktemp -d "${tmpdir}outXXXXXX")"
 
-mkfifo $tmp/cudf_out $tmp/gringo_out
-
+"${cudf2lp_bin}" "${cudf_opts[@]}"   > "$tmp/cudf_out"   2> "$tmp/cudf_err"   - < "$1"
+"${gringo_bin}"  "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" - < "$tmp/cudf_out"
 "${solver_bin}"  "${clasp_opts[@]}"  > "$tmp/clasp_out"  2> "$tmp/clasp_err"    < "$tmp/gringo_out" &
 clasp_pid=$!
-"${gringo_bin}"  "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" - < "$tmp/cudf_out" &
-gringo_pid=$!
-"${cudf2lp_bin}" "${cudf_opts[@]}"   > "$tmp/cudf_out"   2> "$tmp/cudf_err"   - < "$1" &
-cudf_pid=$!
+function usrtrap() { 
+	kill $clasp_pid 
+}
 
 trap usrtrap USR1 TERM INT
-
-wait $cudf_pid
-[[ $? -ne 0 ]] && die "cudf2lp failed"
-wait $gringo_pid
-[[ $? -ne 0 ]] && die "gringo failed"
-wait $clasp_pid
-
-trap "" USR1 TERM INT
 wait
 
 grep -A 1 ^Answer "$tmp/clasp_out" | tail -n 1 | sed -e 's/in("/package: /g' -e 's/",/\nversion: /g' -e 's/)[ ]\?/\ninstalled: true\n\n/g' > "$wrapper_out"
