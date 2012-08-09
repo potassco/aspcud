@@ -391,7 +391,7 @@ turn(sol     ,1). turn(sub     ,-1).
 #minimize[ penalty(_,C,S,T,M) = M*F*G @ L :
            criterion(O,T,C,L) : mult(O,F) : turn(S,G) : not special(C),
            penalty(_,C,_,T,M) = M*F @ L :
-           criterion(O,T,C,L) : mult(O,F) : special(C),
+           criterion(O,T,unsat_recommends,L) : mult(O,F) : special(C),
            aligned(T,A,_,B) = -F @ L :
            criterion(O,T,aligned(A,B),L) : mult(O,F),
            aligned(T,A,X,B,_) = F @ L :
