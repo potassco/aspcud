@@ -6,7 +6,7 @@
 #const cliqueRelations = 1.
 
 % include redundant cardinality constraints for cliques
-#const cliqueShortcuts = 0.
+#const cliqueShortcuts = 1.
 
 % group clique elements by package names for optimization
 #const cliqueBreak = 1.
