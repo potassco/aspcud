@@ -14,6 +14,9 @@
 % limit of values per key for counter implementation (numeric)
 #const alignCounter = 50.
 
+% output solution in terms of in/2
+#const output = 1.
+
 % trace derivations of objectives' elements (for debugging only)
 #const trace = 0.
 
@@ -66,8 +69,11 @@ active(R,D) :- hold(uni(P,V)), relate(P,V,R,D), not dropClique(P,V,R,D).
  :- active(dep,D), not active(sat,D).
  :-    request(D), not active(sat,D).
 
+in(P,V) :- hold(uni(P,V)), output == 1.
+
 #hide.
-#show hold(uni(_,_)).
+#show hold(uni(_,_)) : output != 1.
+#show in(_,_) : output == 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % precalculate target sets and elements of objectives %
