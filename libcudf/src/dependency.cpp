@@ -490,7 +490,8 @@ void ConflictGraph::addEdges(Package *a, PackageList const &neighbors)
 
 void ConflictGraph::init(bool verbose)
 {
-	foreach (Edges::value_type &out, edges_)
+	Edges copy = edges_;
+	foreach (Edges::value_type &out, copy)
 	{
 		foreach (Package *pkg, out.second) 
 		{

@@ -2,7 +2,7 @@
 
 clasp_bin=clasp
 unclasp_bin=unclasp
-gringo_bin=gringo-3.0.3
+gringo_bin=gringo
 cudf2lp_bin=cudf2lp
 
 function enc()

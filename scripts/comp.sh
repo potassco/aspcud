@@ -1,6 +1,6 @@
 #!/bin/bash
 
-encodings=( "scripts/encodings/specification.lp" ) 
+encodings=( "scripts/encodings/specification.lp" "scripts/encodings/misc2012.lp" ) 
 cudf2lp="build/static/bin/cudf2lp"
 clasp="/home/kaminski/svn/potassco/trunk/clasp/build/static/bin/clasp"
 unclasp="/home/wv/bin/linux/64/unclasp"
