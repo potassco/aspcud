@@ -11,7 +11,7 @@
 % group clique elements by package names for optimization
 #const cliqueBreak = 1.
 
-% limit of values per key for counter implementation
+% limit of values per key for counter implementation (numeric)
 #const alignCounter = 50.
 
 % trace derivations of objectives' elements (for debugging only)
@@ -174,6 +174,7 @@ special(unsat_recommends(D),sub,changed) :- object(unsat_recommends(D),sub,chang
 
 special(unsat_recommends(D)) :- special(unsat_recommends(D),_,_).
 special(unsat_recommends(D)) :- object(unsat_recommends(D),sol,_,_,_).
+special(unsat_recommends(D)) :- static(_,unsat_recommends(D),_).
 
 conClique(I,C,P) :- remClique(I,P), remove(C,P).
 conClique(I,C)   :- conClique(I,C,_).
@@ -187,14 +188,14 @@ resClique(I,C,S,T,P,V) :- subClique(I,C,S,T,P,V), resClique(I,C,S,T).
 resClique(C,S,T,P,V)   :- resClique(_,C,S,T,P,V).
 
 subRemove(P)     :- remove(_,P), not remClique(P).
-subRemove(P)     :- remove(C,P),   remClique(I,P), not resClique(I,C,sub,removed).
+subRemove(P)     :- conClique(I,C,P), not resClique(I,C,sub,removed).
 subRemove(I,P)   :- subRemove(P), realClique(I,P), cliqueBreak == 1.
 subRemove(I,P,N) :- subRemove(I,P), N := { realClique(I,P,_) }.
 
 recClique(I,C,sub,removed,Z) :- resClique(I,C,sub,removed), special(C,sub,removed),
-                                Z := [ remove(C,P,M) : conClique(I,C,P) ].
+                                Z := [ remove(C,P,M) = M : conClique(I,C,P) ].
 recClique(I,C,sub,changed,Z) :- resClique(I,C,sub,changed), special(C,sub,changed),
-                                Z := [ object(C,sub,changed,P,V,M) :
+                                Z := [ object(C,sub,changed,P,V,M) = M :
                                   resClique(I,C,sub,changed,P,V) ].
 
 valClique(I,C,sub,removed,P,0,M)   :- resClique(I,C,sub,removed), conClique(I,C,P),
@@ -213,16 +214,18 @@ valClique(I,C,S,T)                 :- valClique(I,C,S,T,_).
 uniClique(I,C,S,T) :- valClique(I,C,S,T), { valClique(I,C,S,T,_) } 1.
 
 ordClique(I,C,S,T,M2,M1) :- valClique(I,C,S,T,M1;M2), |M1| < |M2|, 0 < M1*M2,
-                            |M| <= |M1| : valClique(I,C,S,T,M) : |M| < |M2| : 0 < M*M2,
-                            not uniClique(I,C,S,T).
+                            |M| <= |M1| : valClique(I,C,S,T,M) : |M| < |M2| : 0 < M*M2.
 ordClique(I,C,S,T,M2,0)  :- valClique(I,C,S,T,M2), not uniClique(I,C,S,T),
                             M1*M2 <= 0 : valClique(I,C,S,T,M1) : |M1| < |M2|.
 
 outClique(I,C,S,T) :- valClique(I,C,S,T), not uniClique(I,C,S,T), not special(C,S,T).
 outClique(I,C,S,T) :- recClique(I,C,S,T,0).
 
-brkClique(i(I,m,f(C,S,T,M)),P,V) :- valClique(I,C,S,T,P,V,M), not uniClique(I,C,S,T).
-brkClique(i(I,n,f(C,S,T))  ,P,V) :- resClique(I,C,S,T,P,V),   not outClique(I,C,S,T).
+brkClique(i(I,m,f(C,S,T,M))        ,P,V) :- valClique(I,C,S,T,P,V,M), not uniClique(I,C,S,T),
+                                            T != removed.
+brkClique(i(I,m,f(C,sub,removed,M)),P,V) :- valClique(I,C,sub,removed,P,0,M), unit(P,V,in),
+                                            not uniClique(I,C,sub,removed).
+brkClique(i(I,n,f(C,S,T))          ,P,V) :- resClique(I,C,S,T,P,V), not outClique(I,C,S,T).
 
 brkClique(J)   :- brkClique(J,_,_).
 brkClique(J,N) :- brkClique(J), N := { brkClique(J,_,_) }.
@@ -281,10 +284,10 @@ hasClique(J              ,uni(P,V))          :- mapClique(J,J), brkClique(J,P,V)
                                                 cliqueBreak != 1.
 hasClique(J              ,E)                 :- ponClique(J,_,E).
 hasClique(J              ,pkg(E,P))          :- mapClique(E,J,P).
-hasClique(i(I,n,f(C,S,T)),i(I,m,f(C,S,T,M))) :- valClique(I,C,S,T,P,V,M),
+hasClique(i(I,n,f(C,S,T)),i(I,m,f(C,S,T,M))) :- valClique(I,C,S,T,M), not recClique(I,C,S,T,M),
                                                 not uniClique(I,C,S,T), not outClique(I,C,S,T).
- :- pkgClique(J), 2 { hold(E) : hasClique(J,E) }, cliqueShortcuts == 1.
- :- valClique(I,C,S,T,P,V,M), not uniClique(I,C,S,T), not outClique(I,C,S,T),
+ :- mapClique(J,J), 2 { hold(E) : hasClique(J,E) }, cliqueShortcuts == 1.
+ :- valClique(I,C,S,T), not uniClique(I,C,S,T), not outClique(I,C,S,T),
     2 { hold(E) : hasClique(i(I,n,f(C,S,T)),E) }, cliqueShortcuts == 1.
 
 donRemove(I,P,uni(P,V))   :- subRemove(I,P,1), realClique(I,P,V).
@@ -297,18 +300,15 @@ hasRemove(rem(P),sub(I,P)) :- subRemove(I,P), not donRemove(I,P).
 hasRemove(rem(P),uni(P,V)) :- subRemove(P), unit(P,V,in),
                               not realClique(I,P,V) : realClique(I,P,V) : cliqueBreak == 1.
 
-abbrev(pkg(E,P)) :- mapClique(E,E,P).
-abbrev(sub(I,P)) :- hasRemove(P,sub(I,P)).
+abbrev(pkg(J,P)) :- mapClique(J,J,P).
+abbrev(sub(I,P)) :- hasRemove(rem(P),sub(I,P)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 % derive objective values %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-hold(sub(I,P))                 :- hold(uni(P,V)), realClique(I,P,V), abbrev(sub(I,P)).
-hold(pkg(i(I,m,f(C,S,T,M)),P)) :- hold(uni(P,V)), valClique(I,C,S,T,P,V,M),
-                                  abbrev(pkg(i(I,m,f(C,S,T,M)),P)).
-hold(pkg(i(I,n,f(C,S,T)),P))   :- hold(uni(P,V)), resClique(I,C,S,T,P,V),
-                                  abbrev(pkg(i(I,n,f(C,S,T)),P)).
+hold(sub(I,P)) :- hold(uni(P,V)), abbrev(sub(I,P)), realClique(I,P,V).
+hold(pkg(J,P)) :- hold(uni(P,V)), abbrev(pkg(J,P)), brkClique(J,P,V).
 
 hold(J) :- hasClique(J,E), hold(E).
 hold(J) :- hasRemove(J,E), hold(E).
@@ -383,8 +383,8 @@ turn(sol     ,1). turn(sub     ,-1).
            criterion(O,T,C,L) : mult(O,F) : special(C),
            aligned(T,A,_,B) = -F @ L :
            criterion(O,T,aligned(A,B),L) : mult(O,F),
-           aligned(T,A,_,B,_) = F @ L :
-           criterion(O,T,aligned(A,B),L) : mult(O,F),
+           aligned(T,A,X,B,_) = F @ L :
+           criterion(O,T,aligned(A,B),L) : mult(O,F) : not alcount(T,A,X,B),
            alcount(T,A,X,B,Y,Z) = F @ L :
            criterion(O,T,aligned(A,B),L) : mult(O,F) : alchain(T,A,X,B,Y) : 0 < Z ].
 
@@ -397,25 +397,26 @@ trace(rel(I,R,D)) :- donRemove(_,_,rel(I,R,D)), trace == 1.
 trace(E)          :- donClique(_,E), trace == 1.
 trace(E)          :- ponClique(_,_,E), trace == 1.
 
-trace(uni(P,V)                ,P,V) :- trace(uni(P,V)).
-trace(rel(I,R,D)              ,P,V) :- trace(rel(I,R,D)), relaClique(I,P,V,R,D).
-trace(sub(I,P)                ,P,V) :- realClique(I,P,V), abbrev(sub(I,P)), trace == 1.
-trace(pkg(i(I,m,f(C,S,T,M)),P),P,V) :- valClique(I,C,S,T,P,V,M),
-                                       abbrev(pkg(i(I,m,f(C,S,T,M)),P)), trace == 1.
-trace(pkg(i(I,n,f(C,S,T)),P)  ,P,V) :- resClique(I,C,S,T,P,V),
-                                       abbrev(pkg(i(I,n,f(C,S,T)),P)), trace == 1.
+trace(uni(P,V)  ,P,V) :- trace(uni(P,V)).
+trace(rel(I,R,D),P,V) :- trace(rel(I,R,D)), relaClique(I,P,V,R,D).
+trace(sub(I,P)  ,P,V) :- realClique(I,P,V), abbrev(sub(I,P)), trace == 1.
+trace(pkg(J,P)  ,P,V) :- brkClique(J,P,V), abbrev(pkg(J,P)), trace == 1.
 
 trace(J,P,V) :- hasClique(J,E), trace(E,P,V).
 trace(P,Q,V) :- hasRemove(P,E), trace(E,Q,V).
 
-malClique(I,C,S,T,P,V)   :- resClique(I,C,S,T,P,V), not outClique(I,C,S,T),
-                            not trace(i(I,n,f(C,S,T)),P,V), trace == 1.
-malClique(I,C,S,T,P,V,M) :- valClique(I,C,S,T,P,V,M), not outClique(I,C,S,T),
-                            not uniClique(I,C,S,T),
-                            not trace(i(I,m,f(C,S,T,M)),P,V), trace == 1.
+malClique(I,C,S,T      ,P,V)   :- resClique(I,C,S,T,P,V), not outClique(I,C,S,T),
+                                  not trace(i(I,n,f(C,S,T)),P,V), trace == 1.
+malClique(I,C,S,T      ,P,V,M) :- valClique(I,C,S,T,P,V,M), not uniClique(I,C,S,T), T != removed,
+                                  not trace(i(I,m,f(C,S,T,M)),P,V), trace == 1.
+malClique(I,C,S,removed,P,0,M) :- valClique(I,C,S,removed,P,V,M), unit(P,V,in),
+                                  not uniClique(I,C,S,removed), trace == 1.
+
 nalClique(I,C,S,T,P,V)   :- trace(i(I,n,f(C,S,T)),P,V), not resClique(I,C,S,T,P,V).
 nalClique(I,C,S,T,P,V)   :- trace(i(I,n,f(C,S,T)),P,V), outClique(I,C,S,T).
-nalClique(I,C,S,T,P,V,M) :- trace(i(I,m,f(C,S,T,M)),P,V), not valClique(I,C,S,T,P,V,M).
+nalClique(I,C,S,T,P,V,M) :- trace(i(I,m,f(C,S,T,M)),P,V),
+                            not valClique(I,C,S,T,P,V,M) : T != removed,
+                            not valClique(I,C,S,T,P,0,M) : T == removed.
 nalClique(I,C,S,T,P,V,M) :- trace(i(I,m,f(C,S,T,M)),P,V), outClique(I,C,S,T).
 nalClique(I,C,S,T,P,V,M) :- trace(i(I,m,f(C,S,T,M)),P,V), uniClique(I,C,S,T).
 
