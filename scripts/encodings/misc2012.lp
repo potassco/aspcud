@@ -404,7 +404,7 @@ turn(sol     ,1). turn(sub     ,-1).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % trace derivations of objectives' elements (for debugging only) %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%*
 trace(uni(P,V))   :- hasRemove(_,uni(P,V)), trace == 1.
 trace(rel(I,R,D)) :- donRemove(_,_,rel(I,R,D)), trace == 1.
 trace(E)          :- donClique(_,E), trace == 1.
@@ -444,3 +444,4 @@ nalRemove(P,P,V) :- trace(rem(P),P,V), not unit(P,V,in).
 #show nalClique/7.
 #show malRemove/3.
 #show nalRemove/3.
+*%

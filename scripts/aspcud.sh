@@ -19,19 +19,9 @@ function cleanup()
 	[[ -d "$tmp" ]] && rm -rf "$tmp"
 }
 
-function dumperr()
-{
-	for x in "$tmp/cudf_err" "$tmp/gringo_err" "$tmp/clasp_err" "$tmp/parser_err"; do
-		[[ -e "$x" ]] && cat $x >&2
-	done
-}
-
 function die()
 {
-	[[ -n "$wrapper_out" ]] && echo FAIL > "$wrapper_out"
-	dumperr
 	echo "error: $1" >&2
-	wait
 	exit 0
 }
 
@@ -144,23 +134,52 @@ trap cleanup EXIT
 test -n "${TMPDIR}" && tmpdir="${TMPDIR}/"
 tmp="$(mktemp -d "${tmpdir}outXXXXXX")"
 
-"${cudf2lp_bin}" "${cudf_opts[@]}"   > "$tmp/cudf_out"   2> "$tmp/cudf_err"   - < "$1"
-"${gringo_bin}"  "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" - < "$tmp/cudf_out"
-"${solver_bin}"  "${clasp_opts[@]}"  > "$tmp/clasp_out"  2> "$tmp/clasp_err"    < "$tmp/gringo_out" &
-clasp_pid=$!
-function usrtrap() { 
-	kill $clasp_pid 
+# note this is just annoying!
+function usrtrap() {
+:
 }
-
 trap usrtrap USR1 TERM INT
-wait
-trap "" USR1 TERM INT
 
-grep -A 1 ^Answer "$tmp/clasp_out" | tail -n 1 | sed -e 's/in("/package: /g' -e 's/",/\nversion: /g' -e 's/)[ ]\?/\ninstalled: true\n\n/g' > "$wrapper_out"
-cat "$tmp/clasp_out" | colrm 81 > "$tmp/parser_err"
-grep -q ^Answer "$tmp/clasp_out" || die "no answer printed"
+cat <<EOF > "$tmp/parse.py"
+#!/usr/bin/python
+import signal, re, sys
 
-dumperr
+def ignore(x, y): pass
 
-exit 0
+signal.signal(signal.SIGUSR1, ignore)
+signal.signal(signal.SIGTERM, ignore)
+signal.signal(signal.SIGINT,  ignore)
+signal.signal(signal.SIGPIPE, ignore)
+
+out = open("$wrapper_out", "w")
+
+keep = False
+solution = None
+try:
+	for line in sys.stdin:
+		sys.stdout.write(line[:-1][:81])
+		sys.stdout.write("\n")
+		if keep: 
+			solution = line
+			keep = False
+		if line.startswith("Answer"): keep = True
+except: pass
+
+if solution == None: out.write("FAIL\n")
+else:
+        for m in re.finditer(r'in\\("(?P<pkg>[^,]+)",(?P<ver>[^)]+)\\)', solution):
+                out.write("package: " + m.group("pkg") + "\\n")
+                out.write("version: " + m.group("ver") + "\\n")
+                out.write("installed: true\\n\\n")
+out.close()
+
+sys.stdout.write(open("$tmp/clasp_err").read())
+sys.stdout.write(open("$tmp/gringo_err").read())
+sys.stdout.write(open("$tmp/cudf_err").read())
+EOF
+chmod +x "$tmp/parse.py"
+
+"${cudf2lp_bin}" "${cudf_opts[@]}"   > "$tmp/cudf_out"   2> "$tmp/cudf_err"   < "$1"
+"${gringo_bin}"  "${gringo_opts[@]}" > "$tmp/gringo_out" 2> "$tmp/gringo_err" "$tmp/cudf_out"
+"${solver_bin}"  "${clasp_opts[@]}"                      2> "$tmp/clasp_err"  "$tmp/gringo_out" | "$tmp/parse.py"
 
