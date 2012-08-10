@@ -328,23 +328,25 @@ special(rem(P),C,sub,removed,M) :- remove(C,P,M), pkgRemove(C,P), not hold(rem(P
                                    special(C,sub,removed).
 
 penalty(uni(P,V),C,S,T,M) :- object(C,S,T,P,V,M), not resClique(C,S,T,P,V), hold(uni(P,V)),
-                             not special(C,S,T).
-special(uni(P,V),C,S,T,M) :- object(C,S,T,P,V,M), not resClique(C,S,T,P,V), not hold(uni(P,V)),
-                             special(C,S,T).
+                             not special(C).
+special(uni(P,V),C,S,T,M) :- object(C,S,T,P,V,M), not resClique(C,S,T,P,V),
+                             hold(uni(P,V)) : special(C) : not special(C,S,T),
+                             not hold(uni(P,V)) : special(C,S,T).
 
 penalty(i(I),C,S,T,M) :- valClique(I,C,S,T,M), uniClique(I,C,S,T),
-                         hold(i(I,n,f(C,S,T))), not special(C,S,T).
+                         hold(i(I,n,f(C,S,T))), not special(C).
 special(i(I),C,S,T,M) :- valClique(I,C,S,T,M), uniClique(I,C,S,T),
-                         not hold(i(I,n,f(C,S,T))), special(C,S,T).
+                         hold(i(I,n,f(C,S,T))) : special(C) : not special(C,S,T),
+                         not hold(i(I,n,f(C,S,T))) : special(C,S,T).
 
 penalty(i(I,M1),C,S,T,M2-M1) :- ordClique(I,C,S,T,M2,M1), hold(i(I,m,f(C,S,T,M2))),
-                                not special(C,S,T).
+                                not special(C).
 penalty(i(I,M1),C,S,T,M2-M1) :- ordClique(I,C,S,T,M2,M1), penalty(i(I,M2),C,S,T,_).
 
 special(i(I,M1),C,S,T,M2-M1) :- ordClique(I,C,S,T,M2,M1), not hold(i(I,n,f(C,S,T))),
                                 recClique(I,C,S,T,M2).
 special(i(I,M1),C,S,T,M2-M1) :- ordClique(I,C,S,T,M2,M1), hold(i(I,m,f(C,S,T,M2))),
-                                special(C,S,T).
+                                special(C).
 special(i(I,M1),C,S,T,M2-M1) :- ordClique(I,C,S,T,M2,M1), special(i(I,M2),C,S,T,_).
 
 penalty(s,unsat_recommends(D),sub,T,M) :- static(T,unsat_recommends(D),M),
