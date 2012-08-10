@@ -399,7 +399,7 @@ turn(sol     ,1). turn(sub     ,-1).
            aligned(T,A,X,B,_) = F @ L :
            criterion(O,T,aligned(A,B),L) : mult(O,F) : not alcount(T,A,X,B),
            alcount(T,A,X,B,Y,Z) = F @ L :
-           criterion(O,T,aligned(A,B),L) : mult(O,F) : alchain(T,A,X,B,Y) : 0 < Z ].
+           criterion(O,T,aligned(A,B),L) : mult(O,F) : alchain(T,A,X,B,Y) ].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % trace derivations of objectives' elements (for debugging only) %
