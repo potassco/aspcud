@@ -76,8 +76,8 @@ PATH=".:$base:$base/../build/release/bin:$PATH"
 solver=""
 clasp_opts_def=( "--opt-heu=1" "--sat-prepro" "--restarts=L,128" "--heuristic=VSIDS" "--opt-hierarch=1" "--local-restarts" "--del-max=200000,250" )
 unclasp_opts_def=( )
-gringo_opts_def=( "$(enc specification.lp)" )
-ungringo_opts_def=( "$(enc specification.lp)" )
+gringo_opts_def=( "$(enc misc2012.lp)" )
+ungringo_opts_def=( "$(enc misc2012.lp)" )
 
 cudf_opts=( )
 clasp_opts=( )
