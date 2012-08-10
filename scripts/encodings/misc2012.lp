@@ -63,8 +63,8 @@ mapsClique(I,R1,D1,R2,D2) :- equiClique(I,R1,D1,R2,D2), mapsClique(I,R1,D1,R1,D1
 
 hold(rel(I,R1,D1)) :- hold(uni(P,V)), relaClique(I,P,V,R1,D1), mapsClique(I,R1,D1,R1,D1).
 
-active(R,D) :- hold(rel(I,R1,D1)), mapsClique(I,R1,D1,R,D).
-active(R,D) :- hold(uni(P,V)), relate(P,V,R,D), not dropClique(P,V,R,D).
+active(R,D) :- hold(rel(I,R1,D1)), mapsClique(I,R1,D1,R,D), R != rec.
+active(R,D) :- hold(uni(P,V)), relate(P,V,R,D), R != rec, not dropClique(P,V,R,D).
  :- active(con,D),     active(sat,D).
  :- active(dep,D), not active(sat,D).
  :-    request(D), not active(sat,D).
