@@ -12,7 +12,7 @@
 #const cliqueBreak = 1.
 
 % limit of values per key for counter implementation (numeric)
-#const alignCounter = 50.
+#const alignCounter = 30.
 
 % output solution in terms of in/2
 #const output = 1.
@@ -106,32 +106,30 @@ remClique(I,P) :- realClique(I,P), remClique(P).
 delete(changed,P,V) :- target(sub,changed,P,V), not unit(P,V,in).
 delete(removed,P,V) :- target(sub,removed,P,V), not solution(P).
 
-oneval(T,A,X,B,Y) :- target(sub,T,P,V), criterion(T,aligned(A,B)),
-                     attribute(P,V,A,X), attribute(P,V,B,Y).
-oneval(T,A,X,B,Y) :- target(sol,T,P,V), criterion(T,aligned(A,B)),
-                     attribute(P,V,A,X), attribute(P,V,B,Y),
-                     attribute(Q,W,B,Y) : attribute(Q,W,A,X) : target(sol,T,Q,W) :
-                     realClique(I,Q,W) : realClique(I,P,V).
-oneval(T,A,X,B,Y) :- target(sol,T,P,V), oneval(T,A,X,B), realClique(_,P,V),
-                     attribute(P,V,A,X), attribute(P,V,B,Y).
+attribute(S,T,P,V,A,X,B,Y)   :- target(S,T,P,V), attribute(P,V,A,X), attribute(P,V,B,Y),
+                                criterion(T,aligned(A,B)).
+attribute(I,S,T,P,V,A,X,B,Y) :- attribute(S,T,P,V,A,X,B,Y), realClique(I,P,V).
+attribute(I,T,A,X,B,Y)       :- attribute(I,sol,T,_,_,A,X,B,Y).
+
+oneval(T,A,X,B,Y) :- attribute(sub,T,_,_,A,X,B,Y).
+oneval(T,A,X,B,Y) :- attribute(sol,T,P,V,A,X,B,Y),
+                     { attribute(I,T,A,X,B,_) : realClique(I,P,V) } 1.
+oneval(T,A,X,B,Y) :- attribute(_,sol,T,_,_,A,X,B,Y), oneval(T,A,X,B).
 oneval(T,A,X,B)   :- oneval(T,A,X,B,_).
 
-twoval(T,A,X,B,I) :- target(sol,T,P,V), criterion(T,aligned(A,B)), realClique(I,P,V),
-                     attribute(P,V,A,X), not oneval(T,A,X,B).
+twoval(T,A,X,B,I) :- attribute(I,T,A,X,B,_), not oneval(T,A,X,B).
 twoval(T,A,X,B)   :- twoval(T,A,X,B,_).
 
 keyval(T,A,X,B) :- oneval(T,A,X,B), 2 { oneval(T,A,X,B,_) }.
 keyval(T,A,X,B) :- twoval(T,A,X,B), 2 { twoval(T,A,X,B,_) }.
 
-remval(I,changed,P,V,A,X,B,Y) :- target(sub,changed,P,V), realClique(I,P,V),
-                                 keyval(changed,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y).
-remval(I,removed,P,0,A,X,B,Y) :- target(sub,removed,P,V), remClique(I,P),
-                                 keyval(removed,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y).
+remval(I,changed,P,V,A,X,B,Y) :- attribute(I,sub,changed,P,V,A,X,B,Y), keyval(changed,A,X,B).
+remval(I,removed,P,0,A,X,B,Y) :- attribute(I,sub,removed,P,V,A,X,B,Y), keyval(removed,A,X,B),
+                                 remClique(I,P).
 remval(I,T,A,X,B,Y)           :- remval(I,T,_,_,A,X,B,Y).
 
 static(T,aligned(A,X,B,Y)) :- remval(I,T,A,X,B,Y), 2 { remval(I,T,_,_,A,X,B,Y) }.
-static(T,aligned(A,X,B,Y)) :- target(sub,T,P,V), delete(T,P,V),
-                              keyval(T,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y).
+static(T,aligned(A,X,B,Y)) :- attribute(sub,T,P,V,A,X,B,Y), delete(T,P,V), keyval(T,A,X,B).
 
 delrec(T,D) :- target(sub,T,P,V), delete(T,P,V), criterion(T,unsat_recommends),
                relate(P,V,rec,D).
@@ -152,9 +150,8 @@ remove(unsat_recommends(D),P,M) :- remrec(P,D),
                                    M := [ recommends(P,V,D,W) = W : installed(P,V) ], M != 0.
 
 remove(C,P)                :- remove(C,P,_).
-remove(aligned(A,X,B,Y),P) :- target(sub,removed,P), installed(P,V),
-                              keyval(removed,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y),
-                              not static(removed,aligned(A,X,B,Y)).
+remove(aligned(A,X,B,Y),P) :- attribute(sub,removed,P,V,A,X,B,Y), installed(P,V),
+                              keyval(removed,A,X,B), not static(removed,aligned(A,X,B,Y)).
 
 object(count              ,S,T,P,V,1) :- target(S,T,P,V), T != removed, not delete(T,P,V),
                                          criterion(T,count).
@@ -167,9 +164,8 @@ object(unsat_recommends(D),S,T,P,V,W) :- target(S,T,P,V), T != removed, not dele
                                          recommends(P,V,D,W), W != 0.
 
 object(C               ,S,T,P,V) :- object(C,S,T,P,V,_).
-object(aligned(A,X,B,Y),S,T,P,V) :- target(S,T,P,V), T != removed,
-                                    keyval(T,A,X,B), attribute(P,V,A,X), attribute(P,V,B,Y),
-                                    not static(T,aligned(A,X,B,Y)).
+object(aligned(A,X,B,Y),S,T,P,V) :- attribute(S,T,P,V,A,X,B,Y), T != removed,
+                                    keyval(T,A,X,B), not static(T,aligned(A,X,B,Y)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % calculate constituents of objectives %
