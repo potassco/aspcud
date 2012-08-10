@@ -350,9 +350,9 @@ special(i(I,M1),C,S,T,M2-M1) :- ordClique(I,C,S,T,M2,M1), hold(i(I,m,f(C,S,T,M2)
 special(i(I,M1),C,S,T,M2-M1) :- ordClique(I,C,S,T,M2,M1), special(i(I,M2),C,S,T,_).
 
 penalty(s,unsat_recommends(D),sub,T,M) :- static(T,unsat_recommends(D),M),
-                                          not active(rec,D).
+                                          not active(sat,D).
 penalty(E,unsat_recommends(D),S  ,T,M) :- special(E,unsat_recommends(D),S,T,M),
-                                          not active(rec,D).
+                                          not active(sat,D).
 
 aligned(removed,A,X,B,Y) :- remove(aligned(A,X,B,Y),P), pkgRemove(aligned(A,X,B,Y),P),
                             not hold(rem(P)).
