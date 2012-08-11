@@ -226,7 +226,7 @@ void Package::doAdd(Dependency *dep)
 			{
 				foreach(Entity *ent, clause) 
 				{ 
-					if (!remove_) { ent->add(dep); }
+					if (!ent->remove_) { ent->add(dep); }
 				}
 			}
 		}
@@ -238,7 +238,7 @@ void Package::doAdd(Dependency *dep)
                 {
                     foreach(Entity *ent, clause) 
 					{ 
-						if (!remove_) { ent->add(dep); }
+						if (!ent->remove_) { ent->add(dep); }
 					}
                 }
             }
@@ -260,6 +260,16 @@ uint32_t Package::getProp(uint32_t uid) const
 
 void Package::dumpAttrs(Dependency *dep, std::ostream &out)
 {
+	// installed(VP)
+	if (installed)
+	{
+		out << "installed(\"" << dep->string(name) << "\"," << version << ").\n";
+	}
+	// maxversion(VP)
+	if (optMaxVersion)
+	{
+		out << "maxversion(\"" << dep->string(name) << "\"," << version << ").\n";
+	}
     // additional attributes
 	bool recom = false;
 	std::set<uint32_t> attr;
@@ -329,16 +339,6 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
 {
     // unit(VP)
     out << "unit(\"" << dep->string(name) << "\"," << version << "," << (remove_ ? "out" : "in") << ").\n";
-	// installed(VP)
-	if (installed)
-	{
-		out << "installed(\"" << dep->string(name) << "\"," << version << ").\n";
-	}
-	// maxversion(VP)
-	if (optMaxVersion)
-	{
-		out << "maxversion(\"" << dep->string(name) << "\"," << version << ").\n";
-	}
 	if (!remove_)
 	{
 		// satisfies(VP,D)

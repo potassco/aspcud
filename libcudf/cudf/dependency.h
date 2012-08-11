@@ -93,11 +93,11 @@ struct Entity
     int32_t  version;
     bool     visited;
     bool     installed;
+    bool     remove_;
 
 protected:
     virtual void doRemove(Dependency *dep) = 0;
 
-    bool remove_;
 };
 
 struct Package : public Entity
