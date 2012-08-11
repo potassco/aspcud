@@ -16,6 +16,11 @@ mkdir -p "submissions/aspcud/encodings"
 cp "${encodings[@]}" "submissions/aspcud/encodings/"
 cp "${gringo}" "${clasp}" "${unclasp}" "${cudf2lp}" "submissions/aspcud/"
 
+strip "submissions/aspcud/gringo"
+strip "submissions/aspcud/clasp"
+strip "submissions/aspcud/unclasp"
+strip "submissions/aspcud/cudf2lp"
+
 cp "scripts/aspcud.sh" "submissions/aspcud/"
 cd "submissions/aspcud/"
 for system in "aspcud" "aspuncud"; do
