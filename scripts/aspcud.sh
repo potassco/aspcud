@@ -134,7 +134,7 @@ trap cleanup EXIT
 test -n "${TMPDIR}" && tmpdir="${TMPDIR}/"
 tmp="$(mktemp -d "${tmpdir}outXXXXXX")"
 
-# note this is just annoying!
+# note this is probably unecessary...
 function usrtrap() {
 :
 }
