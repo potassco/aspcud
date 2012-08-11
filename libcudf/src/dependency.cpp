@@ -178,8 +178,8 @@ bool Package::_satisfies(bool optimize, Criterion::Selector sel)
         case Criterion::CHANGED:  { return optimize != installed; }
         case Criterion::NEW:      { return optimize && !optInstalled; }
         case Criterion::REMOVED:  { return !optimize && installed; }
-        case Criterion::UP:       { return !optimize && optGtMaxInstalled; }
-        case Criterion::DOWN:     { return !optimize && optLtMinInstalled; }
+        case Criterion::UP:       { return optimize && optGtMaxInstalled; }
+        case Criterion::DOWN:     { return optimize && optLtMinInstalled; }
     }
 	assert(false);
 	return false;
