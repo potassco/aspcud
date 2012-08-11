@@ -258,40 +258,8 @@ uint32_t Package::getProp(uint32_t uid) const
     return 0;
 }
 
-void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
+void Package::dumpAttrs(Dependency *dep, std::ostream &out)
 {
-    // unit(VP)
-    out << "unit(\"" << dep->string(name) << "\"," << version << "," << (remove_ ? "out" : "in") << ").\n";
-	// installed(VP)
-	if (installed)
-	{
-		out << "installed(\"" << dep->string(name) << "\"," << version << ").\n";
-	}
-	// maxversion(VP)
-	if (optMaxVersion)
-	{
-		out << "maxversion(\"" << dep->string(name) << "\"," << version << ").\n";
-	}
-	if (!remove_)
-	{
-		// satisfies(VP,D)
-		// depends(VP,D)
-		foreach(EntityList &clause, depends)
-		{
-			PackageList pkgClause;
-			foreach(Entity *ent, clause) { ent->addToClause(pkgClause); }
-			uint32_t condition = dep->addClause(pkgClause, out);
-			out << "depends(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
-		}
-		// conflicts(VP, D)
-		if (!conflicts.empty())
-		{
-			PackageList pkgClause;
-			foreach(Entity *ent, conflicts) { ent->addToClause(pkgClause, this); }
-			uint32_t condition = dep->addClause(pkgClause, out);
-			out << "conflict(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
-		}
-	}
     // additional attributes
 	bool recom = false;
 	std::set<uint32_t> attr;
@@ -354,6 +322,42 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
 			if (jt != stringProps.end()) { out << jt->second; }
 		}
 		out << ").\n";
+	}
+}
+
+void Package::dumpAsFacts(Dependency *dep, std::ostream &out)
+{
+    // unit(VP)
+    out << "unit(\"" << dep->string(name) << "\"," << version << "," << (remove_ ? "out" : "in") << ").\n";
+	// installed(VP)
+	if (installed)
+	{
+		out << "installed(\"" << dep->string(name) << "\"," << version << ").\n";
+	}
+	// maxversion(VP)
+	if (optMaxVersion)
+	{
+		out << "maxversion(\"" << dep->string(name) << "\"," << version << ").\n";
+	}
+	if (!remove_)
+	{
+		// satisfies(VP,D)
+		// depends(VP,D)
+		foreach(EntityList &clause, depends)
+		{
+			PackageList pkgClause;
+			foreach(Entity *ent, clause) { ent->addToClause(pkgClause); }
+			uint32_t condition = dep->addClause(pkgClause, out);
+			out << "depends(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
+		}
+		// conflicts(VP, D)
+		if (!conflicts.empty())
+		{
+			PackageList pkgClause;
+			foreach(Entity *ent, conflicts) { ent->addToClause(pkgClause, this); }
+			uint32_t condition = dep->addClause(pkgClause, out);
+			out << "conflict(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
+		}
 	}
 }
 
@@ -862,6 +866,7 @@ void Dependency::conflicts()
 
 void Dependency::dumpAsFacts(std::ostream &out)
 {
+    foreach(Package &pkg, packages_) { pkg.dumpAttrs(this, out); }
     foreach(Entity *ent, closure_) { ent->dumpAsFacts(this, out); }
     // requests according to install request
     foreach(Request &request, install_)

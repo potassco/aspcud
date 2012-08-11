@@ -108,6 +108,7 @@ struct Package : public Entity
 
     Package(const Cudf::Package &pkg);
     void dumpAsFacts(Dependency *dep, std::ostream &out);
+    void dumpAttrs(Dependency *dep, std::ostream &out);
     void dumpAttr(Dependency *dep, std::ostream &out, unsigned uid);
     void addToClause(PackageList &clause, Package *self = 0);
 	void addConflictEdges(ConflictGraph &g);
