@@ -69,8 +69,8 @@
 \begin{itemize}
   \item \texttt{unit($p.\mathrm{name}$,$p.\mathrm{version}$,in).} for $p\in\mathcal{C}\setminus\mathcal{R}$
   \item \texttt{unit($p.\mathrm{name}$,$p.\mathrm{version}$,out).} for $p\in\mathcal{R}$
-  \item \texttt{installed($p.\mathrm{name}$,$p.\mathrm{version}$).} for $p.\mathrm{name}\in \mathcal{C}.\mathrm{name}$
-  \item \texttt{maxversion($p.\mathrm{name}$,$p.\mathrm{version}$).} for $p.\mathrm{name} \in \mathcal{C}$ and $p.\mathrm{version}=\max(\mathcal{P}.\mathrm{version}(p))$
+  \item \texttt{installed($p.\mathrm{name}$,$p.\mathrm{version}$).} for $p\in\mathcal{P}$
+  \item \texttt{maxversion($p.\mathrm{name}$,$p.\mathrm{version}$).} for $p\in\mathcal{P}$ and $p.\mathrm{version}=\max(\mathcal{P}.\mathrm{version}(p))$
   \item \texttt{satisfies(Name,Version,Condition).} for $p\in\mathcal{C}\setminus\mathcal{R}$
     \begin{itemize}
       \item applies to various parts of the CUDF-document
