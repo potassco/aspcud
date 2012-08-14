@@ -49,8 +49,8 @@
           \item $\mathrm{init}({+}\mathit{count}(X))=X^{+}$
           \item $\mathrm{init}({-}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}>0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}<0\}$
           \item $\mathrm{init}({+}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}<0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}>0\}$
-          \item $\mathrm{init}({-}\mathit{notuptodate}(X))=\{p\in X^{-}\mid p.\mathrm{version}=\max(\mathcal{P}.\mathrm{version}(p))\}$
-          \item $\mathrm{init}({+}\mathit{notuptodate}(X))=\{p\in X^{+}\mid p.\mathrm{version}\not=\max(\mathcal{P}.\mathrm{version}(p))\}$
+          \item $\mathrm{init}({-}\mathit{notuptodate}(X))=\{p\in X^{-}\mid p.\mathrm{version}\neq\max(\mathcal{P}.\mathrm{version}(p))\}$
+          \item $\mathrm{init}({+}\mathit{notuptodate}(X))=\{p\in X^{+}\mid p.\mathrm{version}\neq\max(\mathcal{P}.\mathrm{version}(p))\}$
           \item $\mathrm{init}({-}\mathit{unsat\_recommends}(X))=\{p\in X^{-}\mid p.\mathrm{recommends}\neq\emptyset\}$
           \item $\mathrm{init}({+}\mathit{unsat\_recommends}(X))=\{p\in X^{+}\mid p.\mathrm{recommends}\neq\emptyset\}$
           \item $\mathrm{init}({-}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{-}\mid q\in \mathcal{P}, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
@@ -58,10 +58,10 @@
         \end{itemize}
       \item $\mathrm{init}=
              \begin{array}[t]{@{}l@{}}
-             \bigcup_{\mathrm{init}({-}/{+}\mathit{``whatever"}(X))}\mathrm{init}({-}/{+}\mathit{``whatever"}(X)) 
+             \bigcup_{\mathrm{init}(\pm\mathit{``whatever"}(X,\vec{x}))}\mathrm{init}(\pm\mathit{``whatever"}(X,\vec{x})) 
              \cup {} \\
              \{p\in \mathcal{P}\setminus \mathcal{R} \mid
-               q\in {-}\mathrm{init}({-}\mathit{``whatever"}(R^{-})),
+               q\in \mathrm{init}({-}\mathit{``whatever"}(R,\vec{x})),
                p.\mathrm{name}=q.\mathrm{name}\}
              \end{array}$
     \end{itemize}
