@@ -56,6 +56,14 @@
           \item $\mathrm{init}({-}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{-}\mid q\in \mathcal{P}, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
           \item $\mathrm{init}({+}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{+}\mid q\in \mathcal{P}, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
         \end{itemize}
+      \item $\mathrm{init}=
+             \begin{array}[t]{@{}l@{}}
+             \bigcup_{\mathrm{init}({-}/{+}\mathit{``whatever"}(X))}\mathrm{init}({-}/{+}\mathit{``whatever"}(X)) 
+             \cup {} \\
+             \{p\in \mathcal{P}\setminus \mathcal{R} \mid
+               q\in {-}\mathrm{init}({-}\mathit{``whatever"}(R^{-})),
+               p.\mathrm{name}=q.\mathrm{name}\}
+             \end{array}$
     \end{itemize}
   \item Calculation
     \begin{itemize}
