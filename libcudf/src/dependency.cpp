@@ -808,12 +808,15 @@ void Dependency::initClosure()
 			foreach(Criterion &crit, criteria.criteria)
 			{
 				Package *pkg = dynamic_cast<Package*>(ent);
-				if (pkg->satisfies(crit))
+				if (pkg && pkg->satisfies(crit))
 				{
-					if (pkg) { pkg->add(this); }
+					pkg->add(this);
 					if (!crit.optimize && crit.selector == Criterion::REMOVED)
 					{
-						foreach(Entity *other, entityMap_[pkg->name]) { other->add(this); }
+						foreach(Entity *other, entityMap_[pkg->name])
+						{
+							if (!other->remove_) { other->add(this); }
+						}
 					}
 				}
 			}
