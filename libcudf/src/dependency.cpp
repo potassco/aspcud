@@ -224,8 +224,8 @@ void Package::doAdd(Dependency *dep)
 		{
 			foreach(EntityList &clause, depends)
 			{
-				foreach(Entity *ent, clause) 
-				{ 
+				foreach(Entity *ent, clause)
+				{
 					if (!ent->remove_) { ent->add(dep); }
 				}
 			}
@@ -236,8 +236,8 @@ void Package::doAdd(Dependency *dep)
             {
                 foreach(EntityList &clause, recommends)
                 {
-                    foreach(Entity *ent, clause) 
-					{ 
+                    foreach(Entity *ent, clause)
+					{
 						if (!ent->remove_) { ent->add(dep); }
 					}
                 }
@@ -282,7 +282,7 @@ void Package::dumpAttrs(Dependency *dep, std::ostream &out)
 				if (dep->addAll() || satisfies(crit, true)) { recom = true; }
 				break;
 			}
-			case Criterion::ALIGNED: 
+			case Criterion::ALIGNED:
 			{
 				if (dep->addAll() || satisfies(crit, true))
 				{
@@ -437,7 +437,7 @@ void Request::add(Dependency *dep)
 }
 
 //////////////////// Criteria ////////////////////
-    
+
 Criteria::Criteria()
 {
 }
@@ -447,10 +447,10 @@ void Criteria::init(Dependency *dep, CritVec &vec)
     std::swap(criteria, vec);
     foreach(Criterion &crit, criteria)
     {
-        if (!crit.attr1.empty()) 
+        if (!crit.attr1.empty())
         {
             crit.attrUid1 = dep->index(crit.attr1);
-            optProps.push_back(crit.attrUid1); 
+            optProps.push_back(crit.attrUid1);
         }
         if (!crit.attr2.empty())
         {
@@ -497,13 +497,13 @@ void ConflictGraph::init(bool verbose)
 	Edges copy = edges_;
 	foreach (Edges::value_type &out, copy)
 	{
-		foreach (Package *pkg, out.second) 
+		foreach (Package *pkg, out.second)
 		{
-			edges_[pkg].push_back(out.first); 
+			edges_[pkg].push_back(out.first);
 			edgeSet_.insert(std::make_pair(std::min(pkg, out.first),std::max(pkg, out.first)));
 		}
 	}
-	foreach (Edges::value_type &out, edges_) 
+	foreach (Edges::value_type &out, edges_)
 	{
 		out.second.resize(boost::range::unique(boost::range::sort(out.second, PkgCmp())).size());
 	}
@@ -583,7 +583,7 @@ void ConflictGraph::cliques_(bool verbose)
 					if (extendsClique) { clique.push_back(pkg); }
 					else { next.push_back(pkg); }
 				}
-				if (clique.size() < 2) { cliques.pop_back(); } 
+				if (clique.size() < 2) { cliques.pop_back(); }
 				else
 				{
 					sum+= clique.size();
@@ -808,7 +808,14 @@ void Dependency::initClosure()
 			foreach(Criterion &crit, criteria.criteria)
 			{
 				Package *pkg = dynamic_cast<Package*>(ent);
-				if (pkg && pkg->satisfies(crit)) { pkg->add(this); }
+				if (pkg->satisfies(crit))
+				{
+					if (pkg) { pkg->add(this); }
+					if (!crit.optimize && crit.selector == Criterion::REMOVED)
+					{
+						foreach(Entity *other, entityMap_[pkg.name]) { other->add(this); }
+					}
+				}
 			}
 		}
 	}
@@ -933,4 +940,3 @@ void Dependency::dumpAsFacts(std::ostream &out)
         out << "," << priotity-- << ").\n";
     }
 }
-
