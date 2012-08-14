@@ -813,7 +813,7 @@ void Dependency::initClosure()
 					if (pkg) { pkg->add(this); }
 					if (!crit.optimize && crit.selector == Criterion::REMOVED)
 					{
-						foreach(Entity *other, entityMap_[pkg.name]) { other->add(this); }
+						foreach(Entity *other, entityMap_[pkg->name]) { other->add(this); }
 					}
 				}
 			}
