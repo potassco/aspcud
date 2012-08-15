@@ -1,11 +1,11 @@
 #!/bin/bash
 
 encodings=( "scripts/encodings/specification.lp" "scripts/encodings/misc2012.lp" ) 
-cudf2lp="/home/kaminski/svn/potassco/trunk/aspcud/build/static/bin/cudf2lp"
+cudf2lp="/home/gebser/bin/cudf2lp"
 clasp="/home/wv/share/kaufmann/clasp"
 unclasp="/home/wv/bin/linux/64/unclasp"
 gringo="/home/wv/bin/linux/64/gringo"
-version="1.6"
+version="1.7"
 
 cd "$(dirname "$0")"
 cd ..
