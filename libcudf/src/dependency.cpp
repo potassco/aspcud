@@ -266,7 +266,7 @@ void Package::dumpAttrs(Dependency *dep, std::ostream &out)
 		out << "installed(\"" << dep->string(name) << "\"," << version << ").\n";
 	}
 	// maxversion(VP)
-	if (optMaxVersion)
+	if (optMaxVersion || dep->addAll())
 	{
 		out << "maxversion(\"" << dep->string(name) << "\"," << version << ").\n";
 	}
