@@ -266,7 +266,7 @@ void Package::dumpAttrs(Dependency *dep, std::ostream &out)
 		out << "installed(\"" << dep->string(name) << "\"," << version << ").\n";
 	}
 	// maxversion(VP)
-	if (optMaxVersion || dep->addAll())
+	if (optMaxVersion)
 	{
 		out << "maxversion(\"" << dep->string(name) << "\"," << version << ").\n";
 	}
@@ -831,7 +831,24 @@ void Dependency::closure()
     {
         foreach(EntityList &list, entityMap_ | boost::adaptors::map_values)
         {
-            foreach(Entity *ent, list) { ent->add(this); }
+            Package *max = 0;
+            foreach(Entity *ent, list)
+            {
+		ent->add(this);
+		Package *pkg = dynamic_cast<Package*>(ent);
+		if (pkg)
+		{
+			if (!max || max->version < pkg->version) { max = pkg; }
+		}
+            }
+            foreach(Entity *ent, list)
+            {
+		Package *pkg = dynamic_cast<Package*>(ent);
+		if (pkg)
+		{
+			pkg->optMaxVersion = pkg == max;
+		}
+            }
         }
     }
     else { initClosure(); }
