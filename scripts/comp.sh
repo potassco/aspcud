@@ -2,7 +2,7 @@
 
 encodings=( "scripts/encodings/specification.lp" "scripts/encodings/misc2012.lp" ) 
 cudf2lp="/home/kaminski/svn/potassco/trunk/aspcud/build/static/bin/cudf2lp"
-clasp="/home/kaminski/svn/potassco/trunk/clasp/build/static/bin/clasp"
+clasp="/home/wv/share/kaufmann/clasp"
 unclasp="/home/wv/bin/linux/64/unclasp"
 gringo="/home/wv/bin/linux/64/gringo"
 version="1.6"
