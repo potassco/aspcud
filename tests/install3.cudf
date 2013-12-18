@@ -8,5 +8,5 @@ package: a
 version: 3
 
 request: 
-install: a >= 2
+install: a != 2
 
