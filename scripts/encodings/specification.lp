@@ -19,8 +19,8 @@ set(changed,P,V)  :-     in(P,V), not installed(P,V).
 set(changed,P,V)  :- not in(P,V),     installed(P,V).
 set(new,P,V)      :-     in(P,V), not installed(P).
 set(removed,P,V)  :- not in(P),       installed(P,V).
-set(up,P,V)       :-     in(P,V), not installed(P,W) : installed(P,W) : W >= V, installed(P).
-set(down,P,V)     :-     in(P,V), not installed(P,W) : installed(P,W) : W <= V, installed(P).
+set(up,P,V)       :-     in(P,V); not installed(P,W) : installed(P,W), W >= V; installed(P).
+set(down,P,V)     :-     in(P,V); not installed(P,W) : installed(P,W), W <= V; installed(P).
 
 opt(P,V,1,O, 1,L) :- criterion(O,S,count,L),            set(S,P,V).
 opt(P,V,1,O, W,L) :- criterion(O,S,sum(A),L),           set(S,P,V), attribute(P,V,A,W).
@@ -29,12 +29,11 @@ opt(P,V,D,O, W,L) :- criterion(O,S,unsat_recommends,L), set(S,P,V), recommends(P
 opt(H,B,1,O, 1,L) :- criterion(O,S,aligned(G,A),L),     set(S,P,V), attribute(P,V,G,H), attribute(P,V,A,B).
 opt(H,1,2,O,-1,L) :- criterion(O,S,aligned(G,A),L),     set(S,P,V), attribute(P,V,G,H).
 
-#minimize [ criterion(_,_,_,L)      = 0 @ L ].
-#minimize [ opt(P,V,X,minimize,W,L) = W @ L ].
-#maximize [ opt(P,V,X,maximize,W,L) = W @ L ].
+#minimize { 0@L                : criterion(_,_,_,L)      }.
+#minimize { W@L,P,V,X,minimize : opt(P,V,X,minimize,W,L) }.
+#maximize { W@L,P,V,X,maximize : opt(P,V,X,maximize,W,L) }.
 
 % output projection
 
-#hide.
 #show in/2.
 

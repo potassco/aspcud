@@ -1,7 +1,8 @@
 #!/bin/bash
 
 location="$(readlink -f "$(dirname $0)")"
-encoding="$location"/encoding_new.lp
+encoding="$location"/../scripts/encodings/misc2012.lp
+#encoding="$location"/../scripts/encodings/specification.lp
 
 clasp=clasp
 gringo=gringo-4
