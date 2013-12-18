@@ -27,6 +27,7 @@ Distribution contents
    libcudf/         - The cudf library
    libprogram_opts/ - Library for options parsing 
    scripts/         - Wrapper scripts to run aspcud
+   tests/           - Set of instances to perfrom sanity checks
 
 Aspcud is written in mostly Standard-C++ and was successfully built and run
 under Linux (x86, x86_64) using gcc and icc. Other compilers might work but 
