@@ -217,7 +217,7 @@ valClique(I,C,S,T)                 :- valClique(I,C,S,T,_).
 
 uniClique(I,C,S,T) :- valClique(I,C,S,T), { valClique(I,C,S,T,X) } 1.
 
-ordClique(I,C,S,T,M2,M1) :- valClique(I,C,S,T,M1;M2); |M1| < |M2|; 0 < M1*M2;
+ordClique(I,C,S,T,M2,M1) :- valClique(I,C,S,T,(M1;M2)); |M1| < |M2|; 0 < M1*M2;
                             |M| <= |M1| : valClique(I,C,S,T,M), |M| < |M2|, 0 < M*M2.
 ordClique(I,C,S,T,M2,0)  :- valClique(I,C,S,T,M2); not uniClique(I,C,S,T);
                             M1*M2 <= 0 : valClique(I,C,S,T,M1), |M1| < |M2|.
