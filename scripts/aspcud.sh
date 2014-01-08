@@ -32,7 +32,8 @@ function usage()
 	echo "  -c OPT   append clasp option OPT"
 	echo "  -e ENC   append encoding ENC"
 	echo "  -p OPT   append cudf2lp option OPT"
-	echo "  -s SOL   choose solver {clasp,unclasp}"
+    echo "  -s SOL   path to solver (clasp or unclasp)"
+    echo "  -g GRD   path to grounder (gringo)"
 	echo
 	echo "Default commandline for clasp:"
 	echo -n "$(basename "${0}")"
@@ -52,7 +53,7 @@ function usage()
 		echo " \\"
 		echo -n "    -c $x"
 	done
-	for x in "${ungringo_opts_def[@]}";  do
+	for x in "${gringo_opts_def[@]}";  do
 		echo " \\"
 		echo -n "    -e $x"
 	done
@@ -63,26 +64,27 @@ base="$(dirname "$(readlink -f "$0")")"
 PATH=".:$base:$base/../build/release/bin:$PATH"
 
 # default options
-solver=""
-clasp_opts_def=( "--opt-heu=1" "--sat-prepro" "--restarts=L,128" "--heuristic=VSIDS" "--opt-hierarch=1" "--local-restarts" "--del-max=200000,250" )
+clasp_opts_def=( "--opt-heu=1" "--sat-prepro" "--restarts=L,128" "--heuristic=VSIDS" "--opt-hierarch=1" "--local-restarts" "--del-max=200000,250" "--save-progress=0" )
 unclasp_opts_def=( )
 gringo_opts_def=( "$(enc misc2012.lp)" )
-ungringo_opts_def=( "$(enc misc2012.lp)" )
 
 cudf_opts=( )
 clasp_opts=( )
 gringo_opts=( )
 
+solver_bin=
+
 unset wrapper_out
 unset tmp
 
-while getopts "hc:e:p:s:" flag
+while getopts "hc:e:p:s:g:" flag
 do
 	case "$flag" in
 		"e") gringo_opts=( "${gringo_opts[@]}" "$(enc "$OPTARG")" ) ;;
 		"c") clasp_opts=( "${clasp_opts[@]}" "$OPTARG" ) ;;
 		"p") cudf_opts=( "${cudf_opts[@]}" "$OPTARG" ) ;;
-		"s") solver="$OPTARG" ;;
+		"s") solver_bin="$OPTARG" ;;
+		"g") gringo_bin="$OPTARG" ;;
 		"h") usage; exit 0 ;;
 		"?") exit 1 ;;
 	esac
@@ -90,29 +92,22 @@ done
 
 shift $((OPTIND-1))
 
-if [[ -z ${solver} ]]; then
+if [[ -z "${solver_bin}" ]]; then
 	if echo $(basename "$0") | grep -q "aspuncud"; then
-		solver="unclasp"
-	elif echo $(basename "$0") | grep -q "aspcud"; then
-		solver="clasp"
-	fi
-fi
-
-case "${solver}" in 
-	clasp)
-		solver_bin="${clasp_bin}"
-		clasp_opts_implicit=( "--stats=2" "--quiet=1,2" )
-		;;
-	unclasp)
-		clasp_opts_def=( "${unclasp_opts_def[@]}" )
-		gringo_opts_def=( "${ungringo_opts_def[@]}" )
 		solver_bin="${unclasp_bin}"
-		clasp_opts_implicit=( "--stats" )
-		;;
-	*)
-		die "error: solver clasp or unclasp expected"
-		;;
-esac
+        clasp_opts_def=( "${unclasp_opts_def[@]}" )
+        clasp_opts_implicit=( "--stats" )
+
+	elif echo $(basename "$0") | grep -q "aspcud"; then
+		solver_bin="${clasp_bin}"
+        clasp_opts_implicit=( "--stats=2" "--quiet=1,2" )
+	fi
+elif echo ${solver_bin} | grep -q "unclasp"; then
+    clasp_opts_def=( "${unclasp_opts_def[@]}" )
+    clasp_opts_implicit=( "--stats" )
+else
+    clasp_opts_implicit=( "--stats=2" "--quiet=1,2" )
+fi
 
 [[ ${#clasp_opts[*]} -eq 0 ]] && clasp_opts=( "${clasp_opts_def[@]}" )
 [[ ${#gringo_opts[*]} -eq 0 ]] && gringo_opts=( "${gringo_opts_def[@]}" )
