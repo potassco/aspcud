@@ -1,12 +1,13 @@
 Aspcud - A solver for package problems in CUDF format using ASP
 ---------------------------------------------------------------
 
-The aspcud project provides a converter/preprocessor (cudf2lp) to translate
-CUDF specifications into a set facts suitable to be processed with an ASP
-grounder and solver. Furthermore, there is a small bash/python script together
-with a specification for the package problem. It calls converter cudf2lp,
-grounder gringo, and solver clasp to obtain a solution to a given CUDF document
-along with an optimization criterion.
+The aspcud project provides a converter/preprocessor (cudf2lp) to translate a
+CUDF specification into a set facts suitable to be processed with an ASP
+grounder and solver. Furthermore, there is a small bash/python script
+(aspcud.sh) together with a specification for the package problem (misc2012.lp
+or specification.lp). It calls converter cudf2lp, grounder gringo, and solver
+clasp to obtain a solution to a given CUDF document along with an optimization
+criterion.
 
 To run aspcud, use the script aspcud.sh in the scripts folder:
 
@@ -24,7 +25,7 @@ of instances are available at the mancoosi homepage:
   http://www.mancoosi.org/
   http://www.mancoosi.org/cudf/
   http://www.mancoosi.org/misc-2012/criteria/
-  http://www.mancoosi.org/misc-2012/results/index.html
+  http://data.mancoosi.org/misc2012/problems/
 
 Either the encoding misc2012.lp or specification.lp can be used for solving the
 package problem (can be selected with option -e). The first encoding can
