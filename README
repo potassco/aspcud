@@ -1,40 +1,42 @@
 Aspcud - A Converter and Preprocessor from CUDF Specifications into ASP
 -----------------------------------------------------------------------
 
+The aspcud project provides a converter/preprocessor (cudf2lp) to translate
+CUDF specifications into a set facts suitable to be processed with an ASP
+grounder and solver. Furthermore, there is a small bash/python script together
+with a specification for the package problem. It calls converter cudf2lp,
+grounder gringo, and solver clasp to obtain a solution to a given CUDF document
+along with an optimization criterion.
+
+To run aspcud, use the script aspcud.sh in the scripts folder:
+
+  ./aspcud.sh problem.cudf solution.cudf <criteria>
+
+For this to work, cudf2lp, clasp (>=2.1.3), and gringo (>=4.2.1) has to be
+available in the path. The solver and grounder is available at:
+  
+  http://sourceforge.net/projects/potassco/files/clasp/
+  http://sourceforge.net/projects/potassco/files/gringo/
+
+The specification of CUDF documents and the supported criteria along with a lot
+of instances are available at the mancoosi homepage:
+
+  http://www.mancoosi.org/
+  http://www.mancoosi.org/cudf/
+  http://www.mancoosi.org/misc-2012/criteria/
+  http://www.mancoosi.org/misc-2012/results/index.html
+
+Either the encoding misc2012.lp or specification.lp can be used for solving the
+package problem (can be selected with option -e). The first encoding can
+typically solve harder problems than the second one. The second encoding is
+often faster on simpler instance though.
+
+Furthermore, the prototypical solver unclasp can be selected with option -s. It
+typically performs better than clasp on package problems. Note that unclasp
+will be part of future clasp versions. But for now you can obtain unclasp using
+subversion:
+
+  svn checkout svn://svn.code.sf.net/p/potassco/code/branches/unclasp
+
 Aspcud is distributed under the GNU Public Licence, see file COPYING for
 details. 
-
-Prerequisites
--------------
-
- - Build system cmake:   http://www.cmake.org/
- - Lexer generator re2c: http://re2c.org/
- - Boost C++ Libraries:  http://www.boost.org/
-   (>= version 1.43)
-
-Distribution contents
----------------------
-
-   COPYING          - GNU Public Licence
-   CHANGES          - Major changes between versions
-   INSTALL          - Installation instructions
-   README           - This file
-   Makefile         - Makefile to build binaries (wraps cmake)
-   CMakeLists.txt   - Build specification
-   cmake/           - Auxiliary cmake scripts 
-   app/             - Sources for application on top of libcudf
-   lemon/           - Parser generator used by aspcud
-   libcudf/         - The cudf library
-   libprogram_opts/ - Library for options parsing 
-   scripts/         - Wrapper scripts to run aspcud
-   tests/           - Set of instances to perfrom sanity checks
-
-Aspcud is written in mostly Standard-C++ and was successfully built and run
-under Linux (x86, x86_64) using gcc and icc. Other compilers might work but 
-have not been tested.
-
-CUDF solver
------------
-
-To obtain the CUDF solver, take the scripts folder and update the executable
-paths in the first lines of scripts/aspcud.sh.

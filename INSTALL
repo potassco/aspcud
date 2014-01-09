@@ -1,17 +1,16 @@
 1 Prerequisites
 ---------------
 
-Boost (>= v1.43) - http://www.boost.org/
-cmake (>= v2.6)  - http://www.cmake.org/
-
-Note that the lexer generatror re2c is only needed for the svn version 
+Boost (>= v1.43)  - http://www.boost.org/
+cmake (>= v2.6)   - http://www.cmake.org/
+re2c  (>= v0.13)  - http://www.re2c.org/
 
 2 Compilation
 -------------
 
-If all prerequisites are satisfied and you are running a *nix, compilation
-should be as simple as typing:
-	make
+If all prerequisites are satisfied and you are running a *nix like system,
+compilation should be as simple as typing: 
+  make
 
 If you want to use a boost library that is not installed in a default 
 location, than you can specify its location using environtment variables:
@@ -28,11 +27,26 @@ BOOST_LIBRARYDIR - Similar to BOOST_ROOT but sets the path to the library
 
 To use a Boost installation in /usr/local, you should compile the project 
 using:
-	BOOST_ROOT=/usr/local make
+
+  BOOST_ROOT=/usr/local make
+
+To compile a release build, use the release target:
+
+  make release
+
+If compilation succeeded, the respective build folder will contain a bin folder
+with an executable. For information on how to run aspcud, please refer to the
+README file.
+
 
 3 Installation
 --------------
 
-If compilation succeeded, the respective build folder will contain a bin
-folder with an executable.
+There is no install target. Relevant files to install are:
 
+  build/<type>/bin/cudf2lp
+  scripts/aspcud.sh
+  scripts/encodings/misc2012.lp
+  scripts/encodings/specification.lp
+
+You might want to change pathes to binaries/encodings in the aspcud.sh script.
