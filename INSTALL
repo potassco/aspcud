@@ -1,9 +1,25 @@
 1 Prerequisites
 ---------------
 
-Boost (>= v1.43)  - http://www.boost.org/
-cmake (>= v2.6)   - http://www.cmake.org/
-re2c  (>= v0.13)  - http://www.re2c.org/
+1.1 Build Dependencies
+----------------------
+
+Boost (>= v1.43) - http://www.boost.org/
+cmake (>= v2.6)  - http://www.cmake.org/
+re2c  (>= v0.13) - http://www.re2c.org/
+
+And a C++ compiler like gcc or clang:
+- http://gcc.gnu.org/
+- http://clang.llvm.org/
+
+1.2 Runtime Dependencies
+------------------------
+
+clasp  (>= v2.1.3 and < v3.0) - http://potassco.sourceforge.net/
+gringo (>= v4.2.1)            - http://potassco.sourceforge.net/
+python (>= v2.7 and < v3.0)   - http://python.org/
+bash                          - http://www.gnu.org/software/bash/
+coreutils                     - http://www.gnu.org/software/coreutils/
 
 2 Compilation
 -------------
