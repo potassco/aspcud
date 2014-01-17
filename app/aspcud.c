@@ -9,9 +9,9 @@
 // TODO: these should be replaced before compilation...
 char *aspcud_version     = "0.10.0";
 char *aspcud_tmpdir      = "/tmp/";
-char *aspcud_gringo_enc  = "/home/kaminski/svn/potassco/trunk/aspcud/scripts/encodings/misc2012.lp";
-char *aspcud_cudf2lp_bin = "/home/kaminski/svn/potassco/trunk/aspcud/build/release/bin/cudf2lp";
-char *aspcud_gringo_bin  = "gringo-4";
+char *aspcud_gringo_enc  = "misc2012.lp";
+char *aspcud_cudf2lp_bin = "cudf2lp";
+char *aspcud_gringo_bin  = "gringo";
 char *aspcud_clasp_bin   = "clasp";
 
 char *aspcud_clasp_args_default[] = {
@@ -51,9 +51,9 @@ int aspcud_exec(char *const args[], char const *out_path, char const *err_path) 
             fprintf(stderr, "debug: starting process");
             char *const *arg;
             for (arg = args; *arg; ++arg) {
-                printf(" %s", *arg);
+                fprintf(stderr, " %s", *arg);
             }
-            printf("\n");
+            fprintf(stderr, "\n");
         }
         mode_t mode = S_IRUSR | S_IWUSR;
         int out_fd = open(out_path, O_WRONLY | O_CREAT | O_TRUNC, mode);
@@ -141,15 +141,29 @@ void aspcud_tempfile(char **pname, char *template) {
     }
     sprintf(name, "%s%s", aspcud_tmpdir, template);
     int fd = mkstemp(name);
-    fprintf(stderr, "debug: created temporary file %s\n", name);
+    if (aspcud_debug) {
+        fprintf(stderr, "debug: created temporary file %s\n", name);
+    }
     if (fd == -1) {
         fprintf(stderr, "error: could not create %s (%s)\n", name, strerror(errno));
         exit(1);
     }
-    if (aspcud_debug) {
-    }
     *pname = name;
     close(fd);
+}
+
+void aspcud_ecat(char *name) {
+    FILE *f  = fopen(name, "r");
+    if (!f) {
+        fprintf(stderr, "error: could not open %s (%s)\n", name, strerror(errno));
+        exit(1);
+    }
+    char buf[4096];
+    size_t read;
+    while ((read = fread(buf, 1, 4096, f)) > 0) {
+        fwrite(buf, 1, read, stderr);
+    }
+    fclose(f);
 }
 
 void aspcud_print_usage(char *name) {
@@ -222,6 +236,7 @@ int main(int argc, char *argv[]) {
 
     char **gringo_args = aspcud_args_new();
     aspcud_args_push(&gringo_args, aspcud_gringo_bin);
+    aspcud_args_push(&gringo_args, "-Wno-atom-undefined");
 
     char *aspcud_in   = NULL;
     char *aspcud_out  = NULL;
@@ -232,7 +247,7 @@ int main(int argc, char *argv[]) {
     int i;
     int a = 0;
     for (i = 1; i < argc; ++i) {
-        if (strncmp(argv[i], "-", 1) == 0) {
+        if (a == 0 && strncmp(argv[i], "-", 1) == 0) {
             if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
                 aspcud_print_usage(argv[0]);
                 exit(0);
@@ -260,15 +275,15 @@ int main(int argc, char *argv[]) {
             }
             else if (strcmp(argv[i], "-s") == 0) {
                 aspcud_checkarg(++i, argc, argv);
-                aspcud_clasp_bin = argv[i];
+                clasp_args[0] = argv[i];
             }
             else if (strcmp(argv[i], "-g") == 0) {
                 aspcud_checkarg(++i, argc, argv);
-                aspcud_gringo_bin = argv[i];
+                gringo_args[0] = argv[i];
             }
             else if (strcmp(argv[i], "-l") == 0) {
                 aspcud_checkarg(++i, argc, argv);
-                aspcud_cudf2lp_bin = argv[i];
+                cudf2lp_args[0] = argv[i];
             }
             else if (strcmp(argv[i], "-t") == 0) {
                 aspcud_checkarg(++i, argc, argv);
@@ -332,6 +347,7 @@ int main(int argc, char *argv[]) {
         aspcud_args_push(&cudf2lp_args, "paranoid");
     }
     int cudf2lp_status = aspcud_exec(cudf2lp_args, aspcud_cudf2lp_out, aspcud_cudf2lp_err);
+    aspcud_ecat(aspcud_cudf2lp_err);
     if (cudf2lp_status != 0) {
         fprintf(stderr, "error: cudf2lp returned with non-zero exit status\n");
         exit(1);
@@ -341,6 +357,7 @@ int main(int argc, char *argv[]) {
     aspcud_args_push(&gringo_args, "-f");
     aspcud_args_push(&gringo_args, aspcud_cudf2lp_out);
     int gringo_status = aspcud_exec(gringo_args, aspcud_gringo_out, aspcud_gringo_err);
+    aspcud_ecat(aspcud_gringo_err);
     if (gringo_status != 0) {
         fprintf(stderr, "error: gringo returned with non-zero exit status\n");
         exit(1);
@@ -352,6 +369,7 @@ int main(int argc, char *argv[]) {
     int clasp_status = aspcud_exec(clasp_args, aspcud_clasp_out, aspcud_clasp_err);
     // TODO: is it possible to do something with the exit status of clasp???
     (void)clasp_status;
+    aspcud_ecat(aspcud_clasp_err);
 
     // find answer set
     FILE   *fclasp_out  = fopen(aspcud_clasp_out, "r");
@@ -369,11 +387,13 @@ int main(int argc, char *argv[]) {
             line[read-1] = '\0';
         }
         printf("%.80s\n", line);
-        if (next && !solution) { 
-            solution = line;
-            line     = NULL;
+        if (next == 1 && !solution) { 
+            char *tmp = solution;
+            solution  = line;
+            line      = tmp;
+            next      = 2;
         }
-        if (!next && strncmp("Answer:", line, 7) == 0) { 
+        else if (strncmp("Answer:", line, 7) == 0) { 
             next = 1;
         }
     }

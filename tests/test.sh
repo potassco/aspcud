@@ -24,9 +24,11 @@ for x in "$location"/*/*.cudf.xz; do
     crit=$(echo "$(basename "$(dirname "$x")")" | tr "PMLRC" '\+\-(),')
     echo "================== $(basename $x) with $crit ================="
     xzcat "$x" > problem.cudf
-    for solver in "$clasp" "$unclasp"; do
-        for encoding in "misc2012.lp" "specification.lp"; do
-            ../scripts/aspcud.sh -e "$encoding" -s "$solver" -g gringo-4 problem.cudf solution.cudf "$crit" > /dev/null
+    #TODO: at some point add back unclasp ...
+    for solver in "$clasp"; do
+        for encoding in "$location/../scripts/encodings/misc2012.lp" "$location/../scripts/encodings/specification.lp"; do
+            echo ../build/debug/bin/aspcud -e "$encoding" -s "$solver" -g "$gringo" "${extra[@]}" problem.cudf solution.cudf "\"$crit\""
+            ../build/debug/bin/aspcud -e "$encoding" -s "$solver" -g "$gringo" "${extra[@]}" problem.cudf solution.cudf "$crit" > /dev/null
             cudf-sol-check -cudf problem.cudf -sol solution.cudf -crit "$crit" > solution.opt
             diff "${x%.cudf.xz}.opt" solution.opt && echo "passed" || echo "FAILED ($encoding/$solver)"
             rm -f solution.cudf solution.opt
