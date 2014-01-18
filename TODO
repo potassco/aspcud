@@ -1,0 +1,4 @@
+- support old style criteria
+- provide install target (check what is needed with deb package)
+- provide windows/mac binaries in releases
+- set hard coded paths in app/aspcud.c using cmake
