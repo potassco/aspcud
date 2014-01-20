@@ -193,7 +193,7 @@ void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions:
             "        new              = count(new)\n"
             "        removed          = count(removed)\n"
             "        changed          = count(changed)\n"
-            "        notuptodate      = count(notuptodate)\n"
+            "        notuptodate      = notuptodate(solution)\n"
             "        unsat_recommends = unsat_recommends(solution)\n"
             "        sum(name)        = sum(name,solution)\n")
         ("addall", bool_switch(&addAll),
