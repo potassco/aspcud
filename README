@@ -9,9 +9,10 @@ or specification.lp). It calls converter cudf2lp, grounder gringo, and solver
 clasp to obtain a solution to a given CUDF document along with an optimization
 criterion.
 
-To run aspcud, use the script aspcud.sh in the scripts folder:
+To run aspcud, use the installed aspcud binary (take a look at the examples
+folder):
 
-  ./aspcud.sh problem.cudf solution.cudf <criteria>
+  aspcud problem.cudf solution.cudf <criteria>
 
 For this to work, cudf2lp, clasp (>=2.1.3), and gringo (>=4.2.1) have to be
 available in the path. Solver and grounder are available at:
@@ -32,10 +33,11 @@ package problem (can be selected with option -e). The first encoding can
 typically solve harder problems than the second one. The second encoding is
 often faster on simpler instance though.
 
-Furthermore, the prototypical solver unclasp can be selected with option -s. It
-typically performs better than clasp on package problems. Note that unclasp's
-optimizaton algorithm will be part of future clasp versions. But for now you
-can obtain unclasp using subversion:
+Furthermore, the prototypical solver unclasp can be selected with option -s
+using the unclasp-wrapper.sh script. The script is necessary to filter some
+incompatible options. It typically performs better than clasp on package
+problems. Note that unclasp's optimizaton algorithm will be part of future
+clasp versions. But for now you can obtain unclasp using subversion:
 
   svn checkout svn://svn.code.sf.net/p/potassco/code/branches/unclasp
 

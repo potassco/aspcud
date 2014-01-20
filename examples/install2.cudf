@@ -1,0 +1,12 @@
+package: a
+version: 1
+
+package: a
+version: 2
+
+package: a
+version: 3
+
+request: 
+install: a >= 2
+

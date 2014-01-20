@@ -1,0 +1,4 @@
+To run an example call:
+
+   aspcud <example>.cudf solution.cudf paranoid
+

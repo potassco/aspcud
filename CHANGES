@@ -1,0 +1,4 @@
+aspcud-1.9.0
+  * added support for old-style criteria
+  * added an install target
+  * replaced bash/python script with a small C program

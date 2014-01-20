@@ -31,8 +31,6 @@
 #include <map>
 #include <set>
 
-#define CUDF_VERSION "1.8.0"
-
 struct Entity;
 struct Package;
 struct Feature;

@@ -24,14 +24,13 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <cudf/version.h>
 
-// TODO: these should be replaced before compilation...
-char *aspcud_version     = "0.10.0";
-char *aspcud_tmpdir      = "/tmp/";
-char *aspcud_gringo_enc  = "misc2012.lp";
-char *aspcud_cudf2lp_bin = "cudf2lp";
-char *aspcud_gringo_bin  = "gringo";
-char *aspcud_clasp_bin   = "clasp";
+char *aspcud_tmpdir      = NULL;
+char *aspcud_gringo_enc  = ASPCUD_DEFAULT_ENCODING;
+char *aspcud_cudf2lp_bin = ASPCUD_CUDF2LP_BIN;
+char *aspcud_gringo_bin  = ASPCUD_GRINGO_BIN;
+char *aspcud_clasp_bin   = ASPCUD_CLASP_BIN;
 
 char *aspcud_clasp_args_default[] = {
     "--opt-heu=1",
@@ -49,6 +48,19 @@ int aspcud_debug = 0;
 
 volatile pid_t aspcud_current_pid     = 0;
 volatile pid_t aspcud_interrupted_pid = 0;
+
+void aspcud_set_tmpdir() {
+    char *tmpdir = getenv("TMPDIR");
+    if (!tmpdir) {
+        tmpdir = P_tmpdir;
+    }
+    aspcud_tmpdir = malloc((sizeof(char))*(strlen(tmpdir)+2));
+    if (!aspcud_tmpdir) {
+        fprintf(stderr, "error: out of memory\n");
+        exit(1);
+    }
+    sprintf(aspcud_tmpdir, "%s/", tmpdir);
+}
 
 void aspcud_interrupt(int signal) {
     if (aspcud_current_pid > 0) { 
@@ -121,6 +133,10 @@ int aspcud_exec(char *const args[], char const *out_path, char const *err_path) 
 
 char **aspcud_args_new() {
     char **opts = malloc(sizeof(char const *));
+    if (!opts) {
+        fprintf(stderr, "error: out of memory\n");
+        exit(1);
+    }
     opts[0] = NULL;
     return opts;
 }
@@ -129,6 +145,10 @@ char **aspcud_args_push(char ***data, char *val) {
     int size;
     for (size = 0; (*data)[size]; size++) { }
     *data = realloc(*data, sizeof(char const *) * (size + 2));
+    if (!data) {
+        fprintf(stderr, "error: out of memory\n");
+        exit(1);
+    }
     (*data)[size + 0] = val;
     (*data)[size + 1] = NULL;
     return *data;
@@ -219,17 +239,17 @@ void aspcud_print_usage(char *name) {
         "  cudf2lp  : %s\n"
         "  TMPDIR   : %s\n"
         "\n"
-        "aspcud is part of Potassco: http://potassco.sourceforge.net/#aspcud\n"
-        "Get help/report bugs via  : http://sourceforge.net/projects/potassco/support\n", aspcud_gringo_enc, aspcud_clasp_bin, aspcud_gringo_bin, aspcud_cudf2lp_bin, aspcud_tmpdir);
+        "aspcud is part of Potassco : http://potassco.sourceforge.net/#aspcud\n"
+        "Get help/report bugs via   : http://sourceforge.net/projects/potassco/support\n", aspcud_gringo_enc, aspcud_clasp_bin, aspcud_gringo_bin, aspcud_cudf2lp_bin, aspcud_tmpdir);
 }
 
 void aspcud_print_version() {
     printf(
-        "aspcud version %s\n"
+        "aspcud version " CUDF_VERSION "\n"
         "Copyright (C) Roland Kaminski\n"
         "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n"
         "aspcud is free software: you are free to change and redistribute it.\n"
-        "There is NO WARRANTY, to the extent permitted by law.\n", aspcud_version);
+        "There is NO WARRANTY, to the extent permitted by law.\n");
 }
 
 void aspcud_checkarg(int i, int argc, char *argv[]) {
@@ -244,6 +264,8 @@ int main(int argc, char *argv[]) {
     signal(SIGTERM, &aspcud_interrupt);
     signal(SIGUSR1, &aspcud_interrupt);
     signal(SIGINT,  &aspcud_interrupt);
+
+    aspcud_set_tmpdir();
 
     char **cudf2lp_args = aspcud_args_new();
     aspcud_args_push(&cudf2lp_args, aspcud_cudf2lp_bin);
@@ -396,21 +418,25 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "error: could not open %s (%s)\n", aspcud_clasp_out, strerror(errno));
         exit(1);
     }
-    size_t  length;
+    size_t  line_length;
+    size_t  solution_length;
     char   *line = NULL;
     char   *solution = NULL;
     ssize_t read;
     int     next = 0;
-    while ((read = getline(&line, &length, fclasp_out)) != -1) {
+    while ((read = getline(&line, &line_length, fclasp_out)) != -1) {
         if (read > 0 && line[read-1] == '\n') {
             line[read-1] = '\0';
         }
         printf("%.80s\n", line);
-        if (next == 1 && !solution) { 
+        if (next == 1) { 
             char *tmp = solution;
             solution  = line;
             line      = tmp;
-            next      = 2;
+            next      = 0;
+            size_t tmp_length = solution_length;
+            solution_length   = line_length;
+            line_length       = tmp_length;
         }
         else if (strncmp("Answer:", line, 7) == 0) { 
             next = 1;
@@ -428,7 +454,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "error: could not open %s (%s)\n", aspcud_out, strerror(errno));
         exit(1);
     }
-    if (next) {
+    if (solution) {
         while ((solution = strstr(solution, "in(\""))) {
             solution+= 4;
             char *comma = strchr(solution, ',');

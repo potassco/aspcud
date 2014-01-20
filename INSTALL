@@ -17,19 +17,27 @@ And a C++ compiler like gcc or clang:
 
 clasp  (>= v2.1.3 and < v3.0) - http://potassco.sourceforge.net/
 gringo (>= v4.2.1)            - http://potassco.sourceforge.net/
-python (>= v2.7 and < v3.0)   - http://python.org/
-bash                          - http://www.gnu.org/software/bash/
-coreutils                     - http://www.gnu.org/software/coreutils/
 
-2 Compilation
--------------
+2 Compilation and Installation
+------------------------------
 
-If all prerequisites are satisfied and you are running a *nix like system,
-compilation should be as simple as typing: 
+To compile a release build, create a release folder and execute cmake
+accordingly:
+
+  mkdir -p build/release
+  cd build/release
+  cmake -DCMAKE_BUILD_TYPE=Release ../..
   make
+  make install
+  
+For information on how to run aspcud, please refer to the
+README file.
+
+2.1 Using non-default Boost Installations
+-----------------------------------------
 
 If you want to use a boost library that is not installed in a default 
-location, than you can specify its location using environtment variables:
+location, than you can specify its location using environment variables:
 
 BOOST_ROOT       - Installation prefix for searching for Boost.
                    Set this if cmake has problems finding the proper
@@ -41,28 +49,27 @@ BOOST_INCLUDEDIR - Similar to BOOST_ROOT but sets the path to the include
 BOOST_LIBRARYDIR - Similar to BOOST_ROOT but sets the path to the library
                    directory directly.
 
-To use a Boost installation in /usr/local, you should compile the project 
-using:
+To use a Boost installation in /usr/local, set the respective environment
+variable:
 
-  BOOST_ROOT=/usr/local make
+  export BOOST_ROOT=/usr/local
 
-To compile a release build, use the release target:
+2.2 Configuring Paths to Binaries and Encodings
+-----------------------------------------------
 
-  make release
+By default aspcud uses some hardcoded paths for binaries/encodings.  These can
+be overwritten using the following cmake variables (this are *not* environment
+variables and thus have to be set using cmakes -D option):
 
-If compilation succeeded, the respective build folder will contain a bin folder
-with an executable. For information on how to run aspcud, please refer to the
-README file.
+CUDF2LP_LOC  - The path to the cudf2lp binary.
+               Default: CMAKE_INSTALL_PREFIX/bin/cudf2lp
 
+GRINGO_LOC   - The path to the gringo binary.
+               Default: CMAKE_INSTALL_PREFIX/bin/gringo
 
-3 Installation
---------------
+CLASP_LOC    - The path to the clasp binary.
+               Default: CMAKE_INSTALL_PREFIX/bin/clasp
 
-There is no install target. Relevant files to install are:
+ENCODING_LOC - The path to the default encoding.
+               Default: CMAKE_INSTALL_PREFIX/share/aspcud/misc2012.lp
 
-  build/<type>/bin/cudf2lp
-  scripts/aspcud.sh
-  scripts/encodings/misc2012.lp
-  scripts/encodings/specification.lp
-
-You might want to change pathes to binaries/encodings in the aspcud.sh script.

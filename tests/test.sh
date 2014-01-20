@@ -7,7 +7,10 @@ encoding="$location"/../scripts/encodings/misc2012.lp
 clasp=clasp
 unclasp=unclasp
 gringo=gringo-4
-cudf="$location"/../build/debug/bin/cudf2lp
+check=cudf-sol-check
+cudf="$location/../build/debug/bin/cudf2lp"
+aspcud="$location/../build/debug/bin/aspcud"
+unclasp="$location/../scripts/unclasp-wrapper.sh"
 
 for x in "$location"/enumerate-all/*.cudf; do
     echo "================== $(basename $x) ================="
@@ -24,13 +27,13 @@ for x in "$location"/*/*.cudf.xz; do
     crit=$(echo "$(basename "$(dirname "$x")")" | tr "PMLRC" '\+\-(),')
     echo "================== $(basename $x) with $crit ================="
     xzcat "$x" > problem.cudf
-    #TODO: at some point add back unclasp ...
-    for solver in "$clasp"; do
+    for solver in "$clasp" "$unclasp"; do
         for encoding in "$location/../scripts/encodings/misc2012.lp" "$location/../scripts/encodings/specification.lp"; do
-            #echo ../build/debug/bin/aspcud -e "$encoding" -s "$solver" -g "$gringo" "${extra[@]}" problem.cudf solution.cudf "\"$crit\""
-            ../build/debug/bin/aspcud -e "$encoding" -s "$solver" -g "$gringo" "${extra[@]}" problem.cudf solution.cudf "$crit" > /dev/null
-            cudf-sol-check -cudf problem.cudf -sol solution.cudf -crit "$crit" > solution.opt
-            diff "${x%.cudf.xz}.opt" solution.opt && echo "passed" || echo "FAILED ($encoding/$solver)"
+            start=$(date +%s)
+            "$aspcud" -e "$encoding" -s "$solver" -g "$gringo" -l "$cudf" "${extra[@]}" problem.cudf solution.cudf "$crit" > /dev/null
+            end=$(date +%s)
+            "$check" -cudf problem.cudf -sol solution.cudf -crit "$crit" > solution.opt
+            diff "${x%.cudf.xz}.opt" solution.opt && echo "passed ($[$end-$start]s, $(basename "$solver"), $(basename "$encoding"))" || echo "FAILED ($encoding/$solver)"
             rm -f solution.cudf solution.opt
         done
     done

@@ -1,0 +1,13 @@
+package: a
+version: 1
+
+package: a
+version: 2
+installed: true
+
+package: a
+version: 3
+
+request: upgrade-request
+upgrade: a
+

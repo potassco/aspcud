@@ -1,0 +1,10 @@
+package: a
+version: 1
+conflicts: a
+
+package: a
+version: 2
+conflicts: a
+
+request: 
+install: a

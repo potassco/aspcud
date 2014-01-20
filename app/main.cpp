@@ -19,6 +19,7 @@
 
 #include <iostream>
 #include <cudf/parser.h>
+#include <cudf/version.h>
 #include <program_opts/app_options.h>
 #include <program_opts/value.h>
 #include <stdexcept>
@@ -77,6 +78,7 @@ namespace ProgramOptions
             : CritParser::base_type(crits)
         {
             using qi::lit;
+            using qi::eps;
             using qi::fail;
             using qi::lexeme;
             using qi::on_error;
@@ -101,12 +103,25 @@ namespace ProgramOptions
                 lit("removed")  [ _val = Criterion::REMOVED ] |
                 lit("up")       [ _val = Criterion::UP ] |
                 lit("down")     [ _val = Criterion::DOWN ];
+            
             ATTR %= lexeme[char_('a', 'z') >> *char_("[a-z][0-9]\\-")];
+
+            ECOUNT = eps            [ _val = Criterion::COUNT ];
+            ESOL   = eps            [ _val = Criterion::SOLUTION ];
+            ONEW   = lit("new")     [ _val = Criterion::NEW ];
+            OREM   = lit("removed") [ _val = Criterion::REMOVED ];
+            OCHG   = lit("changed") [ _val = Criterion::CHANGED ];
+
+            old %= SIGN >> (
+                (ECOUNT >> (ONEW | OREM | OCHG)) |
+                (NOTUPTODATE >> ESOL) |
+                (UNSAT_RECOMMENDS >> ESOL) |
+                (SUM >> '(' >> ESOL >> ATTR >> ')'));
 
             unary   %= SIGN >> (COUNT | NOTUPTODATE | UNSAT_RECOMMENDS) >> '(' >> SELECTOR >> ')';
             binary  %= SIGN >> SUM >> '(' >> SELECTOR >> ',' >> ATTR >> ')';
             ternary %= SIGN >> ALIGNED >> '(' >> SELECTOR >> ',' >> ATTR >> ',' >> ATTR >> ')';
-            crits   %= lit("") > (unary | binary | ternary) > *(',' > (unary | binary | ternary)) > eoi;
+            crits   %= lit("") > (unary | binary | ternary | old) > *(',' > (unary | binary | ternary | old)) > eoi;
 
             on_error<fail>
             (
@@ -118,12 +133,12 @@ namespace ProgramOptions
                     << std::endl
             );
         }
-        qi::rule<Iterator, Criterion::Selector()> SELECTOR;
+        qi::rule<Iterator, Criterion::Selector()> SELECTOR, ONEW, OREM, OCHG, ESOL;
         qi::rule<Iterator, bool()> SIGN;
-        qi::rule<Iterator, Criterion::Measurement()> COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED;
+        qi::rule<Iterator, Criterion::Measurement()> COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED, ECOUNT;
         qi::rule<Iterator, std::string()> ATTR; 
 
-        qi::rule<Iterator, Criterion()> unary, binary, ternary;
+        qi::rule<Iterator, Criterion()> unary, binary, ternary, old;
         qi::rule<Iterator, Criteria::CritVec()> crits;
     };
 
@@ -169,8 +184,18 @@ void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions:
         ("criteria,c", storeTo(crits),
             "Preprocess for specific optimization criteria\n"
             "      Default: none\n"
-            "      Valid:   none, paranoid, trendy, -|+<crit>(,-|+<crit>)*\n"
-            "        <crit>: removed, new, changed, notuptodate, or unsat_recommends\n")
+            "      Valid:   none, paranoid, -|+<crit>(,-|+<crit>)*\n"
+            "        <crit>: count(<set>) | sum(<set>,<attr>) | unsat_recommends(<set>)\n"
+            "              | aligned(<set>,<attr>,<attr>) | notuptodate(<set>)\n"
+            "        <attr>: CUDF attribute name\n"
+            "        <set> : solution | changed | new | removed | up | down\n"
+            "      For backwards compatibility: \n"
+            "        new              = count(new)\n"
+            "        removed          = count(removed)\n"
+            "        changed          = count(changed)\n"
+            "        notuptodate      = count(notuptodate)\n"
+            "        unsat_recommends = unsat_recommends(solution)\n"
+            "        sum(name)        = sum(name,solution)\n")
         ("addall", bool_switch(&addAll),
             "Disable preprocessing and add all packages\n");
 
