@@ -48,23 +48,23 @@ namespace
 
     struct CudfPackageRefFilter
     {
-        CudfPackageRefFilter(const Cudf::PackageRef &ref) : ref(ref) { }
+        CudfPackageRefFilter(const Cudf::PackageRef &ref) : ref(&ref) { }
         bool operator()(const Entity *entity)
         {
-            switch(ref.op)
+            switch(ref->op)
             {
             case Cudf::PackageRef::EQ:
-                return (entity->version == ref.version || entity->allVersions()) && ref.version != 0;
+                return (entity->version == ref->version || entity->allVersions()) && ref->version != 0;
             case Cudf::PackageRef::NEQ:
-                return  entity->version != ref.version || entity->allVersions();
+                return  entity->version != ref->version || entity->allVersions();
             case Cudf::PackageRef::LE:
-                return (entity->version <= ref.version || entity->allVersions()) && ref.version != 0;
+                return (entity->version <= ref->version || entity->allVersions()) && ref->version != 0;
             case Cudf::PackageRef::GE:
-                return  entity->version >= ref.version || entity->allVersions();
+                return  entity->version >= ref->version || entity->allVersions();
             }
             return true;
         }
-        const Cudf::PackageRef &ref;
+        const Cudf::PackageRef *ref;
     };
 
 #define refRange(map, ref) ( map[ref.name] | boost::adaptors::filtered(CudfPackageRefFilter(ref)) )

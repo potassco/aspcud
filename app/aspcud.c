@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/wait.h>
 #include <cudf/version.h>
 
