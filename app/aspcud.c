@@ -47,6 +47,7 @@ char *aspcud_clasp_args_default[] = {
 
 int aspcud_debug = 0;
 
+volatile pid_t aspcud_pid             = 0;
 volatile pid_t aspcud_current_pid     = 0;
 volatile pid_t aspcud_interrupted_pid = 0;
 
@@ -98,12 +99,10 @@ int aspcud_exec(char *const args[], char const *out_path, char const *err_path) 
             fprintf(stderr, "error: could not open %s (%s)\n", err_path, strerror(errno));
             exit(1);
         }
-        close(STDOUT_FILENO);
         if (dup2(out_fd, STDOUT_FILENO) == -1) {
             fprintf(stderr, "error: could not duplicate stdout (%s)\n", strerror(errno));
             exit(1);
         }
-        close(STDERR_FILENO);
         if (dup2(err_fd, STDERR_FILENO) == -1) {
             fprintf(stderr, "error: could not duplicate stderr (%s)\n", strerror(errno));
             exit(1);
@@ -117,7 +116,7 @@ int aspcud_exec(char *const args[], char const *out_path, char const *err_path) 
         kill(aspcud_current_pid, SIGTERM);
         aspcud_interrupted_pid = aspcud_current_pid;
     }
-    int status = 0;
+    int status = 1;
     while (1) {
         int ret = waitpid(aspcud_current_pid, &status, 0);
         if (ret == -1) {
@@ -129,7 +128,7 @@ int aspcud_exec(char *const args[], char const *out_path, char const *err_path) 
         }
         else { break; }
     }
-    return WEXITSTATUS(status); 
+    return WIFEXITED(status) ? WEXITSTATUS(status) : 1; 
 }
 
 char **aspcud_args_new() {
@@ -163,7 +162,7 @@ char *aspcud_clasp_out   = NULL;
 char *aspcud_clasp_err   = NULL;
 
 void aspcud_atexit() {
-    if (!aspcud_debug) {
+    if (!aspcud_debug && aspcud_pid == getpid()) {
         if (aspcud_cudf2lp_out) { unlink(aspcud_cudf2lp_out); }
         if (aspcud_cudf2lp_err) { unlink(aspcud_cudf2lp_err); }
         if (aspcud_gringo_out)  { unlink(aspcud_gringo_out); }
@@ -194,10 +193,7 @@ void aspcud_tempfile(char **pname, char *template) {
 
 void aspcud_ecat(char *name) {
     FILE *f  = fopen(name, "r");
-    if (!f) {
-        fprintf(stderr, "error: could not open %s (%s)\n", name, strerror(errno));
-        exit(1);
-    }
+    if (!f) { return; }
     char buf[4096];
     size_t read;
     while ((read = fread(buf, 1, 4096, f)) > 0) {
@@ -365,6 +361,7 @@ int main(int argc, char *argv[]) {
         aspcud_args_push(&gringo_args, aspcud_gringo_enc);
     }
 
+	aspcud_pid = getpid();
     if (atexit(&aspcud_atexit) != 0) {
         fprintf(stderr, "error: could not set exithandler\n");
         exit(1);
