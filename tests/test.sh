@@ -1,6 +1,6 @@
 #!/bin/bash
 
-location="$(readlink -f "$(dirname $0)")"
+location="$(cd "$(dirname $0)"; echo "$PWD")"
 encoding="$location"/../scripts/encodings/misc2012.lp
 #encoding="$location"/../scripts/encodings/specification.lp
 
