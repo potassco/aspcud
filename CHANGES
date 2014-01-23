@@ -3,5 +3,6 @@ aspcud-1.9.0
   * added an install target (supports DESTDIR)
   * replaced bash/python script with a small C program
   * should build on MacOS X without problems now
+  * compiles with Cygwin under Windows
 aspcud-1.8.0
   * first official release
