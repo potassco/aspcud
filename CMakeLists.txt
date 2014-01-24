@@ -6,9 +6,6 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
 	message(FATAL_ERROR "The file CmakeCache.txt and directory CMakeFiles in the root directory have to be deleted manually now")
 endif()
 
-# user configurables
-set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Release Debug")
-
 project(aspcud)
 
 include(cmake/re2c.cmake)
