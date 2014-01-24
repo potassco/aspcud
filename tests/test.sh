@@ -1,7 +1,7 @@
 #!/bin/bash
 
 location="$(cd "$(dirname $0)"; echo "$PWD")"
-encoding="$location"/../scripts/encodings/misc2012.lp
+encoding="$location"/../share/aspcud/misc2012.lp
 #encoding="$location"/../scripts/encodings/specification.lp
 
 clasp=clasp
@@ -14,7 +14,7 @@ unclasp="$location/../scripts/unclasp-wrapper.sh"
 
 for x in "$location"/enumerate-all/*.cudf; do
     echo "================== $(basename $x) ================="
-    "$cudf" < "$x" 2>/dev/null | $gringo - "$encoding" 2>/dev/null | "$clasp" 0 --outf=1 -V0 -q0,0 | grep -v "A" |\
+    "$cudf" < "$x" 2>/dev/null | "$gringo" - "$encoding" 2>/dev/null | "$clasp" 0 --outf=1 -V0 -q0,0 | grep -v "A" |\
     while read line; do
         if [[ -n "$line" ]]; then
             echo "$line" | tr " " "\n" | sort | tr -d "\n"
@@ -28,7 +28,7 @@ for x in "$location"/*/*.cudf.xz; do
     echo "================== $(basename $x) with $crit ================="
     xzcat "$x" > problem.cudf
     for solver in "$clasp" "$unclasp"; do
-        for encoding in "$location/../scripts/encodings/misc2012.lp" "$location/../scripts/encodings/specification.lp"; do
+        for encoding in "$location/../share/aspcud/misc2012.lp" "$location/../share/aspcud/specification.lp"; do
             start=$(date +%s)
             "$aspcud" -e "$encoding" -s "$solver" -g "$gringo" -l "$cudf" "${extra[@]}" problem.cudf solution.cudf "$crit" > /dev/null
             end=$(date +%s)
