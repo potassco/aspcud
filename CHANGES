@@ -1,6 +1,7 @@
 aspcud-1.9.0
   * added support for old-style criteria
   * added an install target (supports DESTDIR)
+  * added old trendy criterion
   * replaced bash/python script with a small C program
   * should build on MacOS X without problems now
   * compiles with Cygwin under Windows

@@ -13,6 +13,7 @@ project(aspcud)
 
 include(cmake/re2c.cmake)
 include(cmake/lemon.cmake)
+include(GNUInstallDirs)
 
 IF(USE_STATIC_LIBS)
 	set(CMAKE_EXE_LINK_DYNAMIC_C_FLAGS)
@@ -42,4 +43,7 @@ ENDIF()
 add_subdirectory(libcudf)
 add_subdirectory(libprogram_opts)
 add_subdirectory(app)
+
+install(FILES "${CMAKE_SOURCE_DIR}/scripts/encodings/misc2012.lp" "${CMAKE_SOURCE_DIR}/scripts/encodings/specification.lp" DESTINATION "${CMAKE_INSTALL_DATADIR}/aspcud")
+install(FILES "${CMAKE_SOURCE_DIR}/man/man1/aspcud.1" DESTINATION "${CMAKE_INSTALL_MANDIR}/man1")
 

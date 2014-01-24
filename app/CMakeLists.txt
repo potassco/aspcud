@@ -37,5 +37,4 @@ set_property(SOURCE main.cpp APPEND PROPERTY COMPILE_FLAGS "-ftemplate-depth=256
 add_executable(aspcud-app aspcud.c)
 set_target_properties(aspcud-app PROPERTIES OUTPUT_NAME aspcud)
 
-install(TARGETS cudf-app aspcud-app RUNTIME DESTINATION bin)
-install(FILES "${CMAKE_SOURCE_DIR}/scripts/encodings/misc2012.lp" "${CMAKE_SOURCE_DIR}/scripts/encodings/specification.lp" DESTINATION "share/aspcud")
+install(TARGETS cudf-app aspcud-app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

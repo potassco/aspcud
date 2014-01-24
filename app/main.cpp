@@ -157,6 +157,24 @@ namespace ProgramOptions
             crits.back().measurement = Criterion::COUNT;
             crits.back().selector = Criterion::CHANGED;
         }
+        else if(lower == "trendy") {
+            crits.push_back(Criterion());
+            crits.back().optimize = false;
+            crits.back().measurement = Criterion::COUNT;
+            crits.back().selector = Criterion::REMOVED;
+            crits.push_back(Criterion());
+            crits.back().optimize = false;
+            crits.back().measurement = Criterion::NOTUPTODATE;
+            crits.back().selector = Criterion::SOLUTION;
+            crits.push_back(Criterion());
+            crits.back().optimize = false;
+            crits.back().measurement = Criterion::UNSAT_RECOMMENDS;
+            crits.back().selector = Criterion::SOLUTION;
+            crits.push_back(Criterion());
+            crits.back().optimize = false;
+            crits.back().measurement = Criterion::COUNT;
+            crits.back().selector = Criterion::NEW;
+        }
         else if(lower == "none") { }
         else if (!qi::parse(lower.begin(), lower.end(), CritParser<std::string::iterator>(), crits))
         {
