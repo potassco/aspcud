@@ -112,16 +112,16 @@ namespace ProgramOptions
             OREM   = lit("removed") [ _val = Criterion::REMOVED ];
             OCHG   = lit("changed") [ _val = Criterion::CHANGED ];
 
-            old %= SIGN >> (
-                (ECOUNT >> (ONEW | OREM | OCHG)) |
-                (NOTUPTODATE >> ESOL) |
-                (UNSAT_RECOMMENDS >> ESOL) |
-                (SUM >> '(' >> ESOL >> ATTR >> ')'));
+            old1 %= SIGN >> ECOUNT >> (ONEW | OREM | OCHG);
+            old2 %= SIGN >> (NOTUPTODATE | UNSAT_RECOMMENDS) >> ESOL;
+            old3 %= SIGN >> SUM >> '(' >> ESOL >> ATTR >> ')';
 
             unary   %= SIGN >> (COUNT | NOTUPTODATE | UNSAT_RECOMMENDS) >> '(' >> SELECTOR >> ')';
             binary  %= SIGN >> SUM >> '(' >> SELECTOR >> ',' >> ATTR >> ')';
             ternary %= SIGN >> ALIGNED >> '(' >> SELECTOR >> ',' >> ATTR >> ',' >> ATTR >> ')';
-            crits   %= lit("") > (unary | binary | ternary | old) > *(',' > (unary | binary | ternary | old)) > eoi;
+
+            crit     = unary | binary | ternary | old1 | old2 | old3;
+            crits   %= crit > *(',' > crit) > eoi;
 
             on_error<fail>
             (
@@ -132,13 +132,46 @@ namespace ProgramOptions
                     << val("\"")
                     << std::endl
             );
+            
+#if 0
+            using qi::debug;
+
+            unary.name("unary");
+            binary.name("binary");
+            ternary.name("ternary");
+            crits.name("crits");
+            crit.name("crit");
+            old1.name("old1");
+            old2.name("old2");
+            old3.name("old3");
+            SIGN.name("SIGN");
+            SELECTOR.name("SELECTOR");
+            ECOUNT.name("ECOUNT");
+            ONEW.name("ONEW");
+            OREM.name("OREM");
+            OCHG.name("OCHG");
+            debug(unary);
+            debug(binary);
+            debug(ternary);
+            debug(crits);
+            debug(SIGN);
+            debug(SELECTOR);
+            debug(ECOUNT);
+            debug(ONEW);
+            debug(OREM);
+            debug(OCHG);
+            debug(old1);
+            debug(old2);
+            debug(old3);
+            debug(crit);
+#endif
         }
         qi::rule<Iterator, Criterion::Selector()> SELECTOR, ONEW, OREM, OCHG, ESOL;
         qi::rule<Iterator, bool()> SIGN;
         qi::rule<Iterator, Criterion::Measurement()> COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED, ECOUNT;
         qi::rule<Iterator, std::string()> ATTR; 
 
-        qi::rule<Iterator, Criterion()> unary, binary, ternary, old;
+        qi::rule<Iterator, Criterion()> unary, binary, ternary, old1, old2, old3, crit;
         qi::rule<Iterator, Criteria::CritVec()> crits;
     };
 
