@@ -42,5 +42,5 @@ add_subdirectory(libprogram_opts)
 add_subdirectory(app)
 
 install(FILES "${CMAKE_SOURCE_DIR}/share/aspcud/misc2012.lp" "${CMAKE_SOURCE_DIR}/share/aspcud/specification.lp" DESTINATION "${CMAKE_INSTALL_DATADIR}/aspcud")
-install(FILES "${CMAKE_SOURCE_DIR}/man/man1/aspcud.1" DESTINATION "${CMAKE_INSTALL_MANDIR}/man1")
+install(FILES "${CMAKE_SOURCE_DIR}/man/man1/aspcud.1" "${CMAKE_SOURCE_DIR}/man/man1/cudf2lp.1" DESTINATION "${CMAKE_INSTALL_MANDIR}/man1")
 

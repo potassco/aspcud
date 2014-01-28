@@ -4,7 +4,7 @@ aspcud \- solve dependencies between packages
 
 .SH SYNOPSIS
 .B aspcud
-[\fIOPTION\fR]... \fIinput-file\fR \fIoutput-file\fR [\fIcriterion\fR]
+[\fIOPTION\fR]... \fIINPUT-FILE\fR \fIOUTPUT-FILE\fR [\fICRITERION\fR]
 
 .SH DESCRIPTION
 .B aspcud
@@ -19,16 +19,16 @@ the output file.
 
 The first two command line arguments are mandatory:
 .TP
-.I input-file
+.I INPUT-FILE
 is the pathname of a file containing the problem specification in
 CUDF format (both the universe and the request)
 .TP
-.I output-file
+.I OUTPUT-FILE
 is the pathname of a file into which the solution will be written in
 CUDF output format. If the file does not exist it will be created, if
 it does already exist it will be overwritten without warning.
 .TP
-.I criterion
+.I CRITERION
 If no criteria is given, then the paranoid optimization criteria is chosen.
 To get a list of supported criteria, see the \fB\-c\fR option of \&\fIcudf2lp\fR\|(1).
 
