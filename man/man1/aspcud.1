@@ -1,9 +1,10 @@
-.TH aspcud 1 "March 18, 2011"  "Version 1.4" "USER COMMANDS"
+.TH aspcud 1 "January 28, 2014"  "Version 1.9" "USER COMMANDS"
 .SH NAME
 aspcud \- solve dependencies between packages
 
 .SH SYNOPSIS
-\fBaspcud\fR \fIinput-file output-file criterion\fR
+.B aspcud
+[\fIOPTION\fR]... \fIinput-file\fR \fIoutput-file\fR [\fIcriterion\fR]
 
 .SH DESCRIPTION
 .B aspcud
@@ -11,12 +12,12 @@ solves package installation/removal/upgrade problems expressed in the
 CUDF format. It is intended to be called by package installers, but
 may also be used independently.
 
-If the tool is not able to find a solution then it prints "FAIL" to
-stdout.
+If the tool is not able to find a solution, then it writes "FAIL" to
+the output file.
 
 .SH ARGUMENTS
 
-All three command line arguments are mandatory:
+The first two command line arguments are mandatory:
 .TP
 .I input-file
 is the pathname of a file containing the problem specification in
@@ -28,17 +29,51 @@ CUDF output format. If the file does not exist it will be created, if
 it does already exist it will be overwritten without warning.
 .TP
 .I criterion
-desribes the optimization criterion. The criterion is a non-empty and
-comma-separated list of signed function names. Each sign is either "+"
-or "-", and each function name is one of removed, new, changed,
-notuptodate, unmet_recommends. One may also use the macros "trendy" or
-"paranoid".
+If no criteria is given, then the paranoid optimization criteria is chosen.
+To get a list of supported criteria, see the \fB\-c\fR option of \&\fIcudf2lp\fR\|(1).
+
+.SH OPTIONS
+.B aspcud
+supports the following options:
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help text, and default configurations and paths
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+print version and license information
+.TP
+\fB\-c\fR \fIOPT\fR
+append clasp option OPT (can be given multiple times);
+if at least one clasp option is given, then default search options are not used
+.TP
+\fB\-e\fR \fIENC\fR
+append encoding ENC (can be given multiple times);
+if at least one encoding is given, then the default encoding is not used
+.TP
+\fB\-p\fR \fIOPT\fR
+append cudf2lp option OPT (can be given multiple times)
+.TP
+\fB\-s\fR \fISOL\fR
+path to solver (clasp)
+.TP
+\fB\-g\fR \fIGRD\fR
+path to grounder (gringo)
+.TP
+\fB\-l\fR \fIPRE\fR
+path to cudf preprocessor (cudf2lp)
+.TP
+\fB\-d\fR
+print debug info and do not cleanup temporary files
+
+.SH ENVIRONMENT VARIABLES
+.B aspcud
+uses temporary files. These are put into the folder indicated by the
+environment variable TMPDIR or, if not set, by the POSIX constant P_tmpdir.
 
 .SH AUTHOR
-.I Aspcud
-has been written by Roland Kaminski <kaminski@cs.uni-potsdam.de>
+.B aspcud
+has been written by Roland Kaminski and Martin Gebser.
 
 .SH SEE ALSO
+\&\fIcudf2lp\fR\|(1), \&\fIgringo\fR\|(1), \&\fIclasp\fR\|(1), and
 <http://www.mancoosi.org/cudf/> for the specification of the CUDF format.
-
-
