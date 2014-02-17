@@ -95,8 +95,8 @@ repeat:
 			}
 			else
 			{
-				if(*(limit_ - 1) == '\n') { in_->putback('\n'); limit_--; }
-				if(limit_ - start < (std::ptrdiff_t)n)    { goto repeat; }
+				if(*(limit_ - 1) == '\n' && in_->peek() == ' ') { in_->get(); limit_--; }
+				if(limit_ - start < (std::ptrdiff_t)n)          { goto repeat; }
 			}
 		}
 		void step()
