@@ -73,3 +73,7 @@ CLASP_LOC    - The path to the clasp binary.
 ENCODING_LOC - The path to the default encoding.
                Default: CMAKE_INSTALL_PREFIX/share/aspcud/misc2012.lp
 
+Furthermore, you can use the prefix <module_path> in any of the above paths.
+This prefix is then replaced by the path the aspcud executable is in. This is
+ment for distributing relocatable binaries of aspcud.
+
