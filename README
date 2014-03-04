@@ -33,13 +33,5 @@ package problem (can be selected with option -e). The first encoding can
 typically solve harder problems than the second one. The second encoding is
 often faster on simpler instance though.
 
-Furthermore, the prototypical solver unclasp can be selected with option -s
-using the unclasp-wrapper.sh script. The script is necessary to filter some
-incompatible options. It typically performs better than clasp on package
-problems. Note that unclasp's optimizaton algorithm will be part of future
-clasp versions. But for now you can obtain unclasp using subversion:
-
-  svn checkout svn://svn.code.sf.net/p/potassco/code/branches/unclasp
-
 Aspcud is distributed under the GNU Public Licence, see file COPYING for
 details. 
