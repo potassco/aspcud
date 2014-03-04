@@ -3,11 +3,10 @@ Aspcud - A solver for package problems in CUDF format using ASP
 
 The aspcud project provides a converter/preprocessor (cudf2lp) to translate a
 CUDF specification into a set facts suitable to be processed with an ASP
-grounder and solver. Furthermore, there is a small bash/python script
-(aspcud.sh) together with a specification for the package problem (misc2012.lp
-or specification.lp). It calls converter cudf2lp, grounder gringo, and solver
-clasp to obtain a solution to a given CUDF document along with an optimization
-criterion.
+grounder and solver. Furthermore, there is a small C program (aspcud) together
+with a specification for the package problem (misc2012.lp or specification.lp).
+It calls converter cudf2lp, grounder gringo, and solver clasp to obtain a
+solution to a given CUDF document along with an optimization criterion.
 
 To run aspcud, use the installed aspcud binary (take a look at the examples
 folder):
