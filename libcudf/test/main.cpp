@@ -21,7 +21,5 @@
 
 //////////////////// Preamble /////////////////////////////////// {{{1
 
-#pragma once
-
-#define CUDF_VERSION "1.9.0"
-
+#define BOOST_TEST_MODULE CudfTest
+#include <boost/test/unit_test.hpp>

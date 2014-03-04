@@ -1,3 +1,5 @@
+//////////////////// Copyright //////////////////////// {{{1
+
 //
 // Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
 //
@@ -16,6 +18,8 @@
 // You should have received a copy of the GNU General Public License
 // along with aspcud.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+//////////////////// Preamble ///////////////////////// {{{1
 
 #pragma once
 
@@ -42,9 +46,11 @@ typedef std::vector<EntityList> EntityFormula;
 typedef std::vector<Feature*>   FeatureList;
 typedef std::vector<Package*>   PackageList;
 
+//////////////////// Criterion //////////////////////// {{{1
+
 struct Criterion
 {
-    enum Selector { SOLUTION, CHANGED, NEW, REMOVED, UP, DOWN };
+    enum Selector { SOLUTION, CHANGED, NEW, REMOVED, UP, DOWN, INSTALLREQUEST, UPGRADEREQUEST, REQUEST };
     enum Measurement { COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED };
     typedef boost::unordered_map<uint32_t, std::set<uint32_t> > AlignedMap;
 
@@ -58,8 +64,9 @@ struct Criterion
     AlignedMap optAligned;
 };
 
-struct Criteria
-{
+//////////////////// Criteria ///////////////////////// {{{1
+
+struct Criteria {
     typedef std::vector<uint32_t> OptProps;
     typedef std::vector<Criterion> CritVec;
 
@@ -70,8 +77,9 @@ struct Criteria
     OptProps optProps;
 };
 
-struct Entity
-{
+//////////////////// Entity /////////////////////////// {{{1
+
+struct Entity {
     Entity(uint32_t name, int32_t version, bool installed = false);
     bool operator<(const Entity &ent) const;
     bool operator==(const Entity &ent) const;
@@ -82,7 +90,7 @@ struct Entity
     virtual void doAdd(Dependency *dep) = 0;
     virtual void dumpAsFacts(Dependency *dep, std::ostream &out) = 0;
     virtual void addToClause(PackageList &clause, Package *self = 0) = 0;
-	virtual void addConflictEdges(ConflictGraph &g) = 0;
+    virtual void addConflictEdges(ConflictGraph &g) = 0;
     bool allVersions() const;
 
     virtual ~Entity() = 0;
@@ -98,21 +106,28 @@ protected:
 
 };
 
-struct Package : public Entity
-{
+//////////////////// Package ////////////////////////// {{{1
+
+struct Package : public Entity {
     typedef Cudf::Package::Keep Keep;
     typedef std::map<uint32_t, int32_t> IntPropMap;
     typedef std::map<uint32_t, uint32_t> StringPropMap;
+    enum Relevant { 
+        RELEVANT_NONE = 0,       // reason set is empty
+        RELEVANT_SELF = 1,       // reason set is the current package itself
+        RELEVANT_EQUAL = 2,      // reason set includes all packages with the same name as the current package
+        RELEVANT_RECOMMENDED = 4 // reason set includes all recommended packages of current package
+    };
 
     Package(const Cudf::Package &pkg);
     void dumpAsFacts(Dependency *dep, std::ostream &out);
     void dumpAttrs(Dependency *dep, std::ostream &out);
     void dumpAttr(Dependency *dep, std::ostream &out, unsigned uid);
     void addToClause(PackageList &clause, Package *self = 0);
-	void addConflictEdges(ConflictGraph &g);
-    bool _satisfies(bool optimize, Criterion &crit);
-    bool _satisfies(bool optimize, Criterion::Selector sel);
-	bool satisfies(Criterion &crit, bool both = false);
+    void addConflictEdges(ConflictGraph &g);
+    bool satisfies(Criterion::Selector sel);
+    Relevant relevant(bool optimize, Criterion::Selector sel);
+    unsigned relevant(Criterion &crit);
     uint32_t getProp(uint32_t uid) const;
     void doAdd(Dependency *dep);
 
@@ -123,24 +138,27 @@ struct Package : public Entity
     Keep          keep;
     IntPropMap    intProps;
     StringPropMap stringProps;
-	// inferred attributes 
+    // inferred attributes 
     bool optInstalled;
     bool optGtMaxInstalled;
     bool optLtMinInstalled;
     bool optMaxVersion;
-	bool dfsVisited;
+    bool optInInstall;
+    bool optInUpgrade;
+    bool dfsVisited;
 
 protected:
     void doRemove(Dependency *dep);
 };
 
-struct Feature : public Entity
-{
+//////////////////// Feature ////////////////////////// {{{1
+
+struct Feature : public Entity {
     Feature(const Cudf::PackageRef &ftr);
     void dumpAsFacts(Dependency *dep, std::ostream &out);
     void addToClause(PackageList &clause, Package *self = 0);
     void doAdd(Dependency *dep);
-	void addConflictEdges(ConflictGraph &g);
+    void addConflictEdges(ConflictGraph &g);
 
     PackageList providedBy;
 
@@ -150,8 +168,9 @@ protected:
 
 size_t hash_value(const Feature &ftr);
 
-struct Request
-{
+//////////////////// Request ////////////////////////// {{{1
+
+struct Request {
     Request(uint32_t name);
     void add(Dependency *dep);
 
@@ -159,37 +178,37 @@ struct Request
     EntityList requests;
 };
 
-class ConflictGraph
-{
+//////////////////// ConflictGraph //////////////////// {{{1
+
+class ConflictGraph {
 public:
-	void addEdges(Package *a, PackageList const &neighbors);
-	void init(bool verbose);
-	void dump(Dependency *dep, std::ostream &out);
+    void addEdges(Package *a, PackageList const &neighbors);
+    void init(bool verbose);
+    void dump(Dependency *dep, std::ostream &out);
 private:
-	void components_(bool verbose);
-	void cliques_(bool verbose);
+    void components_(bool verbose);
+    void cliques_(bool verbose);
 private:
-	struct PkgCmp
-	{
-		bool operator()(Package *a, Package *b) const;
-	};
-	struct PkgHash
-	{
-		size_t operator()(Package *pkg) const;
-	};
-	bool edgeSort(Package *a, Package *b);
-	typedef boost::unordered_map<Package*, PackageList, ConflictGraph::PkgHash> Edges;
-	typedef boost::unordered_set<std::pair<Package*, Package*> > EdgeSet;
-	EdgeSet edgeSet_;
-	Edges edges_;
+    struct PkgCmp {
+        bool operator()(Package *a, Package *b) const;
+    };
+    struct PkgHash {
+        size_t operator()(Package *pkg) const;
+    };
+    bool edgeSort(Package *a, Package *b);
+    typedef boost::unordered_map<Package*, PackageList, ConflictGraph::PkgHash> Edges;
+    typedef boost::unordered_set<std::pair<Package*, Package*> > EdgeSet;
+    EdgeSet edgeSet_;
+    Edges edges_;
 public:
-	typedef std::vector<PackageList> Components;
-	Components components;
-	Components cliques;
+    typedef std::vector<PackageList> Components;
+    Components components;
+    Components cliques;
 };
 
-class Dependency
-{
+//////////////////// Dependency /////////////////////// {{{1
+
+class Dependency {
 public:
     typedef boost::unordered_map<uint32_t, EntityList>  EntityMap;
     typedef std::vector<Request>                        RequestList;
@@ -198,10 +217,8 @@ public:
 private:
     typedef boost::ptr_vector<Package>    PackageSet;
     typedef boost::unordered_set<Feature> FeatureSet;
-    typedef boost::multi_index::multi_index_container
-    <
-        std::string, boost::multi_index::indexed_by
-        <
+    typedef boost::multi_index::multi_index_container<
+        std::string, boost::multi_index::indexed_by<
             boost::multi_index::random_access<>,
             boost::multi_index::hashed_unique<boost::multi_index::identity<std::string> >
         >
@@ -220,6 +237,9 @@ public:
     void dumpAsFacts(std::ostream &out);
     bool addAll() const;
 
+    // WARNING: for testing the implementation of this is highly inefficient
+    bool test_contains(std::string const &name, int32_t version);
+
 private:
     void initClosure();
     void rewriteRequests();
@@ -237,7 +257,7 @@ private:
     RequestList   upgrade_;
     EntityList    closure_;
     ClauseMap     clauses_;
-	ConflictGraph conflictGraph_;
+    ConflictGraph conflictGraph_;
     bool          verbose_;
     bool          addAll_;
 };

@@ -5,7 +5,6 @@ encoding="$location"/../share/aspcud/misc2012.lp
 #encoding="$location"/../scripts/encodings/specification.lp
 
 clasp=clasp
-unclasp=unclasp
 gringo=gringo-4
 check=cudf-sol-check
 cudf="$location/../build/debug/bin/cudf2lp"

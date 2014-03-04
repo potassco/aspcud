@@ -19,9 +19,9 @@
 // along with aspcud.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-//////////////////// Preamble /////////////////////////////////// {{{1
+//#define BOOST_TEST_MODULE CudfTest
+#include <boost/test/unit_test.hpp>
 
-#pragma once
-
-#define CUDF_VERSION "1.9.0"
+BOOST_AUTO_TEST_CASE( test_maximize_bla ) {
+}
 

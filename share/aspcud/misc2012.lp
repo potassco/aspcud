@@ -90,11 +90,15 @@ target(T) :- criterion(T,_).
   up(P,M) :- target(up),   installed(P), M = #max { V : installed(P,V) }.
 down(P,M) :- target(down), installed(P), M = #min { V : installed(P,V) }.
 
-target(sol,solution,P,V) :- unit(P,V,in), target(solution).
-target(sol,changed ,P,V) :- unit(P,V,in), target(changed), not installed(P,V).
-target(sol,new     ,P,V) :- unit(P,V,in), target(new),     not installed(P).
-target(sol,up      ,P,V) :- unit(P,V,in),   up(P,M), M < V.
-target(sol,down    ,P,V) :- unit(P,V,in), down(P,M), V < M.
+target(sol,installrequest,P,V) :- unit(P,V,in), target(installrequest), installrequest(P,V).
+target(sol,upgraderequest,P,V) :- unit(P,V,in), target(upgraderequest), upgraderequest(P,V).
+target(sol,request,P,V)        :- unit(P,V,in), target(request), installrequest(P,V).
+target(sol,request,P,V)        :- unit(P,V,in), target(request), upgraderequest(P,V).
+target(sol,solution,P,V)       :- unit(P,V,in), target(solution).
+target(sol,changed ,P,V)       :- unit(P,V,in), target(changed), not installed(P,V).
+target(sol,new     ,P,V)       :- unit(P,V,in), target(new),     not installed(P).
+target(sol,up      ,P,V)       :- unit(P,V,in),   up(P,M), M < V.
+target(sol,down    ,P,V)       :- unit(P,V,in), down(P,M), V < M.
 
 target(sub,changed,P,V) :- installed(P,V), target(changed).
 target(sub,removed,P,V) :- installed(P,V), target(removed).

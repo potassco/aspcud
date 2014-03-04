@@ -1,10 +1,13 @@
 aspcud-1.9.0
+  * added support for three new selectors (request,installrequest,upgraderequest)
   * added support for old-style criteria
   * added an install target (supports PREFIX/DESTDIR)
   * added old trendy criterion
   * added Debian manpage
+  * switched to clasp-3's uncore algorithm
   * replaced bash/python script with a small C program
   * should build on MacOS X without problems now
-  * compiles with Cygwin under Windows
+  * compiles with mingw
+  * support reading from streams
 aspcud-1.8.0
   * first official release

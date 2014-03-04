@@ -1,3 +1,5 @@
+//////////////////// Copyright ///////////////////////// {{{1
+
 //
 // Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
 //
@@ -17,6 +19,8 @@
 // along with aspcud.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+//////////////////// Preamble ////////////////////////// {{{1
+
 %include {
 
 #include <cassert>
@@ -34,6 +38,8 @@
 %token_destructor { (void)pParser; (void)$$; }
 %token_prefix     PARSER_
 %start_symbol     cudf
+
+//////////////////// Grammar /////////////////////////// {{{1
 
 // lexer feedback
 parse_string    ::= .                 { pParser->parseString(); }
@@ -125,9 +131,9 @@ orfla ::= orfla BAR vpkg. { pParser->pkgList.push_back(pParser->pkgRef); }
 andfla ::= orfla.              { pParser->pkgFormula.clear(); pParser->pushPkgList(); }
 andfla ::= andfla COMMA orfla. { pParser->pushPkgList(); }
 
-vpkgformula ::=	andfla.
-vpkgformula ::=	TRUEX.  { pParser->pkgFormula.clear(); }
-vpkgformula ::=	FALSEX. { pParser->pkgFormula.clear(); pParser->pkgList.clear(); pParser->pushPkgList(); }
+vpkgformula ::= andfla.
+vpkgformula ::= TRUEX.  { pParser->pkgFormula.clear(); }
+vpkgformula ::= FALSEX. { pParser->pkgFormula.clear(); pParser->pkgList.clear(); pParser->pushPkgList(); }
 
 vpkglist  ::= .
 vpkglist  ::= nvpkglist.

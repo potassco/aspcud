@@ -14,7 +14,8 @@ do
     case "$arg" in
         "-q1,2") ;;
         "--opt-hierarch="*) ;;
-        "--opt-heu="*) ;;
+        "--opt-strategy="*) ;;
+        "--opt-heuristic="*) ;;
         "--del-max="*) ;;
         "--restarts="*) ;;
         "--sat-prepro") ;;

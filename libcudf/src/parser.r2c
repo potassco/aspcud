@@ -1,3 +1,5 @@
+//////////////////// Copyright ///////////////////////// {{{1
+
 //
 // Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
 //
@@ -17,6 +19,8 @@
 // along with aspcud.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+//////////////////// Preamble ////////////////////////// {{{1
+
 #include <cudf/parser.h>
 #include <stdexcept>
 #include "parser_impl.h"
@@ -26,249 +30,233 @@ void *parserAlloc(void *(*mallocProc)(size_t));
 void parserFree(void *p, void (*freeProc)(void*));
 void parser(void *yyp, int yymajor, Parser::Token yyminor, Parser *pParser);
 
-Parser::Type::Type(uint32_t type)
-	: type(type)
-{ }
+//////////////////// Parser //////////////////////////// {{{1
 
-bool Parser::Type::stringType() const
-{
-	return type == PARSER_FEEDBACK_STRING || type == PARSER_FEEDBACK_PKGNAME || type == PARSER_FEEDBACK_ENUM || type == PARSER_FEEDBACK_IDENT;
+Parser::Type::Type(uint32_t type)
+    : type(type) { }
+
+bool Parser::Type::stringType() const {
+    return type == PARSER_FEEDBACK_STRING || type == PARSER_FEEDBACK_PKGNAME || type == PARSER_FEEDBACK_ENUM || type == PARSER_FEEDBACK_IDENT;
 }
 
-bool Parser::Type::intType() const
-{
-	return
-		type == PARSER_FEEDBACK_INT ||
-		type == PARSER_FEEDBACK_NAT ||
-		type == PARSER_FEEDBACK_POSINT;
+bool Parser::Type::intType() const {
+    return
+        type == PARSER_FEEDBACK_INT ||
+        type == PARSER_FEEDBACK_NAT ||
+        type == PARSER_FEEDBACK_POSINT;
 }
 
 Parser::Parser(Dependency &dep)
-	: dep_(dep)
-	, doc_(0)
-	, parser_(parserAlloc(malloc))
-	, lexString_(false)
-	, shiftToken_(0)
-{
-	versionStr_    = dep_.index("version");
-	conflictsStr_  = dep_.index("conflicts");
-	dependsStr_    = dep_.index("depends");
-	recommendsStr_ = dep_.index("recommends");
-	providesStr_   = dep_.index("provides");
-	keepStr_       = dep_.index("keep");
-	installedStr_  = dep_.index("installed");
+    : dep_(dep)
+    , doc_(0)
+    , parser_(parserAlloc(malloc))
+    , lexString_(false)
+    , shiftToken_(0) {
+    versionStr_    = dep_.index("version");
+    conflictsStr_  = dep_.index("conflicts");
+    dependsStr_    = dep_.index("depends");
+    recommendsStr_ = dep_.index("recommends");
+    providesStr_   = dep_.index("provides");
+    keepStr_       = dep_.index("keep");
+    installedStr_  = dep_.index("installed");
 
-	installStr_ = dep_.index("install");
-	removeStr_  = dep_.index("remove");
-	upgradeStr_ = dep_.index("upgrade");
+    installStr_ = dep_.index("install");
+    removeStr_  = dep_.index("remove");
+    upgradeStr_ = dep_.index("upgrade");
 
-	trueStr_  = dep_.index("true");
-	falseStr_ = dep_.index("false");
+    trueStr_  = dep_.index("true");
+    falseStr_ = dep_.index("false");
 
-	packageStr_ = dep_.index("package");
-	featureStr_ = dep_.index("feature");
-	noneStr_    = dep_.index("none");
+    packageStr_ = dep_.index("package");
+    featureStr_ = dep_.index("feature");
+    noneStr_    = dep_.index("none");
 
-	uint32_t wasInstalledStr = dep_.index("was-installed");
-	uint32_t emptyStr = dep_.index("");
+    uint32_t wasInstalledStr = dep_.index("was-installed");
+    uint32_t emptyStr = dep_.index("");
 
-	// preamble
-	addType(dep_.index("property"),        PARSER_FEEDBACK_TYPEDECL) = uint32_t(0);
-	addType(dep_.index("univ-checksum"),   PARSER_FEEDBACK_STRING)   = uint32_t(emptyStr);
-	addType(dep_.index("status-checksum"), PARSER_FEEDBACK_STRING)   = uint32_t(emptyStr);
-	addType(dep_.index("req-checksum"),    PARSER_FEEDBACK_STRING)   = uint32_t(emptyStr);
+    // preamble
+    addType(dep_.index("property"),        PARSER_FEEDBACK_TYPEDECL) = uint32_t(0);
+    addType(dep_.index("univ-checksum"),   PARSER_FEEDBACK_STRING)   = uint32_t(emptyStr);
+    addType(dep_.index("status-checksum"), PARSER_FEEDBACK_STRING)   = uint32_t(emptyStr);
+    addType(dep_.index("req-checksum"),    PARSER_FEEDBACK_STRING)   = uint32_t(emptyStr);
 
-	// package
-	addType(packageStr_,     PARSER_FEEDBACK_PKGNAME);
-	addType(versionStr_,     PARSER_FEEDBACK_POSINT);
-	addType(dependsStr_,     PARSER_FEEDBACK_VPKGFORMULA) = pkgFormula;
-	addType(conflictsStr_,   PARSER_FEEDBACK_VPKGLIST)    = pkgList;
-	addType(providesStr_,    PARSER_FEEDBACK_VEQPKGLIST)  = pkgList;
-	addType(installedStr_,   PARSER_FEEDBACK_BOOL)        = false;
-	addType(wasInstalledStr, PARSER_FEEDBACK_BOOL)        = false;
+    // package
+    addType(packageStr_,     PARSER_FEEDBACK_PKGNAME);
+    addType(versionStr_,     PARSER_FEEDBACK_POSINT);
+    addType(dependsStr_,     PARSER_FEEDBACK_VPKGFORMULA) = pkgFormula;
+    addType(conflictsStr_,   PARSER_FEEDBACK_VPKGLIST)    = pkgList;
+    addType(providesStr_,    PARSER_FEEDBACK_VEQPKGLIST)  = pkgList;
+    addType(installedStr_,   PARSER_FEEDBACK_BOOL)        = false;
+    addType(wasInstalledStr, PARSER_FEEDBACK_BOOL)        = false;
 
-	/*
-	EnumValues values;
-	values.insert(packageStr);
-	values.insert(featureStr);
-	values.insert(versionStr);
-	values.insert(noneStr);
-	*/
-	addType(dep_.index("keep"), PARSER_FEEDBACK_ENUM) = uint32_t(noneStr_);
+    /*
+    EnumValues values;
+    values.insert(packageStr);
+    values.insert(featureStr);
+    values.insert(versionStr);
+    values.insert(noneStr);
+    */
+    addType(dep_.index("keep"), PARSER_FEEDBACK_ENUM) = uint32_t(noneStr_);
 
-	// request
-	addType(installStr_, PARSER_FEEDBACK_VPKGLIST) = pkgList;
-	addType(removeStr_,  PARSER_FEEDBACK_VPKGLIST) = pkgList;
-	addType(upgradeStr_, PARSER_FEEDBACK_VPKGLIST) = pkgList;
+    // request
+    addType(installStr_, PARSER_FEEDBACK_VPKGLIST) = pkgList;
+    addType(removeStr_,  PARSER_FEEDBACK_VPKGLIST) = pkgList;
+    addType(upgradeStr_, PARSER_FEEDBACK_VPKGLIST) = pkgList;
 
-	BOOST_FOREACH (uint32_t uid, dep_.criteria.optProps)
-	{
-		optProps_.push_back(uid);
-	}
+    BOOST_FOREACH (uint32_t uid, dep_.criteria.optProps) {
+        optProps_.push_back(uid);
+    }
 }
 
 /*!re2c
-	EOF              = [\000];
-	QUOTED           = "\"" ([^\r\n"\\] | "\\\\" | "\\\"" | ("\\"[^\r\n"\\]))* "\"";
-	NL               = "\n";
-	COMMENT          = "#" [^\n]*;
-	PREAMBLE         = "preamble";
-	PACKAGE          = "package";
-	REQUEST          = "request";
-	TYPE_BOOL        = "bool";
-	TYPE_INT         = "int";
-	TYPE_NAT         = "nat";
-	TYPE_POSINT      = "posint";
-	TYPE_STRING      = "string";
-	TYPE_PKGNAME     = "pkgname";
-	TYPE_IDENT       = "ident";
-	TYPE_VPKG        = "vpkg";
-	TYPE_VEQPKG      = "veqpkg";
-	TYPE_VPKGFORMULA = "vpkgformula";
-	TYPE_VPKGLIST    = "vpkglist";
-	TYPE_VEQPKGLIST  = "veqpkglist";
-	TYPE_ENUM        = "enum";
-	TRUE             = "true";
-	FALSE            = "false";
-	COLONSP          = ": ";
-	COLON            = ":";
-	SPACE            = [ \t];
-	IDENT            = [a-z][a-z0-9\-]*;
-	POSINT           = "+"?[0-9]*[1-9]+[0-9]*;
-	NAT              = "+"?[0]+;
-	INT              = "-"[0-9]+;
-	PKGNAME          = [A-Za-z0-9\-+./@()%]+;
-	COMMA            = ",";
-	EQUAL            = "=";
-	BAR              = "|";
-	TRUEX            = "true!";
-	FALSEX           = "false!";
-	NEQ              = "!=";
-	GEQ              = ">=";
-	GTH              = ">";
-	LEQ              = "<=";
-	LTH              = "<";
-	LBRAC            = "[";
-	RBRAC            = "]";
-	ANY              = [\000-\377];
+    EOF              = [\000];
+    QUOTED           = "\"" ([^\r\n"\\] | "\\\\" | "\\\"" | ("\\"[^\r\n"\\]))* "\"";
+    NL               = "\n";
+    COMMENT          = "#" [^\n]*;
+    PREAMBLE         = "preamble";
+    PACKAGE          = "package";
+    REQUEST          = "request";
+    TYPE_BOOL        = "bool";
+    TYPE_INT         = "int";
+    TYPE_NAT         = "nat";
+    TYPE_POSINT      = "posint";
+    TYPE_STRING      = "string";
+    TYPE_PKGNAME     = "pkgname";
+    TYPE_IDENT       = "ident";
+    TYPE_VPKG        = "vpkg";
+    TYPE_VEQPKG      = "veqpkg";
+    TYPE_VPKGFORMULA = "vpkgformula";
+    TYPE_VPKGLIST    = "vpkglist";
+    TYPE_VEQPKGLIST  = "veqpkglist";
+    TYPE_ENUM        = "enum";
+    TRUE             = "true";
+    FALSE            = "false";
+    COLONSP          = ": ";
+    COLON            = ":";
+    SPACE            = [ \t];
+    IDENT            = [a-z][a-z0-9\-]*;
+    POSINT           = "+"?[0-9]*[1-9]+[0-9]*;
+    NAT              = "+"?[0]+;
+    INT              = "-"[0-9]+;
+    PKGNAME          = [A-Za-z0-9\-+./@()%]+;
+    COMMA            = ",";
+    EQUAL            = "=";
+    BAR              = "|";
+    TRUEX            = "true!";
+    FALSEX           = "false!";
+    NEQ              = "!=";
+    GEQ              = ">=";
+    GTH              = ">";
+    LEQ              = "<=";
+    LTH              = "<";
+    LBRAC            = "[";
+    RBRAC            = "]";
+    ANY              = [\000-\377];
 */
 
-int Parser::lex()
-{
-	for(;;)
-	{
-		start();
-		/*!re2c
-			EOF              { return 0; }
-			NL               { return PARSER_NL; }
-			COLONSP          { return PARSER_COLONSP; }
-			COLON            { return PARSER_COLON; }
-			TRUEX            { return PARSER_TRUEX; }
-			FALSEX           { return PARSER_FALSEX; }
-			COMMENT          { return PARSER_NL; }
-			COMMA            { return PARSER_COMMA; }
-			BAR              { return PARSER_BAR; }
-			EQUAL            { token_.index = EQ; return PARSER_EQUAL; }
-			NEQ              { token_.index = NEQ; return PARSER_RELOP; }
-			GEQ              { token_.index = GE; return PARSER_RELOP; }
-			GTH              { token_.index = GT; return PARSER_RELOP; }
-			LEQ              { token_.index = LE; return PARSER_RELOP; }
-			LTH              { token_.index = LT; return PARSER_RELOP; }
-			LBRAC            { return PARSER_LBRAC; }
-			RBRAC            { return PARSER_RBRAC; }
-			SPACE            { continue; }
-			QUOTED           { token_.index = dep_.index(string(1, 1)); return PARSER_QUOTED; }
-			PREAMBLE         { token_.index = dep_.index(string()); return PARSER_PREAMBLE; }
-			PACKAGE          { token_.index = dep_.index(string()); return PARSER_PACKAGE; }
-			REQUEST          { token_.index = dep_.index(string()); return PARSER_REQUEST; }
-			TYPE_BOOL        { token_.index = dep_.index(string()); return PARSER_TYPE_BOOL; }
-			TYPE_INT         { token_.index = dep_.index(string()); return PARSER_TYPE_INT; }
-			TYPE_NAT         { token_.index = dep_.index(string()); return PARSER_TYPE_NAT; }
-			TYPE_POSINT      { token_.index = dep_.index(string()); return PARSER_TYPE_POSINT; }
-			TYPE_STRING      { token_.index = dep_.index(string()); return PARSER_TYPE_STRING; }
-			TYPE_PKGNAME     { token_.index = dep_.index(string()); return PARSER_TYPE_PKGNAME; }
-			TYPE_IDENT       { token_.index = dep_.index(string()); return PARSER_TYPE_IDENT; }
-			TYPE_VPKG        { token_.index = dep_.index(string()); return PARSER_TYPE_VPKG; }
-			TYPE_VEQPKG      { token_.index = dep_.index(string()); return PARSER_TYPE_VEQPKG; }
-			TYPE_VPKGFORMULA { token_.index = dep_.index(string()); return PARSER_TYPE_VPKGFORMULA; }
-			TYPE_VPKGLIST    { token_.index = dep_.index(string()); return PARSER_TYPE_VPKGLIST; }
-			TYPE_VEQPKGLIST  { token_.index = dep_.index(string()); return PARSER_TYPE_VEQPKGLIST; }
-			TYPE_ENUM        { token_.index = dep_.index(string()); return PARSER_TYPE_ENUM; }
-			TRUE             { token_.index = dep_.index(string()); return PARSER_TRUE; }
-			FALSE            { token_.index = dep_.index(string()); return PARSER_FALSE; }
-			POSINT           { token_.index = dep_.index(string()); return PARSER_POSINT; }
-			NAT              { token_.index = dep_.index(string()); return PARSER_NAT; }
-			INT              { token_.index = dep_.index(string()); return PARSER_INT; }
-			IDENT            { token_.index = dep_.index(string()); return PARSER_IDENT; }
-			PKGNAME          { token_.index = dep_.index(string()); return PARSER_PKGNAME; }
-			ANY              { syntaxError(); }
-		*/
-	}
-	return 0;
+int Parser::lex() {
+    for(;;) {
+        start();
+        /*!re2c
+            EOF              { return 0; }
+            NL               { return PARSER_NL; }
+            COLONSP          { return PARSER_COLONSP; }
+            COLON            { return PARSER_COLON; }
+            TRUEX            { return PARSER_TRUEX; }
+            FALSEX           { return PARSER_FALSEX; }
+            COMMENT          { return PARSER_NL; }
+            COMMA            { return PARSER_COMMA; }
+            BAR              { return PARSER_BAR; }
+            EQUAL            { token_.index = EQ; return PARSER_EQUAL; }
+            NEQ              { token_.index = NEQ; return PARSER_RELOP; }
+            GEQ              { token_.index = GE; return PARSER_RELOP; }
+            GTH              { token_.index = GT; return PARSER_RELOP; }
+            LEQ              { token_.index = LE; return PARSER_RELOP; }
+            LTH              { token_.index = LT; return PARSER_RELOP; }
+            LBRAC            { return PARSER_LBRAC; }
+            RBRAC            { return PARSER_RBRAC; }
+            SPACE            { continue; }
+            QUOTED           { token_.index = dep_.index(string(1, 1)); return PARSER_QUOTED; }
+            PREAMBLE         { token_.index = dep_.index(string()); return PARSER_PREAMBLE; }
+            PACKAGE          { token_.index = dep_.index(string()); return PARSER_PACKAGE; }
+            REQUEST          { token_.index = dep_.index(string()); return PARSER_REQUEST; }
+            TYPE_BOOL        { token_.index = dep_.index(string()); return PARSER_TYPE_BOOL; }
+            TYPE_INT         { token_.index = dep_.index(string()); return PARSER_TYPE_INT; }
+            TYPE_NAT         { token_.index = dep_.index(string()); return PARSER_TYPE_NAT; }
+            TYPE_POSINT      { token_.index = dep_.index(string()); return PARSER_TYPE_POSINT; }
+            TYPE_STRING      { token_.index = dep_.index(string()); return PARSER_TYPE_STRING; }
+            TYPE_PKGNAME     { token_.index = dep_.index(string()); return PARSER_TYPE_PKGNAME; }
+            TYPE_IDENT       { token_.index = dep_.index(string()); return PARSER_TYPE_IDENT; }
+            TYPE_VPKG        { token_.index = dep_.index(string()); return PARSER_TYPE_VPKG; }
+            TYPE_VEQPKG      { token_.index = dep_.index(string()); return PARSER_TYPE_VEQPKG; }
+            TYPE_VPKGFORMULA { token_.index = dep_.index(string()); return PARSER_TYPE_VPKGFORMULA; }
+            TYPE_VPKGLIST    { token_.index = dep_.index(string()); return PARSER_TYPE_VPKGLIST; }
+            TYPE_VEQPKGLIST  { token_.index = dep_.index(string()); return PARSER_TYPE_VEQPKGLIST; }
+            TYPE_ENUM        { token_.index = dep_.index(string()); return PARSER_TYPE_ENUM; }
+            TRUE             { token_.index = dep_.index(string()); return PARSER_TRUE; }
+            FALSE            { token_.index = dep_.index(string()); return PARSER_FALSE; }
+            POSINT           { token_.index = dep_.index(string()); return PARSER_POSINT; }
+            NAT              { token_.index = dep_.index(string()); return PARSER_NAT; }
+            INT              { token_.index = dep_.index(string()); return PARSER_INT; }
+            IDENT            { token_.index = dep_.index(string()); return PARSER_IDENT; }
+            PKGNAME          { token_.index = dep_.index(string()); return PARSER_PKGNAME; }
+            ANY              { syntaxError(); }
+        */
+    }
+    return 0;
 }
 
-int Parser::lexString()
-{
-	start();
+int Parser::lexString() {
+    start();
 start:
-	/*!re2c
-		[^\n\r] { goto start; }
-		[\n\r]  { unget(); token_.index = dep_.index(string()); return PARSER_STRING; }
-		ANY     { syntaxError(); }
-	*/
-	return 0;
+    /*!re2c
+        [^\n\r] { goto start; }
+        [\n\r]  { unget(); token_.index = dep_.index(string()); return PARSER_STRING; }
+        ANY     { syntaxError(); }
+    */
+    return 0;
 }
 
-void Parser::parseType(uint32_t index)
-{
-	TypeMap::iterator it = typeMap_.find(index);
-	if (it != typeMap_.end()) { shiftToken_ = it->second.type; }
-	else { syntaxError(); }
+void Parser::parseType(uint32_t index) {
+    TypeMap::iterator it = typeMap_.find(index);
+    if (it != typeMap_.end()) { shiftToken_ = it->second.type; }
+    else { syntaxError(); }
 }
 
-void Parser::parseError()
-{
+void Parser::parseError() { }
+
+std::string Parser::errorToken() {
+    if(eof()) return "<EOF>";
+    else return string();
 }
 
-std::string Parser::errorToken()
-{
-	if(eof()) return "<EOF>";
-	else return string();
+void Parser::syntaxError() {
+    throw std::runtime_error("syntax error:" + errorToken());
 }
 
-void Parser::syntaxError()
-{
-	throw std::runtime_error("syntax error:" + errorToken());
+void Parser::parse(std::istream &in) {
+    Cudf::Document doc;
+    doc_ = &doc;
+    reset(&in);
+    int token;
+    do {
+        if (shiftToken_) {
+            token       = shiftToken_;
+            shiftToken_ = 0;
+        }
+        else if(lexString_) {
+            lexString_ = false;
+            token      = lexString();
+        }
+        else { token = lex(); }
+        // std::cerr << "lexed: '" << string() << "' (" << token << ")" << std::endl;
+        parser(parser_, token, token_, this);
+    }
+    while(token != 0);
+    dep_.init(*doc_);
+    doc_ = 0;
 }
 
-void Parser::parse(std::istream &in)
-{
-	Cudf::Document doc;
-	doc_ = &doc;
-	reset(&in);
-	int token;
-	do
-	{
-		if (shiftToken_)
-		{
-			token       = shiftToken_;
-			shiftToken_ = 0;
-		}
-		else if(lexString_)
-		{
-			lexString_ = false;
-			token      = lexString();
-		}
-		else { token = lex(); }
-		// std::cerr << "lexed: '" << string() << "' (" << token << ")" << std::endl;
-		parser(parser_, token, token_, this);
-	}
-	while(token != 0);
-	dep_.init(*doc_);
-	doc_ = 0;
-}
-
-Parser::~Parser()
-{
-	parserFree(parser_, free);
+Parser::~Parser() {
+    parserFree(parser_, free);
 }

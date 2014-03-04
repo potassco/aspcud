@@ -1,3 +1,5 @@
+//////////////////// Copyright ////////////////////////////////// {{{1
+
 //
 // Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
 //
@@ -17,6 +19,8 @@
 // along with aspcud.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+//////////////////// Preamble /////////////////////////////////// {{{1
+
 #pragma once
 
 #include <stdint.h>
@@ -28,62 +32,67 @@
 #include <boost/functional/hash.hpp>
 #include <boost/any.hpp>
 
-namespace Cudf
-{
-	struct PackageRef
-	{
-		enum RelOp { GE=0, LE, EQ, NEQ };
+namespace Cudf {
 
-		uint32_t  name;
-		uint32_t  op;
-		int32_t   version;
+typedef boost::any Value;
 
-		PackageRef(uint32_t name = 0, RelOp op = GE, int32_t version = 0);
-	};
 
-	typedef std::vector<PackageRef> PkgList;
-	typedef std::vector<PkgList> PkgFormula;
+//////////////////// PackageRef ///////////////////////////////// {{{1
 
-	struct Package
-	{
-		typedef std::map<uint32_t, int32_t> IntPropMap;
-		typedef std::map<uint32_t, uint32_t> StringPropMap;
-		enum Keep { VERSION, PACKAGE, FEATURE, NONE };
+struct PackageRef {
+    enum RelOp { GE=0, LE, EQ, NEQ };
 
-		Package(uint32_t name = std::numeric_limits<uint32_t>::max(), int32_t version = 0)
-			: name(name)
-			, version(version)
-			, keep(NONE)
-			, installed(false)
-		{ }
+    uint32_t  name;
+    uint32_t  op;
+    int32_t   version;
 
-		bool initialized() { return name != std::numeric_limits<uint32_t>::max(); }
+    PackageRef(uint32_t name = 0, RelOp op = GE, int32_t version = 0);
+};
 
-		uint32_t      name;
-		int32_t       version;
-		PkgList       conflicts;   // default empty
-		PkgFormula    depends;     // default true
-		PkgFormula    recommends;  // default empty
-		PkgList       provides;    // default empty
-		Keep          keep;        // default NONE
-		bool          installed;   // default false
-		IntPropMap    intProps;    // default empty
-		StringPropMap stringProps; // default empty
-	};
+typedef std::vector<PackageRef> PkgList;
+typedef std::vector<PkgList> PkgFormula;
 
-	struct Request
-	{
-		PkgList install;
-		PkgList upgrade;
-		PkgList remove;
-	};
+//////////////////// Package //////////////////////////////////// {{{1
 
-	struct Document
-	{
-		typedef std::vector<Package> Packages;
-		Packages packages;
-		Request  request;
-	};
+struct Package {
+    typedef std::map<uint32_t, int32_t> IntPropMap;
+    typedef std::map<uint32_t, uint32_t> StringPropMap;
+    enum Keep { VERSION, PACKAGE, FEATURE, NONE };
 
-	typedef boost::any Value;
-}
+    Package(uint32_t name = std::numeric_limits<uint32_t>::max(), int32_t version = 0)
+        : name(name)
+        , version(version)
+        , keep(NONE)
+        , installed(false) { }
+
+    bool initialized() { return name != std::numeric_limits<uint32_t>::max(); }
+
+    uint32_t      name;
+    int32_t       version;
+    PkgList       conflicts;   // default empty
+    PkgFormula    depends;     // default true
+    PkgFormula    recommends;  // default empty
+    PkgList       provides;    // default empty
+    Keep          keep;        // default NONE
+    bool          installed;   // default false
+    IntPropMap    intProps;    // default empty
+    StringPropMap stringProps; // default empty
+};
+
+//////////////////// Request //////////////////////////////////// {{{1
+
+struct Request {
+    PkgList install;
+    PkgList upgrade;
+    PkgList remove;
+};
+
+//////////////////// Document /////////////////////////////////// {{{1
+
+struct Document {
+    typedef std::vector<Package> Packages;
+    Packages packages;
+    Request  request;
+};
+
+} // namespace Cudf

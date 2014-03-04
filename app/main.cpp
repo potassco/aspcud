@@ -1,3 +1,5 @@
+//////////////////// Copyright ////////////////////////////////// {{{1
+
 //
 // Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
 //
@@ -17,9 +19,12 @@
 // along with aspcud.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+//////////////////// Preamble /////////////////////////////////// {{{1
+
 #include <iostream>
-#include <cudf/parser.h>
 #include <cudf/version.h>
+#include <cudf/parser.h>
+#include <cudf/critparser.h>
 #include <program_opts/app_options.h>
 #include <program_opts/value.h>
 #include <stdexcept>
@@ -29,20 +34,12 @@
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
 
-#include <boost/config/warning_disable.hpp>
-#include <boost/spirit/include/qi.hpp>
-#include <boost/spirit/include/phoenix_core.hpp>
-#include <boost/spirit/include/phoenix_operator.hpp>
-#include <boost/spirit/include/phoenix_object.hpp>
-#include <boost/fusion/include/adapt_struct.hpp>
-#include <boost/fusion/include/io.hpp>
-
-
 #define CUDF_EXECUTABLE "cudf"
 #define CUDF_USAGE "[options] [file]"
 
-class CudfOptions : public AppOptions
-{
+//////////////////// CudfOptions //////////////////////////////// {{{1
+
+class CudfOptions : public AppOptions {
 public:
     CudfOptions();
 
@@ -52,135 +49,17 @@ private:
     virtual bool validateOptions(ProgramOptions::OptionValues&, Messages&);
 
 public:
-	Criteria::CritVec crits;
+    Criteria::CritVec crits;
     bool              addAll;
 };
 
-BOOST_FUSION_ADAPT_STRUCT
-(
-    Criterion,
-    (bool, optimize)
-    (Criterion::Measurement, measurement)
-    (Criterion::Selector, selector)
-    (std::string, attr1)
-    (std::string, attr2)
-)
+//////////////////// CritParser ///////////////////////////////// {{{1
 
-namespace ProgramOptions
-{
-    namespace qi = boost::spirit::qi;
-    namespace ascii = boost::spirit::ascii;
-
-    template <typename Iterator>
-    struct CritParser : qi::grammar<Iterator, Criteria::CritVec()>
-    {
-        CritParser()
-            : CritParser::base_type(crits)
-        {
-            using qi::lit;
-            using qi::eps;
-            using qi::fail;
-            using qi::lexeme;
-            using qi::on_error;
-            using ascii::char_;
-            using boost::spirit::eoi;
-            using boost::spirit::_val;
-            using boost::phoenix::val;
-            using boost::phoenix::construct;
-
-            SIGN = 
-                char_('+') [ _val = true ] |
-                char_('-') [ _val = false ];
-            COUNT            = lit("count")            [ _val = Criterion::COUNT ];
-            SUM              = lit("sum")              [ _val = Criterion::SUM ];
-            NOTUPTODATE      = lit("notuptodate")      [ _val = Criterion::NOTUPTODATE ];
-            UNSAT_RECOMMENDS = lit("unsat_recommends") [ _val = Criterion::UNSAT_RECOMMENDS ];
-            ALIGNED          = lit("aligned")          [ _val = Criterion::ALIGNED ];
-            SELECTOR =
-                lit("solution") [ _val = Criterion::SOLUTION ] |
-                lit("changed")  [ _val = Criterion::CHANGED ] |
-                lit("new")      [ _val = Criterion::NEW ] |
-                lit("removed")  [ _val = Criterion::REMOVED ] |
-                lit("up")       [ _val = Criterion::UP ] |
-                lit("down")     [ _val = Criterion::DOWN ];
-            
-            ATTR %= lexeme[char_('a', 'z') >> *char_("[a-z][0-9]\\-")];
-
-            ECOUNT = eps            [ _val = Criterion::COUNT ];
-            ESOL   = eps            [ _val = Criterion::SOLUTION ];
-            ONEW   = lit("new")     [ _val = Criterion::NEW ];
-            OREM   = lit("removed") [ _val = Criterion::REMOVED ];
-            OCHG   = lit("changed") [ _val = Criterion::CHANGED ];
-
-            old1 %= SIGN >> ECOUNT >> (ONEW | OREM | OCHG);
-            old2 %= SIGN >> (NOTUPTODATE | UNSAT_RECOMMENDS) >> ESOL;
-            old3 %= SIGN >> SUM >> '(' >> ESOL >> ATTR >> ')';
-
-            unary   %= SIGN >> (COUNT | NOTUPTODATE | UNSAT_RECOMMENDS) >> '(' >> SELECTOR >> ')';
-            binary  %= SIGN >> SUM >> '(' >> SELECTOR >> ',' >> ATTR >> ')';
-            ternary %= SIGN >> ALIGNED >> '(' >> SELECTOR >> ',' >> ATTR >> ',' >> ATTR >> ')';
-
-            crit     = unary | binary | ternary | old1 | old2 | old3;
-            crits   %= crit > *(',' > crit) > eoi;
-
-            on_error<fail>
-            (
-                crits,
-                std::cerr
-                    << val("Error: could not parse: ")
-                    << construct<std::string>(qi::_3, qi::_2)
-                    << val("\"")
-                    << std::endl
-            );
-            
-#if 0
-            using qi::debug;
-
-            unary.name("unary");
-            binary.name("binary");
-            ternary.name("ternary");
-            crits.name("crits");
-            crit.name("crit");
-            old1.name("old1");
-            old2.name("old2");
-            old3.name("old3");
-            SIGN.name("SIGN");
-            SELECTOR.name("SELECTOR");
-            ECOUNT.name("ECOUNT");
-            ONEW.name("ONEW");
-            OREM.name("OREM");
-            OCHG.name("OCHG");
-            debug(unary);
-            debug(binary);
-            debug(ternary);
-            debug(crits);
-            debug(SIGN);
-            debug(SELECTOR);
-            debug(ECOUNT);
-            debug(ONEW);
-            debug(OREM);
-            debug(OCHG);
-            debug(old1);
-            debug(old2);
-            debug(old3);
-            debug(crit);
-#endif
-        }
-        qi::rule<Iterator, Criterion::Selector()> SELECTOR, ONEW, OREM, OCHG, ESOL;
-        qi::rule<Iterator, bool()> SIGN;
-        qi::rule<Iterator, Criterion::Measurement()> COUNT, SUM, NOTUPTODATE, UNSAT_RECOMMENDS, ALIGNED, ECOUNT;
-        qi::rule<Iterator, std::string()> ATTR; 
-
-        qi::rule<Iterator, Criterion()> unary, binary, ternary, old1, old2, old3, crit;
-        qi::rule<Iterator, Criteria::CritVec()> crits;
-    };
-
+namespace ProgramOptions {
     template <>
-    bool parseValue(const std::string& s, Criteria::CritVec& crits, int)
-    {
+    bool parseValue(const std::string& s, Criteria::CritVec& crits, int) {
         std::string lower = toLower(s);
-        if(lower == "paranoid")
-        {
+        if (lower == "paranoid") {
             crits.push_back(Criterion());
             crits.back().optimize = false;
             crits.back().measurement = Criterion::COUNT;
@@ -190,7 +69,7 @@ namespace ProgramOptions
             crits.back().measurement = Criterion::COUNT;
             crits.back().selector = Criterion::CHANGED;
         }
-        else if(lower == "trendy") {
+        else if (lower == "trendy") {
             crits.push_back(Criterion());
             crits.back().optimize = false;
             crits.back().measurement = Criterion::COUNT;
@@ -208,27 +87,26 @@ namespace ProgramOptions
             crits.back().measurement = Criterion::COUNT;
             crits.back().selector = Criterion::NEW;
         }
-        else if(lower == "none") { }
-        else if (!qi::parse(lower.begin(), lower.end(), CritParser<std::string::iterator>(), crits))
-        {
-            return false; 
+        else if (lower == "none") { }
+        else {
+            CritParser p(crits);
+            std::istringstream iss(s);
+            return p.parse(iss);
         }
         return true;
     }
 }
 
-CudfOptions::CudfOptions()
-    : addAll(false)
-{
-}
+//////////////////// CudfOptions (impl) ///////////////////////// {{{1
 
-void CudfOptions::addDefaults(std::string& defaults)
-{
+CudfOptions::CudfOptions()
+    : addAll(false) { }
+
+void CudfOptions::addDefaults(std::string& defaults) {
     defaults += "--criteria=none\n";
 }
 
-void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions::OptionGroup& hidden)
-{
+void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions::OptionGroup&) {
     using namespace ProgramOptions;
     OptionGroup prepro("Preprocessing Options");
     prepro.addOptions()
@@ -253,30 +131,26 @@ void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions:
     root.addOptions(prepro);
 }
 
-bool CudfOptions::validateOptions(ProgramOptions::OptionValues&, Messages&msg)
-{
-    if(generic.input.size() > 1)
-    {
+bool CudfOptions::validateOptions(ProgramOptions::OptionValues&, Messages&msg) {
+    if (generic.input.size() > 1) {
         msg.error = "at most one file may be given";
         return false;
     }
     return true;
 }
 
-bool parsePositional(const std::string&, std::string& out)
-{
+bool parsePositional(const std::string&, std::string& out) {
     out = "file";
     return true;
 }
 
-int main(int argc, char *argv[])
-{
-    //try
-    {
+//////////////////// main /////////////////////////////////////// {{{1
+
+int main(int argc, char *argv[]) {
+    try {
         CudfOptions opts;
-        if(!opts.parse(argc, argv, parsePositional)) { throw std::runtime_error( opts.messages.error.c_str() ); }
-        if(opts.generic.help)
-        {
+        if (!opts.parse(argc, argv, parsePositional)) { throw std::runtime_error( opts.messages.error.c_str() ); }
+        if (opts.generic.help) {
             std::cout
                 << CUDF_EXECUTABLE << " version " << CUDF_VERSION << "\n\n"
                 << "Usage: " << CUDF_EXECUTABLE << " " << CUDF_USAGE << "\n"
@@ -286,8 +160,7 @@ int main(int argc, char *argv[])
                 << "  " << CUDF_EXECUTABLE << " " << opts.getDefaults() << std::endl;
             return EXIT_SUCCESS;
         }
-        if(opts.generic.version)
-        {
+        if (opts.generic.version) {
             std::cout
                 << CUDF_EXECUTABLE << " " << CUDF_VERSION << "\n\n"
                 << "Copyright (C) Roland Kaminski" << "\n"
@@ -298,9 +171,8 @@ int main(int argc, char *argv[])
         }
         Dependency d(opts.crits, opts.addAll, opts.generic.verbose > 0);
         Parser p(d);
-        if(opts.generic.input.empty() || opts.generic.input.front() == "-") { p.parse(std::cin); }
-        else
-        {
+        if (opts.generic.input.empty() || opts.generic.input.front() == "-") { p.parse(std::cin); }
+        else {
             std::ifstream in(opts.generic.input.front().c_str());
             p.parse(in);
         }
@@ -309,11 +181,8 @@ int main(int argc, char *argv[])
         d.dumpAsFacts(std::cout);
         return EXIT_SUCCESS;
     }
-	/*
-    catch(const std::exception& e)
-    {
+    catch(const std::exception& e) {
         std::cerr << "\nERROR: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
-	*/
 }

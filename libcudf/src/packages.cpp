@@ -1,3 +1,5 @@
+//////////////////// Copyright ///////////////////////// {{{1
+
 //
 // Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
 //
@@ -17,16 +19,17 @@
 // along with aspcud.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+//////////////////// Preamble ////////////////////////// {{{1
+
 #include <cudf/packages.h>
 
-namespace Cudf
-{
+//////////////////// PackageRef //////////////////////// {{{1
+
+namespace Cudf {
 
 	PackageRef::PackageRef(uint32_t name, RelOp op, int32_t version)
 		: name(name)
 		, op(op)
-		, version(version)
-	{
-	}
+		, version(version) { }
 
 }

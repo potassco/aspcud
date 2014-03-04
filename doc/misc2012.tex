@@ -1,10 +1,42 @@
 \documentclass[a4paper,english]{article}
-\usepackage{hyperref}
+\usepackage{tgtermes}
 \usepackage[T1]{fontenc}
-\usepackage[latin9]{inputenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
 \usepackage{amssymb}
 \usepackage[cm]{fullpage}
 \usepackage{babel}
+
+\newcommand{\universe}{\mathcal{P}}
+\newcommand{\closure}{\mathcal{C}}
+\newcommand{\installation}{\mathcal{I}}
+\newcommand{\removed}{\mathcal{R}}
+\newcommand{\optimization}{\mathcal{O}}
+\newcommand{\name}{\mathrm{name}}
+\newcommand{\version}{\mathrm{version}}
+\newcommand{\conflicts}{\mathrm{conflicts}}
+\newcommand{\recommends}{\mathrm{recommends}}
+\newcommand{\depends}{\mathrm{depends}}
+\newcommand{\reason}{\mathrm{reason}}
+\newcommand{\eval}{\mathrm{eval}}
+\newcommand{\funsatrecom}{\mathrm{unsat\_recommends}}
+\newcommand{\fcount}{\mathrm{count}}
+\newcommand{\fsum}{\mathrm{sum}}
+\newcommand{\faligned}{\mathrm{aligned}}
+\newcommand{\fnotuptodate}{\mathrm{notuptodate}}
+\newcommand{\selmax}{S^\infty}
+\newcommand{\reasonmax}[1]{S^+(#1)}
+\newcommand{\reasonmin}[1]{S^-(#1)}
+\newcommand{\attr}[1]{\mathit{#1}}
+\newcommand{\ssolution}{\mathrm{solution}}
+\newcommand{\schanged}{\mathrm{changed}}
+\newcommand{\snew}{\mathrm{new}}
+\newcommand{\sremoved}{\mathrm{removed}}
+\newcommand{\selup}{\mathrm{up}}
+\newcommand{\sdown}{\mathrm{down}}
+\newcommand{\sinstallrequest}{\mathrm{installrequest}}
+\newcommand{\supgraderequest}{\mathrm{upgraderequest}}
+\newcommand{\srequest}{\mathrm{request}}
 
 \begin{document}
 
@@ -12,74 +44,78 @@
 
 \begin{itemize}
   \item See: \url{http://www.mancoosi.org/misc-2012/criteria/}
-  \item Package universe: $\mathcal{P}$ 
-  \item Installation: $\mathcal{I}\subseteq\mathcal{P}$
-  \item Closure: $\mathcal{C}\subseteq\mathcal{P}$
-  \item Removed (by explicit request): $\mathcal{R}\subseteq\mathcal{P}$
-  \item Optimization criteria: $\mathcal{O}$
-  \item Names: $X.\mathrm{name}=\{p.\mathrm{name}\mid p\in X\}$
-  \item Versions: $X.\mathrm{version}(p)=\{q.\mathrm{version}\mid q\in X,p.\mathrm{name}=q.\mathrm{name}\}$
+  \item Package universe: $\universe$ 
+  \item Installation: $\installation\subseteq\universe$
+  \item Closure: $\closure\subseteq\universe$
+  \item Removed (by explicit request): $\removed\subseteq\universe$
+  \item Optimization criteria: $\optimization$
+  \item Names: $X.\name=\{p.\name\mid p\in X\}$
+  \item Versions: $X.\version(p)=\{q.\version\mid q\in X,p.\name=q.\name\}$
 \end{itemize}
 
 \section{Closure}
 
-\begin{table}
-  \centering{}\begin{tabular}{c||c|c}
-    selector & minimize & maximize\\
-    \hline 
-    solution $S$ & $S^{-}=\emptyset$ & $S^{+}=\mathcal{P}$\\
-    changed $C$ & $C^{-}=\mathcal{I}$ & $C^{+}=\mathcal{P}\setminus \mathcal{I}$\\
-    new $N$ & $N^{-}=\emptyset$ & $N^{+}=\{p\in \mathcal{P}\mid p.\mathrm{name}\notin \mathcal{I}.\mathrm{name}\}$\\
-    removed $R$ & $R^{-}=\mathcal{I}$ & $R^{+}=\emptyset$\\
-    up $U$ & $U^{-}=\emptyset$ & $U^{+}=\{p\in \mathcal{P}\mid p.\mathrm{name}\in \mathcal{I}.\mathrm{name},p.\mathrm{version}>\max(\mathcal{I}.\mathrm{version}(p))\}$\\
-    down $D$ & $D^{-}=\emptyset$ & $D^{+}=\{p\in \mathcal{P}\mid p.\mathrm{name}\in \mathcal{I}.\mathrm{name},p.\mathrm{version}<\min(\mathcal{I}.\mathrm{version}(p))\}$\\
-  \end{tabular}\caption{Minimal and Maximal Sets\label{tab:Minimal-and-Maximal}}
-\end{table}
-
 \begin{itemize}
-  \item Initialization
+  \item Table \ref{tab:selectors} lists available selectors
     \begin{itemize}
-      \item Package Selector: $X\in\{S,C,N,R,U,D\}$
-        \begin{itemize}
-          \item for $X^{-}$ and $X^{+}$ see Table \ref{tab:Minimal-and-Maximal}
-        \end{itemize}
-      \item Measurements
-        \begin{itemize}
-          \item $\mathrm{init}({-}\mathit{count}(X))=X^{-}$
-          \item $\mathrm{init}({+}\mathit{count}(X))=X^{+}$
-          \item $\mathrm{init}({-}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}>0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}<0\}$
-          \item $\mathrm{init}({+}\mathit{sum}(X,\mathrm{attr}))=\{p\in X^{-}\mid p.\mathrm{attr}<0\}\cup\{p\in X^{+}\mid p.\mathrm{attr}>0\}$
-          \item $\mathrm{init}({-}\mathit{notuptodate}(X))=\{p\in X^{-}\mid p.\mathrm{version}\neq\max(\mathcal{P}.\mathrm{version}(p))\}$
-          \item $\mathrm{init}({+}\mathit{notuptodate}(X))=\{p\in X^{+}\mid p.\mathrm{version}\neq\max(\mathcal{P}.\mathrm{version}(p))\}$
-          \item $\mathrm{init}({-}\mathit{unsat\_recommends}(X))=\{p\in X^{-}\mid p.\mathrm{recommends}\neq\emptyset\}$
-          \item $\mathrm{init}({+}\mathit{unsat\_recommends}(X))=\{p\in X^{+}\mid p.\mathrm{recommends}\neq\emptyset\}$
-          \item $\mathrm{init}({-}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{-}\mid q\in \mathcal{P}, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
-          \item $\mathrm{init}({+}\mathit{aligned}(X,\mathrm{group},\mathrm{value}))=\{p\in X^{+}\mid q\in \mathcal{P}, q.\mathrm{group} = p.\mathrm{group}, q.\mathrm{value} \neq p.\mathrm{value}\}$
-        \end{itemize}
-      \item $\mathrm{init}=
-             \begin{array}[t]{@{}l@{}}
-             \bigcup_{\mathrm{init}(\pm\mathit{``whatever"}(X,\vec{x}))}\mathrm{init}(\pm\mathit{``whatever"}(X,\vec{x})) 
-             \cup {} \\
-             \{p\in \mathcal{P}\setminus \mathcal{R} \mid
-               q\in \mathrm{init}({-}\mathit{``whatever"}(R,\vec{x})),
-               p.\mathrm{name}=q.\mathrm{name}\}
-             \end{array}$
+      \item $\selmax$ is an upper bound for packages in a selector
+      \item $\reasonmin{q}$ for $q\in\selmax$ is the set of packages whose installation might remove $q$ from the selector
+      \item $\reasonmax{q}$ for $q\in\selmax$ is the set of packages whose installation might add $q$ to the selector
     \end{itemize}
-  \item Calculation
+  \item a package $p \in \universe \setminus \removed$ is relevant if at least one of the following conditions holds
     \begin{itemize}
-      \item $p\in \mathcal{C}$ and ${-}\mathit{unsat\_recommends}(X)\in\mathcal{O}$ and $p \in X^{+}\cup X^{-}$ implies $p.\mathrm{recommends}\setminus\mathcal{R}\subseteq\mathcal{C}$
-      \item $p\in \mathcal{C}\setminus\mathcal{R}$ implies $p.\mathrm{depends}\setminus\mathcal{R}\subseteq\mathcal{C}$
+      \item $+f \in \optimization$ where
+        \begin{itemize}
+          \item $f = \fcount(S)$, $q \in \selmax$, and $p \in \reasonmax{q}$,
+          \item $f = \fsum(S,\attr{attr})$, $q \in \selmax$, $q.\attr{attr} > 0$, and $p \in \reasonmax{q}$,
+          \item $f = \fsum(S,\attr{attr})$, $q \in \selmax$, $q.\attr{attr} < 0$, and $p \in \reasonmin{q}$,
+          \item $f = \fnotuptodate(S)$, $q \in \selmax$, $q.\version \neq \max(\universe.\version(q))$, and $p \in \reasonmax{q}$,
+          \item $f = \funsatrecom(S)$, $q \in \selmax$, $q.\recommends \neq \emptyset$, and $p \in \reasonmax{q}$, or
+          \item $f = \faligned(S,\attr{group},\attr{value}))$, $q\in \selmax$, $q' \in \selmax$, $q.\attr{group} = q'.\attr{group}$, $q.\attr{value} \neq q'.\attr{value}$, and $p \in \reasonmax{q}$\\
+        \end{itemize}
+      \item $-f \in \optimization$ where
+        \begin{itemize}
+          \item $f = \fcount(S)$, $q \in \selmax$, and $p \in \reasonmin{q}$,
+          \item $f = \fsum(S,\attr{attr})$, $q \in \selmax$, $q.\attr{attr} > 0$, and $p \in \reasonmin{q}$,
+          \item $f = \fsum(S,\attr{attr})$, $q \in \selmax$, $q.\attr{attr} < 0$, and $p \in \reasonmax{q}$,
+          \item $f = \fnotuptodate(S)$, $q \in \selmax$, $q.\version \neq \max(\universe.\version(q))$, and $p \in \reasonmin{q}$,
+          \item $f = \funsatrecom(S)$, $q \in \selmax$, $q.\recommends \neq \emptyset$, and $p \in \reasonmin{q}$,
+          \item $f = \funsatrecom(S)$, $q \in \selmax$ and $p \in q.\recommends\setminus\removed$, or
+          \item $f = \faligned(S,\attr{group},\attr{value}))$, $q\in \selmax$, $q' \in \selmax$, $q.\attr{group} = q'.\attr{group}$, $q.\attr{value} \neq q'.\attr{value}$, and $p \in \reasonmin{q}$\\
+        \end{itemize}
+    \end{itemize}
+  \item the closure $\closure$ is the least set that
+    \begin{itemize}
+      \item contains all relevant packages, and
+      \item if $p\in \closure$ then $p.\depends\setminus\removed\subseteq\closure$
     \end{itemize}
 \end{itemize}
+
+\begin{table}
+  \scriptsize
+  \centering{}\begin{tabular}{r|l|l|l}
+    selector $S$       & $\selmax$ & $\reasonmin{q}$ & $\reasonmax{q}$ \\
+    \hline 
+    $\ssolution$       & $\universe\setminus\removed$ & $\emptyset$ & $\{q\}$ \\
+    $\schanged$        & $\universe\setminus\removed\cup\installation$ & $\{q\}\cap\installation\setminus\removed$ & $\{q\}\setminus\installation$ \\
+    $\snew$            & $\{p\in \universe\setminus\removed\mid p.\name\notin \installation.\name\}$ & $\emptyset$ & $\{q\}$ \\
+    $\sremoved$        & $\installation$ & $\{p\in\universe\setminus\removed\mid p.\name = q.\name\}$ & $\emptyset$ \\
+    $\selup$           & $\{p\in \universe\setminus\removed\mid p.\name\in \installation.\name,p.\version>\max(\installation.\version(p))\}$ & $\emptyset$ & $\{q\}$ \\
+    $\sdown$           & $\{p\in \universe\setminus\removed\mid p.\name\in \installation.\name,p.\version<\max(\installation.\version(p))\}$ & $\emptyset$ & $\{q\}$ \\
+    $\sinstallrequest$ & $\{ p \in P\setminus\removed \mid q \mbox{ mentioned in install request } p.\name = q.\name \}$ & $\emptyset$ & $\{q\}$ \\
+    $\supgraderequest$ & $\{ p \in P\setminus\removed \mid q \mbox{ mentioned in upgrade request } p.\name = q.\name \}$ & $\emptyset$ & $\{q\}$  \\
+    $\srequest$        & $\sinstallrequest^\infty \cup \supgraderequest^\infty$ & $\emptyset$ & $\{q\}$ \\
+  \end{tabular}\caption{Selectors\label{tab:selectors}}
+\end{table}
 
 \section{Fact Format}
 
 \begin{itemize}
-  \item \texttt{unit($p.\mathrm{name}$,$p.\mathrm{version}$,in).} for $p\in\mathcal{C}\setminus\mathcal{R}$
-  \item \texttt{unit($p.\mathrm{name}$,$p.\mathrm{version}$,out).} for $p\in\mathcal{R}$
-  \item \texttt{installed($p.\mathrm{name}$,$p.\mathrm{version}$).} for $p\in\mathcal{P}$
-  \item \texttt{maxversion($p.\mathrm{name}$,$p.\mathrm{version}$).} for $p\in\mathcal{P}$ and $p.\mathrm{version}=\max(\mathcal{P}.\mathrm{version}(p))$
-  \item \texttt{satisfies(Name,Version,Condition).} for $p\in\mathcal{C}\setminus\mathcal{R}$
+  \item \texttt{unit($p.\name$,$p.\version$,in).} for $p\in\closure$
+  \item \texttt{unit($p.\name$,$p.\version$,out).} for $p\in\removed$
+  \item \texttt{installed($p.\name$,$p.\version$).} for $p\in\universe$
+  \item \texttt{maxversion($p.\name$,$p.\version$).} for $p\in\universe$ and $p.\version=\max(\universe.\version(p))$
+  \item \texttt{satisfies(Name,Version,Condition).} for $p\in\closure$
     \begin{itemize}
       \item applies to various parts of the CUDF-document
         \begin{itemize}
@@ -90,47 +126,35 @@
           \item keep flags
         \end{itemize}
     \end{itemize}
-  \item \texttt{depends($p.\mathrm{name}$,$p.\mathrm{version}$,Condition).} for $p\in\mathcal{C}\setminus\mathcal{R}$
-  \item \texttt{conflict($p.\mathrm{name}$,$p.\mathrm{version}$,Condition).} for $p\in\mathcal{C}\setminus\mathcal{R}$
-  \item \texttt{recommends($p.\mathrm{name}$,$p.\mathrm{version}$,Condition,Weight).}
+  \item \texttt{depends($p.\name$,$p.\version$,Condition).} for $p\in\closure$
+  \item \texttt{conflict($p.\name$,$p.\version$,Condition).} for $p\in\closure$
+  \item \texttt{recommends($p.\name$,$p.\version$,Condition,Weight).}
     \begin{itemize}
-      \item $\pm O\in\mathcal{O}$, $O=\mathrm{unsat\_recommends}(X)$, and $p\in\mathrm{init}({+}O)\cup\mathrm{init}({-}O)$, or
+      \item $\pm f\in\optimization$, $f=\funsatrecom(S)$, and $p\in\selmax$
     \end{itemize}
   \item \texttt{request(Condition).}
     \begin{itemize}
       \item requests
       \item keep flags
     \end{itemize}
-  \item \texttt{attribute($p.\mathrm{name}$,$p.\mathrm{version}$,Attribute,Value).}
+  \item \texttt{attribute($p.\name$,$p.\version$,Attribute,Value).}
     \begin{itemize}
-      \item $\pm O\in\mathcal{O}$, $O=\mathrm{sum}(X,\mathrm{attr})$, and $p\in\mathrm{init}({+}O)\cup\mathrm{init}({-}O)$, or
-      \item $\pm O\in\mathcal{O}$, $O=\mathrm{aligned}(X,\mathrm{group},\mathrm{value})$, and $p\in\mathrm{init}({+}O)\cup\mathrm{init}({-}O)$, or
+      \item $\pm f\in\optimization$, $f=\fsum(S,\attr{attr})$, and $p\in\selmax$, or
+      \item $\pm f\in\optimization$, $f=\faligned(S,\attr{group},\attr{value})$, and $p\in\selmax$, or
     \end{itemize}
-  \item \texttt{component($\mathtt{Index}$,$p.\mathrm{name}$,$p.\mathrm{version})$}
+  \item \texttt{installrequest(Name,Version).}
+  \item \texttt{upgraderequest(Name,Version).}
+  \item 
+    \texttt{clique($I$,$p.\name$,$p.\version)$} where $p\in I$ and $I$ is a non-singular clique in the graph\\
+    $(\closure, \{ (p,q) \mid p,q\in\closure, p\neq q, q\in p.\conflicts \})$
     \begin{itemize}
-      \item $\mathtt{Index}$ is a subset-minimal set, s.t.:
-      \begin{itemize}
-        \item $p\in C\setminus\mathcal{R}\cap\mathtt{Index}$
-        \item $q\in C\setminus\mathcal{R}\cap\mathtt{Index}$ if exists $r\in\mathtt{Index}$ s.t. $r\in q.\mathrm{conflicts}$ or $q\in r.\mathrm{conflicts}$
-        \item $|\mathtt{Index}|>1$
-      \end{itemize}
+      \item no overlapping cliques will be added
     \end{itemize}
-  \item \texttt{clique($\mathtt{Index}$,$p.\mathrm{name}$,$p.\mathrm{version})$}
-    \begin{itemize}
-      \item $\mathtt{Index}$ is a subset-minimal set, s.t.:
-      \begin{itemize}
-        \item $p\in C\setminus\mathcal{R}\cap\mathtt{Index}$
-        \item $q\in C\setminus\mathcal{R}\cap\mathtt{Index}$ if for all $r\in\mathtt{Index}$ holds $r\in q.\mathrm{conflicts}$ or $q\in r.\mathrm{conflicts}$, and\\$q$ is not a member of a previously printed clique
-        \item $|\mathtt{Index}|>1$
-
-      \end{itemize}
-    \end{itemize}
-
-  \item \texttt{criterion(Maximize,Selector,count,Priority).}
-  \item \texttt{criterion(Maximize,Selector,sum(Attribute),Priority).}
-  \item \texttt{criterion(Maximize,Selector,notuptodate,Priority).}
-  \item \texttt{criterion(Maximize,Selector,unsat\_recommends,Priority).}
-  \item \texttt{criterion(Maximize,Selector,aligned(Group,Value),Priority).}
+  \item \texttt{criterion(Maximize,Selector,$\fcount$,Priority).}
+  \item \texttt{criterion(Maximize,Selector,$\fsum(\attr{attr})$,Priority).}
+  \item \texttt{criterion(Maximize,Selector,$\fnotuptodate$, Priority).}
+  \item \texttt{criterion(Maximize,Selector,$\funsatrecom$,Priority).}
+  \item \texttt{criterion(Maximize,Selector,$\faligned(\attr{group},\attr{value})$,Priority).}
 \end{itemize}
 
 \end{document}

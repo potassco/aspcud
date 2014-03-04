@@ -1,3 +1,5 @@
+//////////////////// Copyright //////////////////////// {{{1
+
 //
 // Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
 //
@@ -17,6 +19,8 @@
 // along with aspcud.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+//////////////////// Preamble ///////////////////////// {{{1
+
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,8 +28,161 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
-#include <sys/wait.h>
+#include <assert.h>
+#ifdef __WIN32__
+#   define NOMINMAX
+#   define WIN32_LEAN_AND_MEAN
+#   include <windows.h>
+#else
+#   include <sys/wait.h>
+#   include <libgen.h>
+#endif
+#include <sys/stat.h>
 #include <cudf/version.h>
+
+//////////////////// Windows ////////////////////////// {{{1
+
+#ifdef __WIN32__
+
+int mkstemp(char *template) {
+    template = _mktemp(template);
+    int fd = open (template, O_RDWR | O_CREAT | O_EXCL, _S_IREAD | _S_IWRITE);
+    return fd;
+}
+
+// for the getline function:
+// Copyright (C) 1993 Free Software Foundation, Inc.
+// Written by Jan Brittenson, bson@gnu.ai.mit.edu.
+#define MIN_CHUNK 64
+ssize_t getline (char **lineptr, size_t *n, FILE *stream) {
+    if (!lineptr || !n || !stream) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (!*lineptr) {
+        *n = MIN_CHUNK;
+        *lineptr = malloc (*n);
+        if (!*lineptr) {
+            errno = ENOMEM;
+            return -1;
+        }
+    }
+
+    ssize_t nchars_avail = *n;
+    char *read_pos = *lineptr;
+
+    for (;;) {
+        int save_errno;
+        int c = getc (stream);
+
+        save_errno = errno;
+
+        assert((*lineptr + *n) == (read_pos + nchars_avail));
+        if (nchars_avail < 2) {
+            if (*n > MIN_CHUNK) { *n *= 2; }
+            else { *n += MIN_CHUNK; }
+
+            nchars_avail = *n + *lineptr - read_pos;
+            *lineptr = realloc (*lineptr, *n);
+            if (!*lineptr) {
+                errno = ENOMEM;
+                return -1;
+            }
+            read_pos = *n - nchars_avail + *lineptr;
+            assert((*lineptr + *n) == (read_pos + nchars_avail));
+        }
+
+        if (ferror (stream)) {
+            errno = save_errno;
+            return -1;
+        }
+
+        if (c == EOF) {
+            if (read_pos == *lineptr) { return -1; }
+            else { break; }
+        }
+
+        *read_pos++ = c;
+        nchars_avail--;
+
+        if (c == '\n') { break; }
+    }
+
+    *read_pos = '\0';
+
+    return read_pos - *lineptr;
+}
+
+// See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
+static void aspcud_reserve(int len, char **cmdline, int *offset, int *length) {
+    if (!cmdline) {
+        *length  = MIN_CHUNK;
+        *cmdline = malloc(*length);
+        if (!*cmdline) {
+            fprintf(stderr, "error: out of memory\n");
+            exit(1);
+        }
+    }
+    if (*offset + len >= *length) {
+        *length = MIN_CHUNK + *length + len;
+        *cmdline = realloc(*cmdline, *length);
+        if (!*cmdline) {
+            fprintf(stderr, "error: out of memory\n");
+            exit(1);
+        }
+    }
+}
+
+static void aspcud_append_char(char arg, char **cmdline, int *offset, int *length) {
+    aspcud_reserve(1, cmdline, offset, length);
+    *(*cmdline + (*offset)++) = arg;
+    *(*cmdline + *offset) = '\0';
+}
+
+static void aspcud_append_string(char *arg, char **cmdline, int *offset, int *length) {
+    int len = strlen(arg);
+    aspcud_reserve(len, cmdline, offset, length);
+    strcpy(*cmdline + *offset, arg);
+    *offset += len;
+}
+
+static void aspcud_append_quoted(char *arg, char **cmdline, int *offset, int *length) {
+    if (*arg && !strpbrk(arg, " \t\n\v\"")) { aspcud_append_string(arg, cmdline, offset, length); }
+    else {
+        aspcud_append_char('\"', cmdline, offset, length);
+        char *it;
+        for (it = arg; *it; ++it) {
+            int slashes = 0;
+            for (; *it == '\\'; ++it, ++slashes) { aspcud_append_char('\\', cmdline, offset, length); }
+            if (!*it || *it == '\"') {
+                int i;
+                for (; slashes > 0; --i) { aspcud_append_char('\\', cmdline, offset, length); }
+                if (*it == '\"') { aspcud_append_char('\\', cmdline, offset, length); }
+                else             { break; }
+            } 
+            aspcud_append_char(*it, cmdline, offset, length);
+        }
+        aspcud_append_char('\"', cmdline, offset, length);
+    }
+}
+
+static char *BuildCommandLine(char **argv) {
+    char *cmdline = 0;
+    int   offset  = 0;
+    int   length  = 0;
+    char **it;
+    for (it = argv; *it; ++it) {
+        aspcud_append_quoted(*it, &cmdline, &offset, &length);
+        if (*(it + 1) != 0) { aspcud_append_char(' ', &cmdline, &offset, &length); }
+    }
+    if (!cmdline) { aspcud_append_string("", &cmdline, &offset, &length); }
+    return cmdline;
+}
+
+#endif
+
+//////////////////// aspcud /////////////////////////// {{{1
 
 char *aspcud_tmpdir      = NULL;
 char *aspcud_gringo_enc  = ASPCUD_DEFAULT_ENCODING;
@@ -33,35 +190,206 @@ char *aspcud_cudf2lp_bin = ASPCUD_CUDF2LP_BIN;
 char *aspcud_gringo_bin  = ASPCUD_GRINGO_BIN;
 char *aspcud_clasp_bin   = ASPCUD_CLASP_BIN;
 
+char *aspcud_expand_path(char *path, char *module_path) {
+    char const *prefix = "<module_path>";
+    if (strncmp(path, prefix, strlen(prefix)) == 0) {
+#ifdef __WIN32__
+        char buf1[MAX_PATH+1];
+        size_t length = GetModuleFileName(0, buf1, MAX_PATH+1);
+        if (!length || length >= MAX_PATH) {
+            fprintf(stderr, "error: module file path too long\n");
+            exit(1);
+        }
+        char *ptr;
+        char *buf = malloc(sizeof(char)*(MAX_PATH+1+strlen(path+strlen(prefix))));
+        if (!buf) {
+            fprintf(stderr, "error: out of memory\n");
+            exit(1);
+        }
+        length = GetFullPathName(buf1, MAX_PATH, buf, &ptr);
+        if (!length || length >= MAX_PATH) {
+            fprintf(stderr, "error: module file path too long\n");
+            exit(1);
+        }
+        strcpy(buf + (ptr - buf), path + strlen(prefix));
+        return buf;
+#else
+        struct stat sb;
+
+        if (lstat(module_path, &sb) == -1) {
+            fprintf(stderr, "error: could not lstat file\n");
+            exit(1);
+        }
+        if (S_ISLNK(sb.st_mode)) {
+            char *linkname = malloc(sb.st_size + 1);
+            if (!linkname) {
+                fprintf(stderr, "error: out of memory\n");
+                exit(1);
+            }
+            ssize_t r = readlink(module_path, linkname, sb.st_size + 1);
+            if (r < 0) {
+                fprintf(stderr, "error: could not read link\n");
+                exit(1);
+            }
+            if (r > sb.st_size) {
+                fprintf(stderr, "error: could not read link\n");
+                exit(1);
+            }
+            linkname[sb.st_size] = '\0';
+            printf("%s\n", linkname);
+            if (linkname[0] != '/') {
+                module_path = dirname(strdup(module_path));
+                char *buf = malloc(sizeof(char)*(strlen(module_path) + strlen(linkname) + 2));
+                if (!buf) {
+                    fprintf(stderr, "error: out of memory\n");
+                    exit(1);
+                }
+                strcpy(buf, module_path);
+                *(buf + strlen(module_path)) = '/';
+                strcpy(buf + strlen(module_path) + 1, linkname);
+                module_path = dirname(buf);
+            }
+            else {
+                module_path = dirname(linkname);
+            }
+        }
+        else {
+            module_path = dirname(strdup(module_path));
+        }
+        char *buf = malloc(sizeof(char)*(strlen(module_path) + strlen(path+strlen(prefix))+2));
+        strcpy(buf, module_path);
+        *(buf + strlen(module_path)) = '/';
+        strcpy(buf + strlen(module_path) + 1, path+strlen(prefix));
+        return buf;
+#endif
+    }
+    return path;
+}
+
 char *aspcud_clasp_args_default[] = {
-    "--opt-heu=1",
-    "--sat-prepro",
-    "--restarts=L,128",
-    "--heuristic=VSIDS",
-    "--opt-hierarch=1",
-    "--local-restarts",
-    "--del-max=200000,250",
-    "--save-progress=0",
+    "--opt-strategy=5",
     NULL
 };
 
 int aspcud_debug = 0;
 
-volatile pid_t aspcud_pid             = 0;
-volatile pid_t aspcud_current_pid     = 0;
-volatile pid_t aspcud_interrupted_pid = 0;
-
 void aspcud_set_tmpdir() {
-    char *tmpdir = getenv("TMPDIR");
-    if (!tmpdir) {
-        tmpdir = P_tmpdir;
+#ifdef __WIN32__
+    unsigned length = GetTempPath(0, 0);
+    if (!length) {
+        fprintf(stderr, "error: could not get TEMP\n");
+        exit(1);
     }
+    aspcud_tmpdir = malloc(sizeof(char)*length);
+    if (!aspcud_tmpdir) {
+        fprintf(stderr, "error: out of memory\n");
+        exit(1);
+    }
+    unsigned size = GetTempPath(length, aspcud_tmpdir);
+    if (!size || size >= length) {
+        fprintf(stderr, "error: could not get TEMP\n");
+        exit(1);
+    }
+#else
+    char *tmpdir = getenv("TMPDIR");
+    if (!tmpdir) { tmpdir = P_tmpdir; }
     aspcud_tmpdir = malloc((sizeof(char))*(strlen(tmpdir)+2));
     if (!aspcud_tmpdir) {
         fprintf(stderr, "error: out of memory\n");
         exit(1);
     }
     sprintf(aspcud_tmpdir, "%s/", tmpdir);
+#endif
+}
+
+#ifdef __WIN32__
+
+volatile int aspcud_interrupted               = 0;
+volatile unsigned long aspcud_current_pid     = 0;
+volatile unsigned long aspcud_interrupted_pid = 0;
+
+void aspcud_setmain() { }
+
+int aspcud_ismain() { return 1; }
+
+void aspcud_interrupt(int signal) {
+    if (!aspcud_interrupted) {
+        //AttachConsole(aspcud_current_pid);
+        //SetConsoleCtrlHandler(0, 1);
+        GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
+        aspcud_interrupted_pid = aspcud_current_pid;
+    }
+    aspcud_interrupted = 1;
+}
+
+int aspcud_exec(char **args, char *out_path, char *err_path) {
+    if (aspcud_interrupted) { return 1; }
+    if (aspcud_debug) {
+        fprintf(stderr, "debug: starting process");
+        char **arg;
+        for (arg = args; *arg; ++arg) {
+            fprintf(stderr, " %s", *arg);
+        }
+        fprintf(stderr, "\n");
+    }
+    // file descriptors returned by open are inheritable 
+    // http://msdn.microsoft.com/en-us/library/z0kc8e3z.aspx
+    mode_t mode = S_IRUSR | S_IWUSR;
+    int out_fd = open(out_path, O_WRONLY | O_CREAT | O_TRUNC, mode);
+    if (out_fd == -1) {
+        fprintf(stderr, "error: could not open %s (%s)\n", out_path, strerror(errno));
+        exit(1);
+    }
+    int err_fd = open(err_path, O_RDWR | O_CREAT | O_TRUNC, mode);
+    if (err_fd == -1) {
+        fprintf(stderr, "error: could not open %s (%s)\n", err_path, strerror(errno));
+        exit(1);
+    }
+    
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+
+    STARTUPINFO si;
+    ZeroMemory(&si, sizeof(STARTUPINFO));
+    si.cb         = sizeof(STARTUPINFO);
+    si.dwFlags    = STARTF_USESTDHANDLES;
+    si.hStdOutput = (HANDLE*)_get_osfhandle(out_fd);
+    si.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
+    si.hStdError  = (HANDLE*)_get_osfhandle(err_fd);
+
+    char *cmdline = BuildCommandLine(args);
+    if (!CreateProcess(args[0], cmdline, 0, 0, 1, 0, 0, 0, &si, &pi)) {
+        fprintf(stderr, "error: could not execute %s\n", cmdline);
+        exit(1);
+    }
+
+    aspcud_current_pid = pi.dwProcessId;
+    if (aspcud_interrupted && aspcud_interrupted_pid != aspcud_current_pid) {
+        //AttachConsole(aspcud_current_pid);
+        //SetConsoleCtrlHandler(0, 1);
+        GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
+    }
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    unsigned long exitCode;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+
+    close(out_fd);
+    close(err_fd);
+    return aspcud_interrupted ? 1 : exitCode;
+}
+
+#else
+
+volatile pid_t aspcud_pid             = 0;
+volatile pid_t aspcud_current_pid     = 0;
+volatile pid_t aspcud_interrupted_pid = 0;
+
+void aspcud_setmain() {
+    aspcud_pid = getpid();
+}
+
+int aspcud_ismain() {
+    return aspcud_pid == getpid();
 }
 
 void aspcud_interrupt(int signal) {
@@ -72,7 +400,7 @@ void aspcud_interrupt(int signal) {
     else { aspcud_interrupted_pid = -1; }
 }
 
-int aspcud_exec(char *const args[], char const *out_path, char const *err_path) {
+int aspcud_exec(char **args, char *out_path, char *err_path) {
     if (aspcud_interrupted_pid != 0) { return 1; }
     aspcud_current_pid = fork();
     if (aspcud_current_pid == -1) {
@@ -82,7 +410,7 @@ int aspcud_exec(char *const args[], char const *out_path, char const *err_path) 
     if (!aspcud_current_pid) {
         if (aspcud_debug) {
             fprintf(stderr, "debug: starting process");
-            char *const *arg;
+            char **arg;
             for (arg = args; *arg; ++arg) {
                 fprintf(stderr, " %s", *arg);
             }
@@ -130,9 +458,10 @@ int aspcud_exec(char *const args[], char const *out_path, char const *err_path) 
     }
     return WIFEXITED(status) ? WEXITSTATUS(status) : 1; 
 }
+#endif
 
 char **aspcud_args_new() {
-    char **opts = malloc(sizeof(char const *));
+    char **opts = malloc(sizeof(char *));
     if (!opts) {
         fprintf(stderr, "error: out of memory\n");
         exit(1);
@@ -144,7 +473,7 @@ char **aspcud_args_new() {
 char **aspcud_args_push(char ***data, char *val) {
     int size;
     for (size = 0; (*data)[size]; size++) { }
-    *data = realloc(*data, sizeof(char const *) * (size + 2));
+    *data = realloc(*data, sizeof(char *) * (size + 2));
     if (!data) {
         fprintf(stderr, "error: out of memory\n");
         exit(1);
@@ -162,7 +491,7 @@ char *aspcud_clasp_out   = NULL;
 char *aspcud_clasp_err   = NULL;
 
 void aspcud_atexit() {
-    if (!aspcud_debug && aspcud_pid == getpid()) {
+    if (!aspcud_debug && aspcud_ismain()) {
         if (aspcud_cudf2lp_out) { unlink(aspcud_cudf2lp_out); }
         if (aspcud_cudf2lp_err) { unlink(aspcud_cudf2lp_err); }
         if (aspcud_gringo_out)  { unlink(aspcud_gringo_out); }
@@ -257,12 +586,20 @@ void aspcud_checkarg(int i, int argc, char *argv[]) {
     }
 }
 
+//////////////////// main ///////////////////////////// {{{1
+
 int main(int argc, char *argv[]) {
     signal(SIGTERM, &aspcud_interrupt);
+#ifndef __WIN32__
     signal(SIGUSR1, &aspcud_interrupt);
+#endif
     signal(SIGINT,  &aspcud_interrupt);
 
     aspcud_set_tmpdir();
+    aspcud_gringo_enc  = aspcud_expand_path(aspcud_gringo_enc, argv[0]);
+    aspcud_cudf2lp_bin = aspcud_expand_path(aspcud_cudf2lp_bin, argv[0]);
+    aspcud_gringo_bin  = aspcud_expand_path(aspcud_gringo_bin, argv[0]);
+    aspcud_clasp_bin   = aspcud_expand_path(aspcud_clasp_bin, argv[0]);
 
     char **cudf2lp_args = aspcud_args_new();
     aspcud_args_push(&cudf2lp_args, aspcud_cudf2lp_bin);
@@ -285,7 +622,7 @@ int main(int argc, char *argv[]) {
     int i;
     int a = 0;
     for (i = 1; i < argc; ++i) {
-        if (a == 0 && strncmp(argv[i], "-", 1) == 0) {
+        if (a == 0 && strncmp(argv[i], "-", 1) == 0 && strcmp(argv[i], "-") != 0) {
             if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
                 aspcud_print_usage(argv[0]);
                 exit(0);
@@ -361,7 +698,7 @@ int main(int argc, char *argv[]) {
         aspcud_args_push(&gringo_args, aspcud_gringo_enc);
     }
 
-	aspcud_pid = getpid();
+    aspcud_setmain();
     if (atexit(&aspcud_atexit) != 0) {
         fprintf(stderr, "error: could not set exithandler\n");
         exit(1);
