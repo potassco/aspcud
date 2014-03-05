@@ -113,7 +113,7 @@ void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions:
         ("criteria,c", storeTo(crits),
             "Preprocess for specific optimization criteria\n"
             "      Default: none\n"
-            "      Valid:   none, paranoid, trendy, -|+<crit>(,-|+<crit>)*\n"
+            "      Valid:   none, paranoid, trendy, -|+<crit>\\(,-|+<crit>\\)*\n"
             "        <crit>: count(<set>) | sum(<set>,<attr>) | unsat_recommends(<set>)\n"
             "              | aligned(<set>,<attr>,<attr>) | notuptodate(<set>)\n"
             "        <attr>: CUDF attribute name\n"
