@@ -118,6 +118,7 @@ void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions:
             "              | aligned(<set>,<attr>,<attr>) | notuptodate(<set>)\n"
             "        <attr>: CUDF attribute name\n"
             "        <set> : solution | changed | new | removed | up | down\n"
+            "              | installrequest | upgraderequest | request\n"
             "      For backwards compatibility: \n"
             "        new              = count(new)\n"
             "        removed          = count(removed)\n"
