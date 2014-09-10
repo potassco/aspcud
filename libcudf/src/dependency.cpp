@@ -49,7 +49,7 @@ namespace {
 
     struct CudfPackageRefFilter {
         CudfPackageRefFilter(const Cudf::PackageRef &ref) : ref(&ref) { }
-        bool operator()(const Entity *entity) {
+        bool operator()(const Entity *entity) const {
             switch (ref->op) {
                 case Cudf::PackageRef::EQ:
                     return (entity->version == ref->version || entity->allVersions()) && ref->version != 0;
