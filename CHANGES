@@ -1,3 +1,8 @@
+aspcud-1.9.1
+  * adjusted encodings to be compatible with gringo-4.5
+    (maintains backwards compatibility with <gringo-4.5)
+  * manpage update
+  * fixed problem with boost-1.56
 aspcud-1.9.0
   * added support for three new selectors (request,installrequest,upgraderequest)
   * added support for old-style criteria

@@ -221,9 +221,9 @@ valClique(I,C,S,T)                 :- valClique(I,C,S,T,_).
 
 uniClique(I,C,S,T) :- valClique(I,C,S,T), { valClique(I,C,S,T,X) } 1.
 
-ordClique(I,C,S,T,M2,M1) :- valClique(I,C,S,T,(M1;M2)); |M1| < |M2|; 0 < M1*M2;
+ordClique(I,C,S,T,M2,M1) :- valClique(I,C,S,T,M1), valClique(I,C,S,T,M2), |M1| < |M2|, 0 < M1*M2,
                             |M| <= |M1| : valClique(I,C,S,T,M), |M| < |M2|, 0 < M*M2.
-ordClique(I,C,S,T,M2,0)  :- valClique(I,C,S,T,M2); not uniClique(I,C,S,T);
+ordClique(I,C,S,T,M2,0)  :- valClique(I,C,S,T,M2), not uniClique(I,C,S,T),
                             M1*M2 <= 0 : valClique(I,C,S,T,M1), |M1| < |M2|.
 
 outClique(I,C,S,T) :- valClique(I,C,S,T), not uniClique(I,C,S,T), not special(C,S,T).
@@ -246,7 +246,7 @@ donClique(J)                   :- donClique(J,_).
 
 comClique(J,N) :- brkClique(J,N), not donClique(J).
 
-simClique(i(I,L1,F1),i(I,L2,F2)) :- comClique((i(I,L1,F1);i(I,L2,F2)),N), (L1,F1) < (L2,F2),
+simClique(i(I,L1,F1),i(I,L2,F2)) :- comClique(i(I,L1,F1),N), comClique(i(I,L2,F2),N), (L1,F1) < (L2,F2),
                                     brkClique(i(I,L1,F1),P,V) : brkClique(i(I,L2,F2),P,V).
 
 mapClique(i(I,L1,F1),i(I,L1,F1)) :- comClique(i(I,L1,F1),_),
@@ -278,7 +278,7 @@ ponClique(J,P)                   :- ponClique(J,P,_).
 
 comClique(J,P,N) :- preClique(J,P,N), not ponClique(J,P).
 
-simClique(i(I,L1,F1),i(I,L2,F2),P) :- comClique((i(I,L1,F1);i(I,L2,F2)),P,N), (L1,F1) < (L2,F2),
+simClique(i(I,L1,F1),i(I,L2,F2),P) :- comClique(i(I,L1,F1),P,N), comClique(i(I,L2,F2),P,N), (L1,F1) < (L2,F2),
                                       brkClique(i(I,L1,F1),P,V) : brkClique(i(I,L2,F2),P,V).
 
 mapClique(i(I,L1,F1),i(I,L1,F1),P) :- comClique(i(I,L1,F1),P,_),
@@ -306,7 +306,7 @@ donRemove(I,P)            :- donRemove(I,P,_).
 
 hasRemove(rem(P),E)        :- subRemove(I,P), donRemove(I,P,E).
 hasRemove(rem(P),sub(I,P)) :- subRemove(I,P), not donRemove(I,P).
-hasRemove(rem(P),uni(P,V)) :- pkgRemove(P); unit(P,V,in);
+hasRemove(rem(P),uni(P,V)) :- pkgRemove(P), unit(P,V,in),
                               not realClique(I,P,V) : realClique(I,P,V), cliqueBreak == 1.
 
 abbrev(pkg(J,P)) :- mapClique(J,J,P).
@@ -329,15 +329,15 @@ special(rem(P),C,sub,removed,M) :- remove(C,P,M), pkgRemove(C,P), not hold(rem(P
 
 penalty(uni(P,V),C,S,T,M) :- object(C,S,T,P,V,M), not resClique(C,S,T,P,V), hold(uni(P,V)),
                              not special(C).
-special(uni(P,V),C,S,T,M) :- object(C,S,T,P,V,M); special(C); not resClique(C,S,T,P,V);
-                             hold(uni(P,V)) : not special(C,S,T);
-                             not hold(uni(P,V)) : special(C,S,T).
+special(uni(P,V),C,S,T,M) :- object(C,S,T,P,V,M), special(C), not resClique(C,S,T,P,V),
+                                 hold(uni(P,V)) : not special(C,S,T);
+                             not hold(uni(P,V)) :     special(C,S,T).
 
 penalty(i(I),C,S,T,M) :- valClique(I,C,S,T,M), uniClique(I,C,S,T),
                          hold(i(I,n,f(C,S,T))), not special(C).
-special(i(I),C,S,T,M) :- valClique(I,C,S,T,M); special(C); uniClique(I,C,S,T);
-                         hold(i(I,n,f(C,S,T))) : not special(C,S,T);
-                         not hold(i(I,n,f(C,S,T))) : special(C,S,T).
+special(i(I),C,S,T,M) :- valClique(I,C,S,T,M), special(C), uniClique(I,C,S,T),
+                             hold(i(I,n,f(C,S,T))) : not special(C,S,T);
+                         not hold(i(I,n,f(C,S,T))) :     special(C,S,T).
 
 penalty(i(I,M1),C,S,T,M2-M1) :- ordClique(I,C,S,T,M2,M1), hold(i(I,m,f(C,S,T,M2))),
                                 not special(C).
@@ -375,9 +375,9 @@ alcount(T,A,X,B) :- alvalue(T,A,X,B), { alvalue(T,A,X,B,Z) } alignCounter.
 
 aligned(T,A,X,B) :- aligned(T,A,X,B,_), not alcount(T,A,X,B), not statkey(T,A,X,B).
 
-alchain(T,A,X,B,Y1,Y2) :- alcount(T,A,X,B); alvalue(T,A,X,B,(Y1;Y2)); Y1 < Y2;
+alchain(T,A,X,B,Y1,Y2) :- alcount(T,A,X,B), alvalue(T,A,X,B,Y1), alvalue(T,A,X,B,Y2), Y1 < Y2,
                           Y <= Y1 : alvalue(T,A,X,B,Y), Y < Y2.
-alchain(T,A,X,B,Y2)    :- alcount(T,A,X,B); alvalue(T,A,X,B,Y2);
+alchain(T,A,X,B,Y2)    :- alcount(T,A,X,B), alvalue(T,A,X,B,Y2),
                           not alchain(T,A,X,B,Y2,Y) : alchain(T,A,X,B,Y2,Y).
 
 alcount(T,A,X,B,Y1,0)   :- alchain(T,A,X,B,Y1,_),  aligned(T,A,X,B,Y1), not statkey(T,A,X,B).
