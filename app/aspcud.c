@@ -37,6 +37,9 @@
 #   include <sys/wait.h>
 #   include <libgen.h>
 #endif
+#if __APPLE__
+#   include <mach-o/dyld.h>
+#endif
 #include <sys/stat.h>
 #include <cudf/version.h>
 
@@ -214,6 +217,25 @@ char *aspcud_expand_path(char *path, char *module_path) {
         strcpy(buf + (ptr - buf), path + strlen(prefix));
         return buf;
 #else
+#   ifdef __linux__
+        module_path = "/proc/self/exe";
+#   elif __APPLE__
+        uint32_t length = 0;
+        _NSGetExecutablePath(NULL, &length);
+        if (!length) {
+            fprintf(stderr, "error: could not get executable path\n");
+            exit(1);
+        }
+        module_path = malloc(length + 1);
+        if (!module_path) {
+            fprintf(stderr, "error: out of memory\n");
+            exit(1);
+        }
+        if (_NSGetExecutablePath(module_path, &length) < 0) {
+            fprintf(stderr, "error: could not get executable path\n");
+            exit(1);
+        }
+#   endif // freebsd, openbsd, ...
         struct stat sb;
 
         if (lstat(module_path, &sb) == -1) {
@@ -221,6 +243,7 @@ char *aspcud_expand_path(char *path, char *module_path) {
             exit(1);
         }
         if (S_ISLNK(sb.st_mode)) {
+            if (sb.st_size == 0) { sb.st_size = 1024; }
             char *linkname = malloc(sb.st_size + 1);
             if (!linkname) {
                 fprintf(stderr, "error: out of memory\n");
@@ -236,7 +259,6 @@ char *aspcud_expand_path(char *path, char *module_path) {
                 exit(1);
             }
             linkname[sb.st_size] = '\0';
-            printf("%s\n", linkname);
             if (linkname[0] != '/') {
                 module_path = dirname(strdup(module_path));
                 char *buf = malloc(sizeof(char)*(strlen(module_path) + strlen(linkname) + 2));
