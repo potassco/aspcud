@@ -37,7 +37,7 @@
 #   include <sys/wait.h>
 #   include <libgen.h>
 #endif
-#if __APPLE__
+#ifdef __APPLE__
 #   include <mach-o/dyld.h>
 #endif
 #include <sys/stat.h>
@@ -219,7 +219,8 @@ char *aspcud_expand_path(char *path, char *module_path) {
 #else
 #   ifdef __linux__
         module_path = "/proc/self/exe";
-#   elif __APPLE__
+#   endif
+#   ifdef __APPLE__
         uint32_t length = 0;
         _NSGetExecutablePath(NULL, &length);
         if (!length) {
