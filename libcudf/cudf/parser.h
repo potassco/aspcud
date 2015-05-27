@@ -130,8 +130,35 @@ public:
             else { throw std::runtime_error("required attribute missing"); }
         }
     }
+    
+    void _checkCrit(uint32_t uid, std::string const &name, bool includeString) {
+        TypeMap::iterator it = typeMap_.find(uid);
+        if (it != typeMap_.end()) {
+            if ((!includeString || !it->second.stringType()) && !it->second.intType() ) {
+                throw std::runtime_error(std::string("only integer") + (includeString ? " and string" : "") + " properties are supported in criteria: " + name);
+            }
+        } 
+        else {
+            throw std::runtime_error("unknown property in criteria: " + name);
+        }
+    }
+
     void addPreamble() {
         propMap_.clear();
+        BOOST_FOREACH (Criterion &crit, dep_.criteria.criteria) {
+            switch (crit.measurement) {
+                case Criterion::SUM: {
+                    _checkCrit(crit.attrUid1, crit.attr1, false);
+                    break;
+                }
+                case Criterion::ALIGNED: {
+                    _checkCrit(crit.attrUid1, crit.attr1, true);
+                    _checkCrit(crit.attrUid2, crit.attr2, true);
+                    break;
+                }
+                default: { break; }
+            }
+        }
     }
     void addPackage(uint32_t name) {
         setProperty(packageStr_, (const uint32_t)name);
@@ -154,7 +181,7 @@ public:
         else                          { throw std::runtime_error("invalid keep value"); }
 
         if (!dep_.addAll()) {
-            BOOST_FOREACH (uint32_t name, optProps_) {
+            BOOST_FOREACH (uint32_t name, dep_.criteria.optProps) {
                 TypeMap::iterator it = typeMap_.find(name);
                 if (it != typeMap_.end()) {
                     if (it->second.intType()) {
@@ -170,8 +197,7 @@ public:
                 }
             }
         }
-        else
-        {
+        else {
             BOOST_FOREACH (TypeMap::value_type &val, typeMap_) {
                 if (val.second.intType()) {
                     int32_t value;
@@ -207,7 +233,6 @@ private:
     bool            lexString_;
     uint32_t        shiftToken_;
 
-    OptPropVec      optProps_;
     TypeMap         typeMap_;
     PropMap         propMap_;
 

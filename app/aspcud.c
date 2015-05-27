@@ -565,7 +565,7 @@ void aspcud_print_usage(char *name) {
 	    "  -c OPT : append clasp option OPT\n"
         "  -e ENC : append encoding ENC\n"
 	    "  -p OPT : append cudf2lp option OPT\n"
-        "  -s SOL : path to solver (clasp or unclasp)\n"
+        "  -s SOL : path to solver (clasp)\n"
         "  -g GRD : path to grounder (gringo)\n"
         "  -l PRE : path to cudf preprocessor (cudf2lp)\n"
         "  -d     : print debug info/do not cleanup temporary files\n"

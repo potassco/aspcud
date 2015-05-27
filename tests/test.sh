@@ -9,7 +9,6 @@ gringo=gringo-4
 check=cudf-sol-check
 cudf="$location/../build/debug/bin/cudf2lp"
 aspcud="$location/../build/debug/bin/aspcud"
-unclasp="$location/../scripts/unclasp-wrapper.sh"
 
 for x in "$location"/enumerate-all/*.cudf; do
     echo "================== $(basename $x) ================="
@@ -26,7 +25,7 @@ for x in "$location"/*/*.cudf.xz; do
     crit=$(echo "$(basename "$(dirname "$x")")" | tr "PMLRC" '\+\-(),')
     echo "================== $(basename $x) with $crit ================="
     xzcat "$x" > problem.cudf
-    for solver in "$clasp" "$unclasp"; do
+    for solver in "$clasp"; do
         for encoding in "$location/../share/aspcud/misc2012.lp" "$location/../share/aspcud/specification.lp"; do
             start=$(date +%s)
             "$aspcud" -e "$encoding" -s "$solver" -g "$gringo" -l "$cudf" "${extra[@]}" problem.cudf solution.cudf "$crit" > /dev/null

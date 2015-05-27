@@ -1,8 +1,7 @@
 The script test.sh runs a few tests. For the script to work, a debug build of
 the preprocessor has to be available in the build directory and the following
 binaries have to be available:
-  clasp          - clasp version =2.1.* and >= 2.1.3
-  unclasp        - unclasp latest version in svn
+  clasp          - clasp version >= 3.0
   gringo-4       - gingo version >= 4.2.1
   cudf-sol-check - latest version available at [1]
 
