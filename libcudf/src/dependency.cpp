@@ -839,3 +839,4 @@ void Dependency::dumpAsFacts(std::ostream &out) {
         out << "," << priotity-- << ").\n";
     }
 }
+
