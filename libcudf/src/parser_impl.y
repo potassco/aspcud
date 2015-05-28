@@ -53,11 +53,11 @@ nl ::= .
 nl ::= nnl.
 
 // overall structure
-cudf ::= nl universe request.
 cudf ::= nl preamble universe request.
 
 // document parts
 preamble ::= PREAMBLE parse_string COLONSP STRING nnl stanza. { pParser->addPreamble(); }
+preamble ::= .                                                { pParser->addPreamble(); }
 universe ::= .
 universe ::= universe package.
 package  ::= PACKAGE COLONSP pkgname(name) nnl stanza.       { pParser->addPackage(name.index); }
