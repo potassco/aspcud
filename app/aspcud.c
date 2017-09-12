@@ -1,23 +1,26 @@
-//////////////////// Copyright //////////////////////// {{{1
+// {{{ MIT License
 
-//
-// Copyright (c) 2010, Roland Kaminski <kaminski@cs.uni-potsdam.de>
-//
-// This file is part of aspcud.
-//
-// aspcud is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// aspcud is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with aspcud.  If not, see <http://www.gnu.org/licenses/>.
-//
+// Copyright 2017 Roland Kaminski
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+// IN THE SOFTWARE.
+
+// }}}
 
 //////////////////// Preamble ///////////////////////// {{{1
 
@@ -43,6 +46,57 @@
 #include <sys/stat.h>
 #include <cudf/version.h>
 
+#define ASPCUD_MIN_CHUNK 64
+ssize_t aspcud_getline (char **lineptr, size_t *n, FILE *stream) {
+    assert (lineptr && n && stream);
+
+    if (!*lineptr) {
+        *n = ASPCUD_MIN_CHUNK;
+        *lineptr = (char*)malloc(*n);
+        if (!*lineptr) {
+            errno = ENOMEM;
+            return -1;
+        }
+    }
+
+    ssize_t m;
+    char *p = *lineptr;
+    for (m = *n; ; --m) {
+        int c = getc(stream);
+        int old_errno = errno;
+
+        if (m < 2) {
+            *n = *n >= ASPCUD_MIN_CHUNK ? *n * 2 : ASPCUD_MIN_CHUNK;
+
+            *lineptr = (char*)realloc(*lineptr, *n);
+            if (!*lineptr) {
+                errno = ENOMEM;
+                return -1;
+            }
+            m = *n + *lineptr - p;
+            p = *n - m + *lineptr;
+        }
+
+        if (ferror(stream)) {
+            errno = old_errno;
+            return -1;
+        }
+
+        if (c == EOF) {
+            if (p == *lineptr) { return -1; }
+            break;
+        }
+
+        *p++ = c;
+
+        if (c == '\n') { break; }
+    }
+
+    *p = '\0';
+
+    return p - *lineptr;
+}
+
 //////////////////// Windows ////////////////////////// {{{1
 
 #ifdef __WIN32__
@@ -53,74 +107,10 @@ int mkstemp(char *template) {
     return fd;
 }
 
-// for the getline function:
-// Copyright (C) 1993 Free Software Foundation, Inc.
-// Written by Jan Brittenson, bson@gnu.ai.mit.edu.
-#define MIN_CHUNK 64
-ssize_t getline (char **lineptr, size_t *n, FILE *stream) {
-    if (!lineptr || !n || !stream) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    if (!*lineptr) {
-        *n = MIN_CHUNK;
-        *lineptr = malloc (*n);
-        if (!*lineptr) {
-            errno = ENOMEM;
-            return -1;
-        }
-    }
-
-    ssize_t nchars_avail = *n;
-    char *read_pos = *lineptr;
-
-    for (;;) {
-        int save_errno;
-        int c = getc (stream);
-
-        save_errno = errno;
-
-        assert((*lineptr + *n) == (read_pos + nchars_avail));
-        if (nchars_avail < 2) {
-            if (*n > MIN_CHUNK) { *n *= 2; }
-            else { *n += MIN_CHUNK; }
-
-            nchars_avail = *n + *lineptr - read_pos;
-            *lineptr = realloc (*lineptr, *n);
-            if (!*lineptr) {
-                errno = ENOMEM;
-                return -1;
-            }
-            read_pos = *n - nchars_avail + *lineptr;
-            assert((*lineptr + *n) == (read_pos + nchars_avail));
-        }
-
-        if (ferror (stream)) {
-            errno = save_errno;
-            return -1;
-        }
-
-        if (c == EOF) {
-            if (read_pos == *lineptr) { return -1; }
-            else { break; }
-        }
-
-        *read_pos++ = c;
-        nchars_avail--;
-
-        if (c == '\n') { break; }
-    }
-
-    *read_pos = '\0';
-
-    return read_pos - *lineptr;
-}
-
 // See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
 static void aspcud_reserve(int len, char **cmdline, int *offset, int *length) {
     if (!cmdline) {
-        *length  = MIN_CHUNK;
+        *length  = ASPCUD_MIN_CHUNK;
         *cmdline = malloc(*length);
         if (!*cmdline) {
             fprintf(stderr, "error: out of memory\n");
@@ -128,7 +118,7 @@ static void aspcud_reserve(int len, char **cmdline, int *offset, int *length) {
         }
     }
     if (*offset + len >= *length) {
-        *length = MIN_CHUNK + *length + len;
+        *length = ASPCUD_MIN_CHUNK + *length + len;
         *cmdline = realloc(*cmdline, *length);
         if (!*cmdline) {
             fprintf(stderr, "error: out of memory\n");
@@ -163,7 +153,7 @@ static void aspcud_append_quoted(char *arg, char **cmdline, int *offset, int *le
                 for (; slashes > 0; --i) { aspcud_append_char('\\', cmdline, offset, length); }
                 if (*it == '\"') { aspcud_append_char('\\', cmdline, offset, length); }
                 else             { break; }
-            } 
+            }
             aspcud_append_char(*it, cmdline, offset, length);
         }
         aspcud_append_char('\"', cmdline, offset, length);
@@ -279,7 +269,7 @@ char *aspcud_expand_path(char *path, char *module_path) {
         else {
             module_path = dirname(strdup(module_path));
         }
-        char *buf = malloc(sizeof(char)*(strlen(module_path) + strlen(path+strlen(prefix))+2));
+        char *buf = (char *)malloc(sizeof(char)*(strlen(module_path) + strlen(path+strlen(prefix))+2));
         strcpy(buf, module_path);
         *(buf + strlen(module_path)) = '/';
         strcpy(buf + strlen(module_path) + 1, path+strlen(prefix));
@@ -316,7 +306,7 @@ void aspcud_set_tmpdir() {
 #else
     char *tmpdir = getenv("TMPDIR");
     if (!tmpdir) { tmpdir = P_tmpdir; }
-    aspcud_tmpdir = malloc((sizeof(char))*(strlen(tmpdir)+2));
+    aspcud_tmpdir = (char*)malloc((sizeof(char))*(strlen(tmpdir)+2));
     if (!aspcud_tmpdir) {
         fprintf(stderr, "error: out of memory\n");
         exit(1);
@@ -355,7 +345,7 @@ int aspcud_exec(char **args, char *out_path, char *err_path) {
         }
         fprintf(stderr, "\n");
     }
-    // file descriptors returned by open are inheritable 
+    // file descriptors returned by open are inheritable
     // http://msdn.microsoft.com/en-us/library/z0kc8e3z.aspx
     mode_t mode = S_IRUSR | S_IWUSR;
     int out_fd = open(out_path, O_WRONLY | O_CREAT | O_TRUNC, mode);
@@ -368,7 +358,7 @@ int aspcud_exec(char **args, char *out_path, char *err_path) {
         fprintf(stderr, "error: could not open %s (%s)\n", err_path, strerror(errno));
         exit(1);
     }
-    
+
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 
@@ -416,7 +406,7 @@ int aspcud_ismain() {
 }
 
 void aspcud_interrupt(int signal) {
-    if (aspcud_current_pid > 0) { 
+    if (aspcud_current_pid > 0) {
         kill(aspcud_current_pid, signal);
         aspcud_interrupted_pid = aspcud_current_pid;
     }
@@ -479,7 +469,7 @@ int aspcud_exec(char **args, char *out_path, char *err_path) {
         }
         else { break; }
     }
-    return WIFEXITED(status) ? WEXITSTATUS(status) : 1; 
+    return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
 }
 #endif
 
@@ -555,16 +545,16 @@ void aspcud_ecat(char *name) {
 }
 
 void aspcud_print_usage(char *name) {
-	printf(
+    printf(
         "Usage: %s [OPTION]... CUDFIN CUDFOUT [CRITERIA]\n"
         "Solves a package configuration problem given in CUDF format.\n"
         "\n"
         "Options:\n"
-    	"  -h     : print this help\n"
-    	"  -v     : print version/license information\n"
-	    "  -c OPT : append clasp option OPT\n"
+        "  -h     : print this help\n"
+        "  -v     : print version/license information\n"
+        "  -c OPT : append clasp option OPT\n"
         "  -e ENC : append encoding ENC\n"
-	    "  -p OPT : append cudf2lp option OPT\n"
+        "  -p OPT : append cudf2lp option OPT\n"
         "  -s SOL : path to solver (clasp)\n"
         "  -g GRD : path to grounder (gringo)\n"
         "  -l PRE : path to cudf preprocessor (cudf2lp)\n"
@@ -579,7 +569,7 @@ void aspcud_print_usage(char *name) {
     for (arg = aspcud_clasp_args_default; *arg; ++arg) {
         printf("  %s\n", *arg);
     }
-	printf(
+    printf(
         "\n"
         "Default paths (overwrite with -e, -s, -g, -l, -t):\n"
         "  encoding : %s\n"
@@ -595,10 +585,8 @@ void aspcud_print_usage(char *name) {
 void aspcud_print_version() {
     printf(
         "aspcud version " CUDF_VERSION "\n"
-        "Copyright (C) Roland Kaminski\n"
-        "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n"
-        "aspcud is free software: you are free to change and redistribute it.\n"
-        "There is NO WARRANTY, to the extent permitted by law.\n");
+        "\n"
+        "License: The MIT License <https://opensource.org/licenses/MIT>\n");
 }
 
 void aspcud_checkarg(int i, int argc, char *argv[]) {
@@ -782,12 +770,12 @@ int main(int argc, char *argv[]) {
     char   *solution = NULL;
     ssize_t read;
     int     next = 0;
-    while ((read = getline(&line, &line_length, fclasp_out)) != -1) {
+    while ((read = aspcud_getline(&line, &line_length, fclasp_out)) != -1) {
         if (read > 0 && line[read-1] == '\n') {
             line[read-1] = '\0';
         }
         printf("%.80s\n", line);
-        if (next == 1) { 
+        if (next == 1) {
             char *tmp = solution;
             solution  = line;
             line      = tmp;
@@ -796,7 +784,7 @@ int main(int argc, char *argv[]) {
             solution_length   = line_length;
             line_length       = tmp_length;
         }
-        else if (strncmp("Answer:", line, 7) == 0) { 
+        else if (strncmp("Answer:", line, 7) == 0) {
             next = 1;
         }
     }
@@ -834,7 +822,7 @@ int main(int argc, char *argv[]) {
             solution = paren;
         }
     }
-    else { 
+    else {
         if (fprintf(faspcud_out, "FAIL\n") < 0) {
             fprintf(stderr, "error: could not write to %s (%s)\n", aspcud_out, strerror(errno));
             exit(1);
