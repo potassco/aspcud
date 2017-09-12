@@ -1,4 +1,4 @@
-.TH cudf2lp 1 "March 25, 2015"  "Version 1.9.1" "USER COMMANDS"
+.TH cudf2lp 1 "September 12, 2017"  "Version 1.9.3" "USER COMMANDS"
 .SH NAME
 cudf2lp \- a preprocessor for CUDF documents
 
@@ -31,10 +31,10 @@ set the verbosity level to \fIN\fR or the maximum if omitted
 preprocess for specific optimization criteria (defaults to none):
   \fICRITS\fR: none | paranoid | trendy | \fICRIT\fR\\(','\fICRIT\fR\\)*
   \fICRIT\fR : \fISIGN\fR count(\fISET\fR) | 
-       | \fIsign\fR sum(\fISET\fR,\fIATTR\fR) 
-       | \fIsign\fR unsat_recommends(\fISET\fR)
-       | \fIsign\fR aligned(\fISET\fR,\fIATTR\fR,\fIATTR\fR) 
-       | \fIsign\fR notuptodate(\fISET\fR)
+       | \fISIGN\fR sum(\fISET\fR,\fIATTR\fR) 
+       | \fISIGN\fR unsat_recommends(\fISET\fR)
+       | \fISIGN\fR aligned(\fISET\fR,\fIATTR\fR,\fIATTR\fR) 
+       | \fISIGN\fR notuptodate(\fISET\fR)
   \fISIGN\fR : '+' | '-'
   \fIATTR\fR : CUDF attribute name
   \fISET\fR  : solution | changed | new | removed | up | down
