@@ -112,7 +112,7 @@ struct Package : public Entity {
     typedef Cudf::Package::Keep Keep;
     typedef std::map<uint32_t, int32_t> IntPropMap;
     typedef std::map<uint32_t, uint32_t> StringPropMap;
-    enum Relevant { 
+    enum Relevant {
         RELEVANT_NONE = 0,       // reason set is empty
         RELEVANT_SELF = 1,       // reason set is the current package itself
         RELEVANT_EQUAL = 2,      // reason set includes all packages with the same name as the current package
@@ -138,7 +138,7 @@ struct Package : public Entity {
     Keep          keep;
     IntPropMap    intProps;
     StringPropMap stringProps;
-    // inferred attributes 
+    // inferred attributes
     bool optInstalled;
     bool optGtMaxInstalled;
     bool optLtMinInstalled;
@@ -213,7 +213,7 @@ public:
     typedef boost::unordered_map<uint32_t, EntityList>  EntityMap;
     typedef std::vector<Request>                        RequestList;
     typedef boost::unordered_map<PackageList, uint32_t> ClauseMap;
-    friend class Package;
+    friend struct Package;
 private:
     typedef boost::ptr_vector<Package>    PackageSet;
     typedef boost::unordered_set<Feature> FeatureSet;

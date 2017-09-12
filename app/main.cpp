@@ -21,160 +21,144 @@
 
 //////////////////// Preamble /////////////////////////////////// {{{1
 
+#include <cstdlib>
 #include <iostream>
 #include <cudf/version.h>
 #include <cudf/parser.h>
 #include <cudf/critparser.h>
-#include <program_opts/app_options.h>
-#include <program_opts/value.h>
 #include <stdexcept>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/foreach.hpp>
+#include <boost/program_options.hpp>
+
 #define foreach BOOST_FOREACH
 
 #define CUDF_EXECUTABLE "cudf2lp"
 #define CUDF_USAGE "[options] [file]"
 
-//////////////////// CudfOptions //////////////////////////////// {{{1
+//////////////////// Parse Criteria ///////////////////////// {{{1
 
-class CudfOptions : public AppOptions {
-public:
-    CudfOptions();
-
-private:
-    virtual void initOptions(ProgramOptions::OptionGroup& root, ProgramOptions::OptionGroup& hidden);
-    virtual void addDefaults(std::string& defaults);
-    virtual bool validateOptions(ProgramOptions::OptionValues&, Messages&);
-
-public:
-    Criteria::CritVec crits;
-    bool              addAll;
-};
-
-//////////////////// CritParser ///////////////////////////////// {{{1
-
-namespace ProgramOptions {
-    template <>
-    bool parseValue(const std::string& s, Criteria::CritVec& crits, int) {
-        std::string lower = toLower(s);
-        if (lower == "paranoid") {
-            crits.push_back(Criterion());
-            crits.back().optimize = false;
-            crits.back().measurement = Criterion::COUNT;
-            crits.back().selector = Criterion::REMOVED;
-            crits.push_back(Criterion());
-            crits.back().optimize = false;
-            crits.back().measurement = Criterion::COUNT;
-            crits.back().selector = Criterion::CHANGED;
-        }
-        else if (lower == "trendy") {
-            crits.push_back(Criterion());
-            crits.back().optimize = false;
-            crits.back().measurement = Criterion::COUNT;
-            crits.back().selector = Criterion::REMOVED;
-            crits.push_back(Criterion());
-            crits.back().optimize = false;
-            crits.back().measurement = Criterion::NOTUPTODATE;
-            crits.back().selector = Criterion::SOLUTION;
-            crits.push_back(Criterion());
-            crits.back().optimize = false;
-            crits.back().measurement = Criterion::UNSAT_RECOMMENDS;
-            crits.back().selector = Criterion::SOLUTION;
-            crits.push_back(Criterion());
-            crits.back().optimize = false;
-            crits.back().measurement = Criterion::COUNT;
-            crits.back().selector = Criterion::NEW;
-        }
-        else if (lower == "none") { }
-        else {
-            CritParser p(crits);
-            std::istringstream iss(s);
-            return p.parse(iss);
-        }
-        return true;
+void validate(boost::any &result, std::vector<std::string> const &values, Criteria::CritVec *, int) {
+    namespace po = boost::program_options;
+    po::validators::check_first_occurrence(result);
+    result = boost::any(Criteria::CritVec{});
+    auto &criteria = boost::any_cast<Criteria::CritVec&>(result);
+    auto value = boost::algorithm::to_lower_copy(po::validators::get_single_string(values));
+    if (value == "paranoid") {
+        criteria.push_back(Criterion());
+        criteria.back().optimize = false;
+        criteria.back().measurement = Criterion::COUNT;
+        criteria.back().selector = Criterion::REMOVED;
+        criteria.push_back(Criterion());
+        criteria.back().optimize = false;
+        criteria.back().measurement = Criterion::COUNT;
+        criteria.back().selector = Criterion::CHANGED;
     }
-}
-
-//////////////////// CudfOptions (impl) ///////////////////////// {{{1
-
-CudfOptions::CudfOptions()
-    : addAll(false) { }
-
-void CudfOptions::addDefaults(std::string& defaults) {
-    defaults += "--criteria=none\n";
-}
-
-void CudfOptions::initOptions(ProgramOptions::OptionGroup& root, ProgramOptions::OptionGroup&) {
-    using namespace ProgramOptions;
-    OptionGroup prepro("Preprocessing Options");
-    prepro.addOptions()
-        ("criteria,c", storeTo(crits),
-            "Preprocess for specific optimization criteria\n"
-            "      Default: none\n"
-            "      Valid:   none, paranoid, trendy, -|+<crit>\\(,-|+<crit>\\)*\n"
-            "        <crit>: count(<set>) | sum(<set>,<attr>) | unsat_recommends(<set>)\n"
-            "              | aligned(<set>,<attr>,<attr>) | notuptodate(<set>)\n"
-            "        <attr>: CUDF attribute name\n"
-            "        <set> : solution | changed | new | removed | up | down\n"
-            "              | installrequest | upgraderequest | request\n"
-            "      For backwards compatibility: \n"
-            "        new              = count(new)\n"
-            "        removed          = count(removed)\n"
-            "        changed          = count(changed)\n"
-            "        notuptodate      = notuptodate(solution)\n"
-            "        unsat_recommends = unsat_recommends(solution)\n"
-            "        sum(name)        = sum(name,solution)\n")
-        ("addall", bool_switch(&addAll),
-            "Disable preprocessing and add all packages\n");
-
-    root.addOptions(prepro);
-}
-
-bool CudfOptions::validateOptions(ProgramOptions::OptionValues&, Messages&msg) {
-    if (generic.input.size() > 1) {
-        msg.error = "at most one file may be given";
-        return false;
+    else if (value == "trendy") {
+        criteria.push_back(Criterion());
+        criteria.back().optimize = false;
+        criteria.back().measurement = Criterion::COUNT;
+        criteria.back().selector = Criterion::REMOVED;
+        criteria.push_back(Criterion());
+        criteria.back().optimize = false;
+        criteria.back().measurement = Criterion::NOTUPTODATE;
+        criteria.back().selector = Criterion::SOLUTION;
+        criteria.push_back(Criterion());
+        criteria.back().optimize = false;
+        criteria.back().measurement = Criterion::UNSAT_RECOMMENDS;
+        criteria.back().selector = Criterion::SOLUTION;
+        criteria.push_back(Criterion());
+        criteria.back().optimize = false;
+        criteria.back().measurement = Criterion::COUNT;
+        criteria.back().selector = Criterion::NEW;
     }
-    return true;
-}
-
-bool parsePositional(const std::string&, std::string& out) {
-    out = "file";
-    return true;
+    else if (value == "none") { }
+    else {
+        CritParser p(criteria);
+        std::istringstream iss(value);
+        if (!p.parse(iss)) {
+            throw po::validation_error(po::validation_error::invalid_option_value);
+            // error
+        }
+    }
 }
 
 //////////////////// main /////////////////////////////////////// {{{1
 
+void printUsage(boost::program_options::options_description &options) {
+    std::cout << "Usage: " << CUDF_EXECUTABLE << " " << CUDF_USAGE << "\n";
+    std::cout << options << std::endl;
+}
+
+void printVersion() {
+    std::cout << CUDF_EXECUTABLE << " version " << CUDF_VERSION << "\n\n";
+    std::cout << "License: The MIT License <https://opensource.org/licenses/MIT>" << std::endl;
+}
+
 int main(int argc, char *argv[]) {
     try {
-        CudfOptions opts;
-        if (!opts.parse(argc, argv, parsePositional)) { throw std::runtime_error( opts.messages.error.c_str() ); }
-        if (opts.generic.help) {
-            std::cout
-                << CUDF_EXECUTABLE << " version " << CUDF_VERSION << "\n\n"
-                << "Usage: " << CUDF_EXECUTABLE << " " << CUDF_USAGE << "\n"
-                << opts.getHelp() << "\n"
-                << "Usage: " << CUDF_EXECUTABLE << " " << CUDF_USAGE << "\n\n"
-                << "Default commandline: \n"
-                << "  " << CUDF_EXECUTABLE << " " << opts.getDefaults() << std::endl;
+        Criteria::CritVec criteria;
+        namespace po = boost::program_options;
+        po::positional_options_description positional_options;
+        positional_options.add("file", 1);
+        po::options_description preprocessing_options("Preprocessing Options");
+        preprocessing_options.add_options()
+            ("criteria,c", po::value<Criteria::CritVec>(&criteria),
+                "Preprocess for specific optimization criteria\n"
+                "  Default: none\n"
+                "  Valid:   none, paranoid, trendy, <list>\n"
+                "    <list>: <sign><crit>\\(,<sign><crit>\\)*\n"
+                "    <sign>: + | -\n"
+                "    <crit>: count(<set>) | sum(<set>,<attr>)\n"
+                "          | unsat_recommends(<set>)\n"
+                "          | aligned(<set>,<attr>,<attr>)\n"
+                "          | notuptodate(<set>)\n"
+                "    <attr>: CUDF attribute name\n"
+                "    <set> : solution | changed | new | removed | up\n"
+                "          | down | installrequest | upgraderequest\n"
+                "          | request\n"
+                "  For backwards compatibility: \n"
+                "    new              = count(new)\n"
+                "    removed          = count(removed)\n"
+                "    changed          = count(changed)\n"
+                "    notuptodate      = notuptodate(solution)\n"
+                "    unsat_recommends = unsat_recommends(solution)\n"
+                "    sum(name)        = sum(name,solution)\n")
+            ("addall", "Disable preprocessing and add all packages");
+        po::options_description basic_options("Basic Options");
+        basic_options.add_options()
+            ("help,h", "Print help information and exit")
+            ("version,v", "Print version information and exit")
+            ("verbose,V", po::value<unsigned>()->default_value(0));
+        po::options_description hidden_options;
+        hidden_options.add_options()
+            ("file,f", po::value<std::string>(), "input file");
+
+        po::options_description cmdline_options, all_options;
+        cmdline_options.add(preprocessing_options).add(basic_options);
+        all_options.add(cmdline_options).add(hidden_options);
+
+        po::variables_map options;
+        po::store(po::command_line_parser(argc, argv).options(all_options).positional(positional_options).run(), options);
+        po::notify(options);
+
+        if (options.count("help")) {
+            printUsage(cmdline_options);
             return EXIT_SUCCESS;
         }
-        if (opts.generic.version) {
-            std::cout
-                << CUDF_EXECUTABLE << " " << CUDF_VERSION << "\n\n"
-                << "Copyright (C) Roland Kaminski" << "\n"
-                << "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n"
-                << "Gringo is free software: you are free to change and redistribute it.\n"
-                << "There is NO WARRANTY, to the extent permitted by law." << std::endl;
+        if (options.count("version")) {
+            printVersion();
             return EXIT_SUCCESS;
         }
-        Dependency d(opts.crits, opts.addAll, opts.generic.verbose > 0);
+
+        Dependency d(criteria, options.count("addall"), options["verbose"].as<unsigned>());
         Parser p(d);
-        if (opts.generic.input.empty() || opts.generic.input.front() == "-") { p.parse(std::cin); }
+        std::string file = options.count("file") ? options["file"].as<std::string>() : "-";
+        if (file == "-") { p.parse(std::cin); }
         else {
-            std::ifstream in(opts.generic.input.front().c_str());
+            std::ifstream in(file.c_str());
             p.parse(in);
         }
         d.closure();
@@ -183,7 +167,7 @@ int main(int argc, char *argv[]) {
         return EXIT_SUCCESS;
     }
     catch(const std::exception& e) {
-        std::cerr << "\nERROR: " << e.what() << std::endl;
+        std::cerr << "ERROR: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 }

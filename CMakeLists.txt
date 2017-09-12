@@ -8,6 +8,10 @@ endif()
 
 project(aspcud)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 include(cmake/re2c.cmake)
 include(cmake/lemon.cmake)
 include(GNUInstallDirs)
@@ -33,12 +37,11 @@ IF(EXISTS "${CMAKE_SOURCE_DIR}/libboost/")
 ELSE()
 	set(Boost_USE_MULTITHREADED OFF CACHE STRING "Whether to Use multi-threaded boost libraries")
 	find_package(Boost REQUIRED)
-	#find_package(Boost COMPONENTS filesystem system)
+	find_package(Boost COMPONENTS program_options)
 	include_directories(${Boost_INCLUDE_DIRS})
 ENDIF()
 
 add_subdirectory(libcudf)
-add_subdirectory(libprogram_opts)
 add_subdirectory(app)
 
 install(FILES "${CMAKE_SOURCE_DIR}/share/aspcud/misc2012.lp" "${CMAKE_SOURCE_DIR}/share/aspcud/specification.lp" DESTINATION "${CMAKE_INSTALL_DATADIR}/aspcud")
