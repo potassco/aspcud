@@ -87,9 +87,30 @@ void validate(boost::any &result, std::vector<std::string> const &values, Criter
 
 //////////////////// main /////////////////////////////////////// {{{1
 
-void printUsage(boost::program_options::options_description &options) {
+void printOptions(char const *caption, boost::program_options::options_description &options) {
+    std::cout << "\n" << caption << ":\n";
+    for (auto &option : options.options()) {
+        std::cout << "  " << option->format_name();
+        auto param = option->format_parameter();
+        if (!param.empty()) { std::cout << " " << param; }
+        std::cout << "\n";
+        auto &desc = option->description();
+        auto it = desc.begin(), ie = desc.end();
+        while (it != ie) {
+            auto jt = std::find(it, ie, '\n');
+            std::cout << "    ";
+            std::copy(it, jt, std::ostreambuf_iterator<char>(std::cout));
+            std::cout << "\n";
+            it = jt;
+            if (it != ie) { ++it; }
+        }
+    }
+}
+
+void printUsage(boost::program_options::options_description &a, boost::program_options::options_description &b) {
     std::cout << "Usage: " << CUDF_EXECUTABLE << " " << CUDF_USAGE << "\n";
-    std::cout << options << std::endl;
+    printOptions("Preprocessing Options", a);
+    printOptions("Basic Options", b);
 }
 
 void printVersion() {
@@ -98,17 +119,16 @@ void printVersion() {
 }
 
 int main(int argc, char *argv[]) {
+    namespace po = boost::program_options;
     try {
         Criteria::CritVec criteria;
-        namespace po = boost::program_options;
         po::positional_options_description positional_options;
         positional_options.add("file", 1);
         po::options_description preprocessing_options("Preprocessing Options");
         preprocessing_options.add_options()
-            ("criteria,c", po::value<Criteria::CritVec>(&criteria),
+            ("criteria,c", po::value<Criteria::CritVec>(&criteria)->default_value({}, "none"),
                 "Preprocess for specific optimization criteria\n"
-                "  Default: none\n"
-                "  Valid:   none, paranoid, trendy, <list>\n"
+                "  Accepted values: none, paranoid, trendy, <list>\n"
                 "    <list>: <sign><crit>\\(,<sign><crit>\\)*\n"
                 "    <sign>: + | -\n"
                 "    <crit>: count(<set>) | sum(<set>,<attr>)\n"
@@ -131,7 +151,7 @@ int main(int argc, char *argv[]) {
         basic_options.add_options()
             ("help,h", "Print help information and exit")
             ("version,v", "Print version information and exit")
-            ("verbose,V", po::value<unsigned>()->default_value(0));
+            ("verbose,V", po::value<unsigned>()->default_value(0), "Set verbosity level");
         po::options_description hidden_options;
         hidden_options.add_options()
             ("file,f", po::value<std::string>(), "input file");
@@ -145,7 +165,7 @@ int main(int argc, char *argv[]) {
         po::notify(options);
 
         if (options.count("help")) {
-            printUsage(cmdline_options);
+            printUsage(preprocessing_options, basic_options);
             return EXIT_SUCCESS;
         }
         if (options.count("version")) {
@@ -165,6 +185,11 @@ int main(int argc, char *argv[]) {
         d.conflicts();
         d.dumpAsFacts(std::cout);
         return EXIT_SUCCESS;
+    }
+    catch (po::error const &e) {
+        std::cerr << "ERROR: " << e.what() << "\n";
+        std::cerr << "INFO : " << "try '--help' for usage information" << std::endl;
+        return EXIT_FAILURE;
     }
     catch(const std::exception& e) {
         std::cerr << "ERROR: " << e.what() << std::endl;
