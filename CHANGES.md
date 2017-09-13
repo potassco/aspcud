@@ -3,6 +3,9 @@
 ## aspcud 1.9.3
   * switch to MIT license
   * switch to boost program options
+  * update cmake files to require version 3.1
+  * lemon and re2c files can be generated now
+    (this make both optional for builds of releases)
   * move to github
 ## aspcud 1.9.2
   * removed obsolete unclasp related code and information
