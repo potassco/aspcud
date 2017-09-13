@@ -1,2 +1,5 @@
 build
 *.swp
+tests/problem.cudf
+tests/solution.opt
+tests/solution.cudf

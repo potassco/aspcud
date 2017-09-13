@@ -44,7 +44,7 @@
 #   include <mach-o/dyld.h>
 #endif
 #include <sys/stat.h>
-#include <cudf/version.h>
+#include <cudf/version.hh>
 
 #define ASPCUD_MIN_CHUNK 64
 ssize_t aspcud_getline (char **lineptr, size_t *n, FILE *stream) {

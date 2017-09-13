@@ -25,38 +25,38 @@
 
 #pragma once
 
-#include <iostream>
-#include <cudf/parser.h>
+#include <cudf/lexer_impl.hh>
+#include <cudf/dependency.hh>
 
-//////////////////// Helpers //////////////////////////////////// {{{1
+//////////////////// Parser //////////////////////////////////// {{{1
 
-struct TestDep {
-    TestDep(Criteria::CritVec crits, std::string const &in)
-        : crits(crits)
-        , dep(this->crits, false, false)
-        , parser(dep) {
-        std::stringstream sin;
-        sin.str(in);
-        parser.parse(sin);
-        dep.closure();
-    }
-    bool contains(std::string const &name, unsigned version) {
-        return dep.test_contains(name, version);
-    }
-    Criteria::CritVec crits;
-    Dependency dep;
-    Parser parser;
+class CritParser : public LexerImpl {
+public:
+    union Token {
+        bool               maximize;
+        std::string const *string;
+    };
+    using LexerImpl::string;
+
+public:
+    CritParser(Criteria::CritVec &crits);
+    int lex();
+    std::string errorToken();
+    void syntaxError();
+    void parseError();
+    bool parse(std::istream &sin);
+    std::string const &string(std::string const &x);
+    Criterion &pushCrit(Criterion::Measurement m, Criterion::Selector s, std::string const *a1 = 0, std::string const *a2 = 0);
+    ~CritParser();
+
+private:
+    typedef std::set<std::string> StringSet;
+
+    StringSet          strings_;
+    Criteria::CritVec &crits_;
+    Token              token_;
+    void              *parser_;
+    std::string        errorStr_;
+    bool               error_;
 };
-
-inline Criteria::CritVec createCrits(bool maximize, Criterion::Measurement m, Criterion::Selector f, char const *attr1 = 0, char const *attr2 = 0) {
-    Criteria::CritVec crits;
-    crits.push_back(Criterion());
-    crits.back().optimize    = maximize;
-    crits.back().measurement = m;
-    crits.back().selector    = f;
-    if (attr1) { crits.back().attr1 = attr1; }
-    if (attr2) { crits.back().attr2 = attr2; }
-    return crits;
-}
-
 

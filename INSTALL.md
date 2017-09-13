@@ -40,13 +40,13 @@ By default aspcud uses some hard-coded paths for binaries/encodings.  These can
 be overwritten using the following cmake variables (this are *not* environment
 variables and thus have to be set using cmakes `-D` option):
 
-- `CUDF2LP_LOC`: The path to the cudf2lp binary.
+- `ASPCUD_CUDF2LP_PATH`: The path to the cudf2lp binary.
   (Default: `CMAKE_INSTALL_PREFIX/bin/cudf2lp`)
-- `GRINGO_LOC`: The path to the gringo binary.
+- `ASPCUD_GRINGO_PATH`: The path to the gringo binary.
   (Default: `CMAKE_INSTALL_PREFIX/bin/gringo`)
-- `CLASP_LOC`: The path to the clasp binary.
+- `ASPCUD_CLASP_PATH`: The path to the clasp binary.
   (Default: `CMAKE_INSTALL_PREFIX/bin/clasp`)
-- `ENCODING_LOC`: The path to the default encoding.
+- `ASPCUD_ENCODING_PATH`: The path to the default encoding.
   (Default: `CMAKE_INSTALL_PREFIX/share/aspcud/misc2012.lp`)
 
 Furthermore, you can use the string "`<module_path>`" as prefix of any of the

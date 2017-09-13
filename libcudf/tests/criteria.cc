@@ -24,7 +24,7 @@
 //////////////////// Preamble /////////////////////////////////// {{{1
 
 #include <boost/test/unit_test.hpp>
-#include <test/helpers.h>
+#include "helpers.hh"
 
 //////////////////// Minimizing Selectors /////////////////////// {{{1
 

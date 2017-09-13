@@ -23,9 +23,9 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <cudf/version.h>
-#include <cudf/parser.h>
-#include <cudf/critparser.h>
+#include <cudf/version.hh>
+#include <cudf/parser.hh>
+#include <cudf/critparser.hh>
 #include <stdexcept>
 #include <fstream>
 #include <boost/algorithm/string.hpp>

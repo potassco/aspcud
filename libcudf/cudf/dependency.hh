@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <cudf/packages.h>
+#include <cudf/packages.hh>
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/random_access_index.hpp>

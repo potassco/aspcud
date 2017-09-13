@@ -42,7 +42,6 @@ flags = [
 '-Wno-variadic-macros',
 '-Wno-#pragma-messages',
 '-fexceptions',
-'-DNDEBUG',
 '-std=c++14',
 '-stdlib=libc++',
 '-xc++',
@@ -50,14 +49,11 @@ flags = [
 '-Ilibprogram_opts',
 '-Ilibcudf',
 '-Ilibcudf/src',
-'-Ilibcudf/test',
+'-Ilibcudf/tests',
 '-Ibuild/debug/libcudf/src',
 '-I{home}/local/opt/libcxx/include'.format(home=os.path.expanduser("~")),
 '-I{home}/local/opt/libcxx/include/c++/v1'.format(home=os.path.expanduser("~")),
 '-I/home/wv/bin/linux/64/gcc-4.9/include/c++/v1',
-'-DWITH_PYTHON',
-'-DWITH_LUA',
-'-DWITH_THREADS=1'
 ]
 
 

@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include <cudf/lexer_impl.h>
+#include <cudf/lexer_impl.hh>
 #include <utility>
 #include <vector>
 #include <stack>
 #include <map>
-#include <cudf/dependency.h>
+#include <cudf/dependency.hh>
 #include <boost/lexical_cast.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/foreach.hpp>

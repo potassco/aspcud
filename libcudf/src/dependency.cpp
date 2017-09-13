@@ -23,7 +23,7 @@
 // }}}
 //////////////////// Preamble ///////////////////////// {{{1
 
-#include <cudf/dependency.h>
+#include <cudf/dependency.hh>
 #include <boost/lambda/lambda.hpp>
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH

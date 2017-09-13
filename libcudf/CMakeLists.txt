@@ -1,30 +1,55 @@
-file(GLOB_RECURSE LIBCUDF_SRC    RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.cpp *.h)
-file(GLOB_RECURSE LIBCUDF_LEXER  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.r2c)
 file(GLOB_RECURSE LIBCUDF_PARSER RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.y)
-file(GLOB_RECURSE TEST_SRC       RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/*.cpp test/*.h)
 
+# [[[header: cudf
+set(ide_header_group "Header Files")
+set(header-group-cudf
+    "${CMAKE_CURRENT_SOURCE_DIR}/cudf/critparser.hh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cudf/dependency.hh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cudf/lexer_impl.hh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cudf/packages.hh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cudf/parser.hh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cudf/version.hh")
+source_group("${ide_header_group}\\cudf" FILES ${header-group-cudf})
+set(header
+    ${header-group-cudf})
+# ]]]
+# [[[source: src
+re2c_target_or_gen("/src/critlexer.xh")
+lemon_target(NAME "critparser_impl" INPUT "src/critparser_impl.y" OUTPUT ${CMAKE_CURRENT_BINARY_DIR})
+re2c_target_or_gen("/src/lexer.xh")
+lemon_target(NAME "parser_impl" INPUT "src/parser_impl.y" OUTPUT ${CMAKE_CURRENT_BINARY_DIR})
+set(ide_source_group "Source Files")
+set(source-group
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/critlexer.xh"
+    ${RE2C_critlexer_OUTPUT}
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/critparser.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/dependency.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/lexer.xh"
+    ${RE2C_lexer_OUTPUT}
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/packages.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser.cc")
+source_group("${ide_source_group}" FILES ${source-group})
+set(source-group-critparser_impl
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/critparser_impl.y"
+    ${LEMON_critparser_impl_OUTPUTS})
+source_group("${ide_source_group}\\critparser_impl" FILES ${source-group-critparser_impl})
+set(source-group-parser_impl
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser_impl.y"
+    ${LEMON_parser_impl_OUTPUTS})
+source_group("${ide_source_group}\\parser_impl" FILES ${source-group-parser_impl})
+set(source
+    ${source-group}
+    ${source-group-critparser_impl}
+    ${source-group-parser_impl})
+# ]]]
 
-include_directories(src .)
+add_library(libcudf STATIC ${header} ${source})
+target_include_directories(libcudf
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+    PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/src>")
+target_link_libraries(libcudf PRIVATE Boost::boost)
+set_target_properties(libcudf PROPERTIES OUTPUT_NAME cudf FOLDER lib)
 
-RE2C(LIBCUDF_SRC ${LIBCUDF_LEXER})
-LEMON(LIBCUDF_SRC ${LIBCUDF_PARSER})
-
-add_library(cudf-lib STATIC ${LIBCUDF_SRC})
-
-target_link_libraries(cudf-lib)
-set_target_properties(cudf-lib PROPERTIES OUTPUT_NAME cudf)
-
-find_package(Boost COMPONENTS unit_test_framework)
-
-if(Boost_UNIT_TEST_FRAMEWORK_FOUND)
-    if("${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}" MATCHES ".*\\.((so)|(dll)|(dynlib))$")
-            add_definitions("-DBOOST_TEST_DYN_LINK")
-    endif()
-
-    add_executable(test-app EXCLUDE_FROM_ALL ${TEST_SRC})
-	target_link_libraries(test-app cudf-lib ${Boost_LIBRARIES})
-    set_target_properties(test-app PROPERTIES OUTPUT_NAME test)
-    
-    add_custom_target(test COMMAND test-app DEPENDS test-app)
+if (ASPCUD_BUILD_TESTS)
+    add_subdirectory(tests)
 endif()
-

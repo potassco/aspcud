@@ -24,7 +24,7 @@
 //////////////////// Preamble /////////////////////////////////// {{{1
 
 #include <boost/test/unit_test.hpp>
-#include <cudf/critparser.h>
+#include <cudf/critparser.hh>
 
 //////////////////// Test CritParser //////////////////////////// {{{1
 

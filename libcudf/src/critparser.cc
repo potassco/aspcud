@@ -23,7 +23,7 @@
 // }}}
 //////////////////// Preamble ////////////////////////// {{{1
 
-#include <cudf/critparser.h>
+#include <cudf/critparser.hh>
 #include <stdexcept>
 #include "critparser_impl.h"
 #include <cassert>
@@ -38,45 +38,6 @@ CritParser::CritParser(Criteria::CritVec &crits)
     : crits_(crits)
     , parser_(critparserAlloc(malloc))
     , error_(false) { }
-
-/*!re2c
-    ADD  = "+";
-    SUB  = "-";
-    ATTR = [a-z][a-z0-9\-]*;
-    EOF  = [\000];
-    ANY  = [\001-\377];
-*/
-
-int CritParser::lex() {
-    for(;;) {
-        start();
-        /*!re2c
-            EOF                { return 0; }
-            ","                { return PARSER_COMMA; }
-            "-"                { token_.maximize = false; return PARSER_SIGN; }
-            "+"                { token_.maximize = true;  return PARSER_SIGN; }
-            "("                { return PARSER_LPAREN; }
-            ")"                { return PARSER_RPAREN; }
-            "solution"         { return PARSER_SOLUTION; }
-            "changed"          { return PARSER_CHANGED; }
-            "new"              { return PARSER_NEW; }
-            "removed"          { return PARSER_REMOVED; }
-            "up"               { return PARSER_UP; }
-            "down"             { return PARSER_DOWN; }
-            "installrequest"   { return PARSER_INSTALLREQUEST; }
-            "upgraderequest"   { return PARSER_UPGRADEREQUEST; }
-            "request"          { return PARSER_REQUEST; }
-            "count"            { return PARSER_COUNT; }
-            "sum"              { return PARSER_SUM; }
-            "notuptodate"      { return PARSER_NOTUPTODATE; }
-            "unsat_recommends" { return PARSER_UNSAT_RECOMMENDS; }
-            "aligned"          { return PARSER_ALIGNED; }
-            ATTR               { token_.string = &string(string()); return PARSER_ATTR; }
-            ANY                { syntaxError(); return 0; }
-        */
-    }
-    return 0;
-}
 
 void CritParser::parseError() {
     error_ = true;
@@ -122,3 +83,4 @@ CritParser::~CritParser() {
     critparserFree(parser_, free);
 }
 
+#include "critlexer.hh"

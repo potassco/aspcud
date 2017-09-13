@@ -27,7 +27,7 @@
 
 #include <cassert>
 #include "parser_impl.h"
-#include "cudf/parser.h"
+#include "cudf/parser.hh"
 
 }
 
