@@ -75,7 +75,7 @@ ssize_t aspcud_getline (char **lineptr, size_t *n, FILE *stream) {
         int old_errno = errno;
 
         if (m < 2) {
-            *n = *n > ASPCUD_MIN_CHUNK ? *n * 2 : n + ASPCUD_MIN_CHUNK;
+            *n = *n > ASPCUD_MIN_CHUNK ? *n * 2 : *n + ASPCUD_MIN_CHUNK;
 
             m = *n + *lineptr - p;
             *lineptr = (char*)realloc(*lineptr, *n);
