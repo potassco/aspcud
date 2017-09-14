@@ -33,7 +33,6 @@
 #include <cudf/dependency.hh>
 #include <boost/lexical_cast.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
-#include <boost/foreach.hpp>
 
 //////////////////// Parser //////////////////////////////////// {{{1
 
@@ -147,7 +146,7 @@ public:
 
     void addPreamble() {
         propMap_.clear();
-        BOOST_FOREACH (Criterion &crit, dep_.criteria.criteria) {
+        for (Criterion &crit : dep_.criteria.criteria) {
             switch (crit.measurement) {
                 case Criterion::SUM: {
                     _checkCrit(crit.attrUid1, crit.attr1, false);
@@ -183,7 +182,7 @@ public:
         else                          { throw std::runtime_error("invalid keep value"); }
 
         if (!dep_.addAll()) {
-            BOOST_FOREACH (uint32_t name, dep_.criteria.optProps) {
+            for  (uint32_t name : dep_.criteria.optProps) {
                 TypeMap::iterator it = typeMap_.find(name);
                 if (it != typeMap_.end()) {
                     if (it->second.intType()) {
@@ -200,7 +199,7 @@ public:
             }
         }
         else {
-            BOOST_FOREACH (TypeMap::value_type &val, typeMap_) {
+            for  (TypeMap::value_type &val : typeMap_) {
                 if (val.second.intType()) {
                     int32_t value;
                     getProp(val.first, value);

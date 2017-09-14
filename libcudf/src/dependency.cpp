@@ -24,9 +24,6 @@
 //////////////////// Preamble ///////////////////////// {{{1
 
 #include <cudf/dependency.hh>
-#include <boost/lambda/lambda.hpp>
-#include <boost/foreach.hpp>
-#define foreach BOOST_FOREACH
 #include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/sort.hpp>
@@ -41,7 +38,8 @@
 namespace {
     template <class T>
     void sort_uniq_ptr(T &t) {
-        t.resize(boost::range::unique(boost::range::sort(t, *boost::lambda::_1 < *boost::lambda::_2), *boost::lambda::_1 == *boost::lambda::_2).size());
+	using U = typename T::value_type;
+        t.resize(boost::range::unique(boost::range::sort(t, [](U a, U b){ return *a < *b; }), [](U a, U b){ return *a == *b; }).size());
     }
 
     template <class T>
@@ -70,21 +68,21 @@ namespace {
 #define refRange(map, ref) ( map[ref.name] | boost::adaptors::filtered(CudfPackageRefFilter(ref)) )
 
     void unroll(Dependency::EntityMap &map, const Cudf::PkgList &clause, EntityList &list) {
-        foreach (const Cudf::PackageRef &ref, clause) {
+        for (const Cudf::PackageRef &ref : clause) {
             boost::range::push_back(list, refRange(map, ref));
         }
         sort_uniq_ptr(list);
     }
 
     void unroll(Dependency::EntityMap &map, const Cudf::PkgFormula &formula, EntityFormula &list) {
-        foreach (const Cudf::PkgList &clause, formula) {
+        for (const Cudf::PkgList &clause : formula) {
             list.push_back(EntityList());
             unroll(map, clause, list.back());
         }
     }
 
     void unroll(Dependency::EntityMap &map, const Cudf::PkgList &formula, Dependency::RequestList &requests) {
-        foreach (const Cudf::PackageRef &clause, formula) {
+        for (const Cudf::PackageRef &clause : formula) {
             requests.push_back(Request(clause.name));
             boost::range::push_back(requests.back().requests, refRange(map, clause));
             sort_uniq_ptr(requests.back().requests);
@@ -210,8 +208,8 @@ unsigned Package::relevant(Criterion &crit) {
 void Package::doAdd(Dependency *dep) {
     if (!dep->addAll()) {
         if (!remove_) {
-            foreach (EntityList &clause, depends) {
-                foreach (Entity *ent, clause) {
+            for (EntityList &clause : depends) {
+                for (Entity *ent : clause) {
                     if (!ent->remove_) { ent->add(dep); }
                 }
             }
@@ -241,7 +239,7 @@ void Package::dumpAttrs(Dependency *dep, std::ostream &out) {
     // additional attributes
     bool recom = false;
     std::set<uint32_t> attr;
-    foreach (Criterion &crit, dep->criteria.criteria) {
+    for (Criterion &crit : dep->criteria.criteria) {
         switch (crit.measurement) {
             case Criterion::UNSAT_RECOMMENDS: {
                 if (dep->addAll() || satisfies(crit.selector)) { recom = true; }
@@ -267,18 +265,18 @@ void Package::dumpAttrs(Dependency *dep, std::ostream &out) {
     if (recom) {
         typedef std::map<uint32_t, uint32_t> OccurMap;
         OccurMap occur;
-        foreach (EntityList &clause, recommends) {
+        for (EntityList &clause : recommends) {
             PackageList pkgClause;
-            foreach (Entity *ent, clause) { ent->addToClause(pkgClause); }
+            for (Entity *ent : clause) { ent->addToClause(pkgClause); }
             uint32_t condition = dep->addClause(pkgClause, out);
             occur[condition]++;
         }
-        foreach (OccurMap::value_type val, occur) {
+        for (OccurMap::value_type val : occur) {
             out << "recommends(\"" << dep->string(name) << "\"," << version << "," << val.first << "," << val.second << ").\n";
         }
     }
     // attributes(VP,K,V)
-    foreach (uint32_t uid, attr) {
+    for (uint32_t uid : attr) {
         out << "attribute(\"" << dep->string(name) << "\"," << version << ",\"" << dep->string(uid) << "\",";
         IntPropMap::const_iterator it = intProps.find(uid);
         if (it != intProps.end()) { out << it->second; }
@@ -297,16 +295,16 @@ void Package::dumpAsFacts(Dependency *dep, std::ostream &out) {
     if (!remove_) {
         // satisfies(VP,D)
         // depends(VP,D)
-        foreach (EntityList &clause, depends) {
+        for (EntityList &clause : depends) {
             PackageList pkgClause;
-            foreach (Entity *ent, clause) { ent->addToClause(pkgClause); }
+            for (Entity *ent : clause) { ent->addToClause(pkgClause); }
             uint32_t condition = dep->addClause(pkgClause, out);
             out << "depends(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
         }
         // conflicts(VP, D)
         if (!conflicts.empty()) {
             PackageList pkgClause;
-            foreach (Entity *ent, conflicts) { ent->addToClause(pkgClause, this); }
+            for (Entity *ent : conflicts) { ent->addToClause(pkgClause, this); }
             uint32_t condition = dep->addClause(pkgClause, out);
             out << "conflict(\"" << dep->string(name) << "\"," << version << "," << condition << ").\n";
         }
@@ -320,7 +318,7 @@ void Package::addToClause(PackageList &clause, Package *self) {
 void Package::addConflictEdges(ConflictGraph &g) {
     if (!remove_) {
         PackageList clause;
-        foreach (Entity *ent, conflicts) {
+        for (Entity *ent : conflicts) {
             ent->addToClause(clause, this);
         }
         g.addEdges(this, clause);
@@ -333,11 +331,11 @@ Feature::Feature(const Cudf::PackageRef &ftr)
     : Entity(ftr.name, ftr.version == 0 ? std::numeric_limits<int32_t>::max() : ftr.version, false) { }
 
 void Feature::doRemove(Dependency *dep) {
-    foreach (Package *pkg, providedBy) { pkg->remove(dep); }
+    for (Package *pkg : providedBy) { pkg->remove(dep); }
 }
 
 void Feature::doAdd(Dependency *dep) {
-    foreach (Package *pkg, providedBy) { pkg->add(dep); }
+    for (Package *pkg : providedBy) { pkg->add(dep); }
 }
 
 void Feature::dumpAsFacts(Dependency *, std::ostream &) { }
@@ -351,7 +349,7 @@ size_t hash_value(const Feature &ftr) {
 
 void Feature::addToClause(PackageList &clause, Package *self) {
     if (!remove_) {
-        foreach (Package *pkg, providedBy) {
+        for (Package *pkg : providedBy) {
             pkg->addToClause(clause, self);
         }
     }
@@ -367,7 +365,7 @@ Request::Request(uint32_t name)
     : name(name) { }
 
 void Request::add(Dependency *dep) {
-    foreach (Entity *ent, requests) {
+    for (Entity *ent : requests) {
         if (!ent->remove_) { ent->add(dep); }
     }
 }
@@ -378,7 +376,7 @@ Criteria::Criteria() { }
 
 void Criteria::init(Dependency *dep, CritVec &vec) {
     std::swap(criteria, vec);
-    foreach (Criterion &crit, criteria) {
+    for (Criterion &crit : criteria) {
         if (!crit.attr1.empty()) {
             crit.attrUid1 = dep->index(crit.attr1);
             optProps.push_back(crit.attrUid1);
@@ -419,13 +417,13 @@ void ConflictGraph::addEdges(Package *a, PackageList const &neighbors) {
 
 void ConflictGraph::init(bool verbose) {
     Edges copy = edges_;
-    foreach (Edges::value_type &out, copy) {
-        foreach (Package *pkg, out.second) {
+    for (Edges::value_type &out : copy) {
+        for (Package *pkg : out.second) {
             edges_[pkg].push_back(out.first);
             edgeSet_.insert(std::make_pair(std::min(pkg, out.first),std::max(pkg, out.first)));
         }
     }
-    foreach (Edges::value_type &out, edges_) {
+    for (Edges::value_type &out : edges_) {
         out.second.resize(boost::range::unique(boost::range::sort(out.second, PkgCmp())).size());
     }
     components_(verbose);
@@ -434,14 +432,14 @@ void ConflictGraph::init(bool verbose) {
 
 void ConflictGraph::components_(bool verbose) {
     uint32_t min = 0, max = 0, sum = 0;
-    foreach (Edges::value_type &out, edges_) {
+    for (Edges::value_type &out : edges_) {
         if (!out.first->dfsVisited) {
             components.push_back(PackageList());
             PackageList &component = components.back();
             out.first->dfsVisited = true;
             component.push_back(out.first);
             for (PackageList::size_type i = 0; i < component.size(); ++i) {
-                foreach (Package *pkg, edges_[component[i]]) {
+                for (Package *pkg : edges_[component[i]]) {
                     if (!pkg->dfsVisited) {
                         pkg->dfsVisited = true;
                         component.push_back(pkg);
@@ -466,7 +464,7 @@ void ConflictGraph::components_(bool verbose) {
 
 void ConflictGraph::cliques_(bool verbose) {
     uint32_t min = 0, max = 0, sum = 0;
-    foreach (PackageList &component, components) {
+    for (PackageList &component : components) {
         if (component.size() == 2) {
             cliques.push_back(component);
             sum += 2;
@@ -480,9 +478,9 @@ void ConflictGraph::cliques_(bool verbose) {
             do {
                 cliques.push_back(PackageList());
                 PackageList &clique = cliques.back();
-                foreach (Package *pkg, candidates) {
+                for (Package *pkg : candidates) {
                     bool extendsClique = true;
-                    foreach (Package *member, clique) {
+                    for (Package *member : clique) {
                         extendsClique = edgeSet_.find(std::make_pair(std::min(pkg, member),std::max(pkg, member))) != edgeSet_.end();
                         if (!extendsClique) { break; }
                     }
@@ -513,8 +511,8 @@ void ConflictGraph::cliques_(bool verbose) {
 
 void ConflictGraph::dump(Dependency *dep, std::ostream &out) {
     uint32_t index = 0;
-    foreach (PackageList &clique, cliques) {
-        foreach (Package *pkg, clique) {
+    for (PackageList &clique : cliques) {
+        for (Package *pkg : clique) {
             out << "clique(" << index << ",\"" << dep->string(pkg->name) << "\"," << pkg->version << ").\n";
         }
         ++index;
@@ -544,11 +542,11 @@ const std::string &Dependency::string(uint32_t index) {
 
 void Dependency::init(const Cudf::Document &doc) {
     // first pass: add packages and features
-    foreach (const Cudf::Package &cudfPkg, doc.packages) {
+    for  (const Cudf::Package &cudfPkg : doc.packages) {
         packages_.push_back(new Package(cudfPkg));
         Package *pkg = &packages_.back();
         entityMap_[pkg->name].push_back(pkg);
-        foreach (const Cudf::PackageRef &provided, cudfPkg.provides) {
+        for  (const Cudf::PackageRef &provided : cudfPkg.provides) {
             // NOTE: version might be zero here, which is than mapped to the maximum integer value
             std::pair<FeatureSet::iterator, bool> res = features_.insert(Feature(provided));
             Feature *ftr = const_cast<Feature*>(&*res.first);
@@ -561,7 +559,7 @@ void Dependency::init(const Cudf::Document &doc) {
     }
     // second pass: roll out dependencies
     PackageSet::iterator current = packages_.begin();
-    foreach (const Cudf::Package &cudfPkg, doc.packages) {
+    for  (const Cudf::Package &cudfPkg : doc.packages) {
         Package *pkg = &*current++;
         unroll(entityMap_, cudfPkg.conflicts, pkg->conflicts);
         unroll(entityMap_, cudfPkg.depends, pkg->depends);
@@ -577,7 +575,7 @@ void Dependency::add(Entity *ent) {
 }
 
 bool Dependency::test_contains(std::string const &name, int32_t version) {
-    foreach (Entity *ent, closure_) {
+    for  (Entity *ent : closure_) {
         Package *pkg = dynamic_cast<Package*>(ent);
         if (pkg && string(pkg->name) == name && pkg->version == version) { return true; }
     }
@@ -585,28 +583,28 @@ bool Dependency::test_contains(std::string const &name, int32_t version) {
 }
 
 void Dependency::rewriteRequests() {
-    foreach (Entity *ent, remove_) { ent->remove(this); }
-    foreach (Request &request, upgrade_) {
-        foreach (Entity *ent, request.requests) { ent->visited = true; }
+    for  (Entity *ent : remove_) { ent->remove(this); }
+    for  (Request &request : upgrade_) {
+        for  (Entity *ent : request.requests) { ent->visited = true; }
         int32_t removeVersion = 0;
-        foreach (Entity *ent, entityMap_[request.name]) {
+        for  (Entity *ent : entityMap_[request.name]) {
             // if some version is installed then a >= version must be installed
             if (ent->installed && removeVersion < ent->version) { removeVersion = ent->version; }
         }
-        foreach (Entity *ent, entityMap_[request.name]) {
+        for  (Entity *ent : entityMap_[request.name]) {
             // no unrequested or smaller version may be installed
             if (!ent->visited || (removeVersion != 0 && (ent->version < removeVersion || ent->allVersions()))) {
                 ent->remove(this);
             }
         }
-        foreach (Entity *ent, request.requests) { ent->visited = false; }
+        for  (Entity *ent : request.requests) { ent->visited = false; }
     }
     // rewrite keep flags into installs
-    foreach (Package &pkg, packages_) {
+    for  (Package &pkg : packages_) {
         if (pkg.installed) {
             switch(pkg.keep) {
                 case Cudf::Package::FEATURE: {
-                    foreach (Feature *ftr, pkg.provides) {
+                    for  (Feature *ftr : pkg.provides) {
                         install_.push_back(Request(ftr->name));
                         install_.back().requests.push_back(ftr);
                     }
@@ -619,7 +617,7 @@ void Dependency::rewriteRequests() {
                 }
                 case Cudf::Package::PACKAGE: {
                     install_.push_back(Request(pkg.name));
-                    foreach (Entity *ent, entityMap_[pkg.name]) {
+                    for  (Entity *ent : entityMap_[pkg.name]) {
                         if (dynamic_cast<Package*>(ent)) {
                             install_.back().requests.push_back(ent);
                         }
@@ -633,27 +631,27 @@ void Dependency::rewriteRequests() {
 }
 
 void Dependency::initClosure() {
-    foreach (Request &request, upgrade_) {
+    for  (Request &request : upgrade_) {
         request.add(this);
-        foreach (Entity *ent, request.requests) {
+        for  (Entity *ent : request.requests) {
             Package *pkg = dynamic_cast<Package*>(ent);
             if (pkg) { pkg->optInUpgrade = true; }
         }
     }
-    foreach (Request &request, install_) {
+    for  (Request &request : install_) {
         request.add(this);
-        foreach (Entity *ent, request.requests) {
+        for  (Entity *ent : request.requests) {
             Package *pkg = dynamic_cast<Package*>(ent);
             if (pkg) { pkg->optInInstall = true; }
         }
     }
     // intialize opt... members to make satisfies calls constant time
-    foreach (EntityList &list, entityMap_ | boost::adaptors::map_values) {
+    for  (EntityList &list : entityMap_ | boost::adaptors::map_values) {
         bool installed        = false;
         Package *max          = 0;
         Package *minInstalled = 0;
         Package *maxInstalled = 0;
-        foreach (Entity *ent, list) {
+        for  (Entity *ent : list) {
             Package *pkg = dynamic_cast<Package*>(ent);
             if (pkg) {
                 if (!max || max->version < pkg->version) { max = pkg; }
@@ -664,14 +662,14 @@ void Dependency::initClosure() {
                 }
             }
         }
-        foreach (Entity *ent, list) {
+        for  (Entity *ent : list) {
             Package *pkg = dynamic_cast<Package*>(ent);
             if (pkg) {
                 pkg->optMaxVersion     = pkg == max;
                 pkg->optInstalled      = installed;
                 pkg->optLtMinInstalled = minInstalled && pkg->version < minInstalled->version;
                 pkg->optGtMaxInstalled = maxInstalled && pkg->version > maxInstalled->version;
-                foreach (Criterion &crit, criteria.criteria) {
+                for  (Criterion &crit : criteria.criteria) {
                     if (crit.measurement == Criterion::ALIGNED) {
                         // NOTE: a pair<uint32_t,bool> as value would be sufficient
                         crit.optAligned[pkg->getProp(crit.attrUid1)].insert(pkg->getProp(crit.attrUid2));
@@ -680,9 +678,9 @@ void Dependency::initClosure() {
             }
         }
     }
-    foreach (EntityList &list, entityMap_ | boost::adaptors::map_values) {
-        foreach (Entity *ent, list) {
-            foreach (Criterion &crit, criteria.criteria) {
+    for  (EntityList &list : entityMap_ | boost::adaptors::map_values) {
+        for  (Entity *ent : list) {
+            for  (Criterion &crit : criteria.criteria) {
                 Package *pkg = dynamic_cast<Package*>(ent);
                 if (pkg) {
                     unsigned rel = pkg->relevant(crit);
@@ -690,14 +688,14 @@ void Dependency::initClosure() {
                         pkg->add(this);
                     }
                     if (rel & Package::RELEVANT_RECOMMENDED) {
-                        foreach (EntityList &clause, pkg->recommends) {
-                            foreach (Entity *ent, clause) {
+                        for  (EntityList &clause : pkg->recommends) {
+                            for  (Entity *ent : clause) {
                                 if (!ent->remove_) { ent->add(this); }
                             }
                         }
                     }
                     if (rel & Package::RELEVANT_EQUAL) {
-                        foreach (Entity *other, entityMap_[pkg->name]) {
+                        for  (Entity *other : entityMap_[pkg->name]) {
                             if (!other->remove_) { other->add(this); }
                         }
                     }
@@ -710,16 +708,16 @@ void Dependency::initClosure() {
 void Dependency::closure() {
     rewriteRequests();
     if (addAll_) {
-        foreach (EntityList &list, entityMap_ | boost::adaptors::map_values) {
+        for  (EntityList &list : entityMap_ | boost::adaptors::map_values) {
             Package *max = 0;
-            foreach (Entity *ent, list) {
+            for  (Entity *ent : list) {
                 ent->add(this);
                 Package *pkg = dynamic_cast<Package*>(ent);
                 if (pkg) {
                     if (!max || max->version < pkg->version) { max = pkg; }
                 }
             }
-            foreach (Entity *ent, list) {
+            for  (Entity *ent : list) {
                 Package *pkg = dynamic_cast<Package*>(ent);
                 if (pkg) {
                     pkg->optMaxVersion = pkg == max;
@@ -742,7 +740,7 @@ uint32_t Dependency::addClause(PackageList &clause, std::ostream &out) {
     std::pair<ClauseMap::iterator,bool> res = clauses_.insert(ClauseMap::value_type(clause, 0));
     if (res.second) {
         res.first->second = clauses_.size();
-        foreach (Package *pkg, clause) {
+        for  (Package *pkg : clause) {
             out << "satisfies(\"" << string(pkg->name) << "\"," << pkg->version << "," << res.first->second << ").\n";
         }
     }
@@ -754,7 +752,7 @@ bool Dependency::addAll() const {
 }
 
 void Dependency::conflicts() {
-    foreach (Entity *ent, closure_) {
+    for  (Entity *ent : closure_) {
         ent->addConflictEdges(conflictGraph_);
     }
     conflictGraph_.init(verbose_);
@@ -763,16 +761,16 @@ void Dependency::conflicts() {
 void Dependency::dumpAsFacts(std::ostream &out) {
     bool installrequest = false;
     bool upgraderequest = false;
-    foreach (Criterion &crit, criteria.criteria) {
+    for  (Criterion &crit : criteria.criteria) {
         if (crit.selector == Criterion::INSTALLREQUEST || crit.selector == Criterion::REQUEST) { installrequest = true; }
         if (crit.selector == Criterion::UPGRADEREQUEST || crit.selector == Criterion::REQUEST) { upgraderequest = true; }
     }
-    foreach (Package &pkg, packages_) { pkg.dumpAttrs(this, out); }
-    foreach (Entity *ent, closure_) { ent->dumpAsFacts(this, out); }
+    for  (Package &pkg : packages_) { pkg.dumpAttrs(this, out); }
+    for  (Entity *ent : closure_) { ent->dumpAsFacts(this, out); }
     // requests according to install request
-    foreach (Request &request, install_) {
+    for  (Request &request : install_) {
         PackageList pkgClause;
-        foreach (Entity *ent, request.requests) {
+        for  (Entity *ent : request.requests) {
             ent->addToClause(pkgClause);
             Package *pkg = dynamic_cast<Package*>(ent);
             if (installrequest && pkg) {
@@ -783,9 +781,9 @@ void Dependency::dumpAsFacts(std::ostream &out) {
         out << "request(" << condition << ").\n";
     }
     // requests/conflicts according to upgrade request
-    foreach (Request &request, upgrade_) {
+    for  (Request &request : upgrade_) {
         PackageList pkgClause;
-        foreach (Entity *ent, request.requests) {
+        for  (Entity *ent : request.requests) {
             ent->addToClause(pkgClause);
             Package *pkg = dynamic_cast<Package*>(ent);
             if (upgraderequest && pkg) {
@@ -795,9 +793,9 @@ void Dependency::dumpAsFacts(std::ostream &out) {
         uint32_t condition = addClause(pkgClause, out);
         out << "request(" << condition << ").\n";
         // foreach requested package there has to be at most one version
-        foreach (Entity *ent, request.requests) {
+        for  (Entity *ent : request.requests) {
             PackageList pkgClause;
-            foreach (Entity *other, entityMap_[request.name]) {
+            for  (Entity *other : entityMap_[request.name]) {
                 assert(ent->name == other->name);
                 // the entity conflicts with all other versions
                 if (ent->version != other->version || ent->allVersions())
@@ -809,7 +807,7 @@ void Dependency::dumpAsFacts(std::ostream &out) {
             PackageList pkgReason;
             ent->addToClause(pkgReason);
             sort_uniq_ptr(pkgReason);
-            foreach (Package *pkg, pkgReason) {
+            for  (Package *pkg : pkgReason) {
                 out << "conflict(\"" << string(pkg->name) << "\"," << pkg->version << "," << condition << ").\n";
             }
         }
@@ -817,7 +815,7 @@ void Dependency::dumpAsFacts(std::ostream &out) {
     conflictGraph_.dump(this, out);
     // criteria
     int priotity = criteria.criteria.size();
-    foreach (Criterion &crit, criteria.criteria) {
+    for  (Criterion &crit : criteria.criteria) {
         out << "criterion(" << (crit.optimize ? "maximize" : "minimize") << ",";
         switch (crit.selector) {
             case Criterion::SOLUTION:       { out << "solution"; break;  }
