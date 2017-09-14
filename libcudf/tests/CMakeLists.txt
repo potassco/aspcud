@@ -13,8 +13,9 @@ set(source
 # ]]]
 
 add_executable(test_libcudf ${header} ${source})
-target_link_libraries(test_libcudf PRIVATE libcudf Boost::unit_test_framework)
-if("${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}" MATCHES ".*\\.((so)|(dll)|(dynlib)|(dll\\.a))$")
+target_link_libraries(test_libcudf PRIVATE libcudf Boost::boost Boost::unit_test_framework Boost::disable_autolinking)
+if(NOT ASPCUD_BUILD_STATIC)
+    target_link_libraries(test_libcudf PRIVATE Boost::dynamic_linking)
     target_compile_definitions(test_libcudf PRIVATE BOOST_TEST_DYN_LINK)
 endif()
 
