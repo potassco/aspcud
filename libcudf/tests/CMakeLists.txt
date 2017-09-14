@@ -14,7 +14,7 @@ set(source
 
 add_executable(test_libcudf ${header} ${source})
 target_link_libraries(test_libcudf PRIVATE libcudf Boost::unit_test_framework)
-if("${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}" MATCHES ".*\\.((so)|(dll)|(dynlib))$")
+if("${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}" MATCHES ".*\\.((so)|(dll)|(dynlib)|(dll\\.a))$")
     target_compile_definitions(test_libcudf PRIVATE BOOST_TEST_DYN_LINK)
 endif()
 

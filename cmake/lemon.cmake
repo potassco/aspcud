@@ -39,15 +39,15 @@ macro(LEMON_TARGET)
         endif()
         add_custom_command(
             OUTPUT "${bin_path}/lempar.c"
-            COMMAND cmake -E make_directory "${bin_path}"
-            COMMAND cmake -E ${copy_or_link} "${CMAKE_SOURCE_DIR}/lemon/lempar.c" "${bin_path}/lempar.c"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${bin_path}"
+            COMMAND ${CMAKE_COMMAND}  -E ${copy_or_link} "${CMAKE_SOURCE_DIR}/lemon/lempar.c" "${bin_path}/lempar.c"
             MAIN_DEPENDENCY "${CMAKE_SOURCE_DIR}/lemon/lempar.c"
         )
         add_custom_command(
             OUTPUT "${bin_path}/${basename}.cc" "${bin_path}/${basename}.h"
-            COMMAND cmake -E ${copy_or_link} "${input}" "${basename}.y"
+            COMMAND ${CMAKE_COMMAND}  -E ${copy_or_link} "${input}" "${basename}.y"
             COMMAND lemon -q "${basename}.y"
-            COMMAND cmake -E ${copy_or_link} "${basename}.c" "${basename}.cc"
+            COMMAND ${CMAKE_COMMAND}  -E ${copy_or_link} "${basename}.c" "${basename}.cc"
             MAIN_DEPENDENCY "${PARSED_ARGS_INPUT}"
             DEPENDS lemon "${bin_path}/lempar.c"
             WORKING_DIRECTORY "${bin_path}"

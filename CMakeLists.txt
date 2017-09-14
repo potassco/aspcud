@@ -19,16 +19,18 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(ASPCUD_BUILD_STATIC "link aspcud statically" OFF)
 option(ASPCUD_BUILD_TESTS "build tests" ON)
 
-set(ASPCUD_ENCODING_PATH "" CACHE STRING "optional to overwrite default path to the encoding")
-set(ASPCUD_CUDF2LP_PATH  "" CACHE STRING "optional to overwrite default path to cudf2lp")
-set(ASPCUD_GRINGO_PATH   "" CACHE STRING "optional to overwrite default path to gringo")
-set(ASPCUD_CLASP_PATH    "" CACHE STRING "optional to overwrite default path to clasp")
+set(ASPCUD_ENCODING_PATH     "" CACHE STRING "optional to overwrite default path to the encoding")
+set(ASPCUD_CUDF2LP_PATH      "" CACHE STRING "optional to overwrite default path to cudf2lp")
+set(ASPCUD_GRINGO_PATH       "" CACHE STRING "optional to overwrite default path to gringo")
+set(ASPCUD_CLASP_PATH        "" CACHE STRING "optional to overwrite default path to clasp")
+set(ASPCUD_EXTRA_DEFINITIONS "" CACHE STRING "pass extra definitions to cmake (for the boost mess)")
 
 mark_as_advanced(ASPCUD_BUILD_STATIC)
 mark_as_advanced(ASPCUD_ENCODING_PATH)
 mark_as_advanced(ASPCUD_CUDF2LP_PATH)
 mark_as_advanced(ASPCUD_GRINGO_PATH)
 mark_as_advanced(ASPCUD_CLASP_PATH)
+mark_as_advanced(ASPCUD_EXTRA_DEFINITIONS)
 
 if (NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -63,6 +65,7 @@ endif()
 
 find_package(RE2C)
 find_package(Boost COMPONENTS ${boost_components} REQUIRED)
+add_definitions(${ASPCUD_EXTRA_DEFINITIONS})
 
 enable_testing()
 

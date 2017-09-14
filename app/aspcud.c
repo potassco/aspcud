@@ -24,7 +24,9 @@
 
 //////////////////// Preamble ///////////////////////// {{{1
 
-#include <unistd.h>
+#ifndef _MSC_VER
+#   include <unistd.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -32,10 +34,16 @@
 #include <string.h>
 #include <signal.h>
 #include <assert.h>
-#ifdef __WIN32__
+#ifdef _WIN32
 #   define NOMINMAX
 #   define WIN32_LEAN_AND_MEAN
 #   include <windows.h>
+#   ifdef _MSC_VER
+#       include <io.h>
+typedef _W64 SSIZE_T ssize_t;
+typedef int mode_t;
+#       define open _open
+#   endif
 #else
 #   include <sys/wait.h>
 #   include <libgen.h>
@@ -47,6 +55,7 @@
 #include <cudf/version.hh>
 
 #define ASPCUD_MIN_CHUNK 64
+
 ssize_t aspcud_getline (char **lineptr, size_t *n, FILE *stream) {
     assert (lineptr && n && stream);
 
@@ -99,7 +108,7 @@ ssize_t aspcud_getline (char **lineptr, size_t *n, FILE *stream) {
 
 //////////////////// Windows ////////////////////////// {{{1
 
-#ifdef __WIN32__
+#ifdef _WIN32
 
 int mkstemp(char *template) {
     template = _mktemp(template);
@@ -186,7 +195,7 @@ char *aspcud_clasp_bin   = ASPCUD_CLASP_BIN;
 char *aspcud_expand_path(char *path, char *module_path) {
     char const *prefix = "<module_path>";
     if (strncmp(path, prefix, strlen(prefix)) == 0) {
-#ifdef __WIN32__
+#ifdef _WIN32
         char buf1[MAX_PATH+1];
         size_t length = GetModuleFileName(0, buf1, MAX_PATH+1);
         if (!length || length >= MAX_PATH) {
@@ -287,7 +296,7 @@ char *aspcud_clasp_args_default[] = {
 int aspcud_debug = 0;
 
 void aspcud_set_tmpdir() {
-#ifdef __WIN32__
+#ifdef _WIN32
     unsigned length = GetTempPath(0, 0);
     if (!length) {
         fprintf(stderr, "error: could not get TEMP\n");
@@ -315,7 +324,7 @@ void aspcud_set_tmpdir() {
 #endif
 }
 
-#ifdef __WIN32__
+#ifdef _WIN32
 
 volatile int aspcud_interrupted               = 0;
 volatile unsigned long aspcud_current_pid     = 0;
@@ -347,7 +356,7 @@ int aspcud_exec(char **args, char *out_path, char *err_path) {
     }
     // file descriptors returned by open are inheritable
     // http://msdn.microsoft.com/en-us/library/z0kc8e3z.aspx
-    mode_t mode = S_IRUSR | S_IWUSR;
+    mode_t mode = _S_IREAD | _S_IWRITE;
     int out_fd = open(out_path, O_WRONLY | O_CREAT | O_TRUNC, mode);
     if (out_fd == -1) {
         fprintf(stderr, "error: could not open %s (%s)\n", out_path, strerror(errno));
@@ -601,7 +610,7 @@ void aspcud_checkarg(int i, int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
     signal(SIGTERM, &aspcud_interrupt);
-#ifndef __WIN32__
+#ifndef _WIN32
     signal(SIGUSR1, &aspcud_interrupt);
 #endif
     signal(SIGINT,  &aspcud_interrupt);
