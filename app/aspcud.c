@@ -75,14 +75,14 @@ ssize_t aspcud_getline (char **lineptr, size_t *n, FILE *stream) {
         int old_errno = errno;
 
         if (m < 2) {
-            *n = *n >= ASPCUD_MIN_CHUNK ? *n * 2 : ASPCUD_MIN_CHUNK;
+            *n = *n > ASPCUD_MIN_CHUNK ? *n * 2 : n + ASPCUD_MIN_CHUNK;
 
+            m = *n + *lineptr - p;
             *lineptr = (char*)realloc(*lineptr, *n);
             if (!*lineptr) {
                 errno = ENOMEM;
                 return -1;
             }
-            m = *n + *lineptr - p;
             p = *n - m + *lineptr;
         }
 
@@ -157,11 +157,10 @@ static void aspcud_append_quoted(char *arg, char **cmdline, int *offset, int *le
         for (it = arg; *it; ++it) {
             int slashes = 0;
             for (; *it == '\\'; ++it, ++slashes) { aspcud_append_char('\\', cmdline, offset, length); }
-            if (!*it || *it == '\"') {
-                int i;
-                for (; slashes > 0; --i) { aspcud_append_char('\\', cmdline, offset, length); }
-                if (*it == '\"') { aspcud_append_char('\\', cmdline, offset, length); }
-                else             { break; }
+            if (!*it || *it == '"') {
+                for (; slashes > 0; --slashes) { aspcud_append_char('\\', cmdline, offset, length); }
+                if (*it == '"') { aspcud_append_char('\\', cmdline, offset, length); }
+                else            { break; }
             }
             aspcud_append_char(*it, cmdline, offset, length);
         }
@@ -353,6 +352,7 @@ int aspcud_exec(char **args, char *out_path, char *err_path) {
             fprintf(stderr, " %s", *arg);
         }
         fprintf(stderr, "\n");
+        fflush(stderr);
     }
     // file descriptors returned by open are inheritable
     // http://msdn.microsoft.com/en-us/library/z0kc8e3z.aspx
@@ -437,6 +437,7 @@ int aspcud_exec(char **args, char *out_path, char *err_path) {
                 fprintf(stderr, " %s", *arg);
             }
             fprintf(stderr, "\n");
+            fflush(stderr);
         }
         mode_t mode = S_IRUSR | S_IWUSR;
         int out_fd = open(out_path, O_WRONLY | O_CREAT | O_TRUNC, mode);
@@ -533,6 +534,7 @@ void aspcud_tempfile(char **pname, char *template) {
     int fd = mkstemp(name);
     if (aspcud_debug) {
         fprintf(stderr, "debug: created temporary file %s\n", name);
+        fflush(stderr);
     }
     if (fd == -1) {
         fprintf(stderr, "error: could not create %s (%s)\n", name, strerror(errno));
@@ -773,8 +775,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "error: could not open %s (%s)\n", aspcud_clasp_out, strerror(errno));
         exit(1);
     }
-    size_t  line_length;
-    size_t  solution_length;
+    size_t  line_length = 0;
+    size_t  solution_length = 0;
     char   *line = NULL;
     char   *solution = NULL;
     ssize_t read;
@@ -783,7 +785,7 @@ int main(int argc, char *argv[]) {
         if (read > 0 && line[read-1] == '\n') {
             line[read-1] = '\0';
         }
-        printf("%.80s\n", line);
+        printf("%.80s\n", line); fflush(stdout);
         if (next == 1) {
             char *tmp = solution;
             solution  = line;
