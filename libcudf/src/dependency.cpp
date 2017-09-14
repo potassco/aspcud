@@ -543,16 +543,16 @@ const std::string &Dependency::string(uint32_t index) {
 void Dependency::init(const Cudf::Document &doc) {
     // first pass: add packages and features
     for  (const Cudf::Package &cudfPkg : doc.packages) {
-        packages_.push_back(new Package(cudfPkg));
-        Package *pkg = &packages_.back();
-        entityMap_[pkg->name].push_back(pkg);
+        packages_.emplace_back(std::make_unique<Package>(cudfPkg));
+        auto &pkg = packages_.back();
+        entityMap_[pkg->name].push_back(pkg.get());
         for  (const Cudf::PackageRef &provided : cudfPkg.provides) {
             // NOTE: version might be zero here, which is than mapped to the maximum integer value
             std::pair<FeatureSet::iterator, bool> res = features_.insert(Feature(provided));
             Feature *ftr = const_cast<Feature*>(&*res.first);
             if (pkg->installed) { ftr->installed = true; }
             pkg->provides.push_back(ftr);
-            ftr->providedBy.push_back(pkg);
+            ftr->providedBy.push_back(pkg.get());
             if (res.second) { entityMap_[ftr->name].push_back(ftr); }
         }
         sort_uniq_ptr(pkg->provides);
@@ -560,7 +560,7 @@ void Dependency::init(const Cudf::Document &doc) {
     // second pass: roll out dependencies
     PackageSet::iterator current = packages_.begin();
     for  (const Cudf::Package &cudfPkg : doc.packages) {
-        Package *pkg = &*current++;
+        auto &pkg = *current++;
         unroll(entityMap_, cudfPkg.conflicts, pkg->conflicts);
         unroll(entityMap_, cudfPkg.depends, pkg->depends);
         unroll(entityMap_, cudfPkg.recommends, pkg->recommends);
@@ -600,24 +600,24 @@ void Dependency::rewriteRequests() {
         for  (Entity *ent : request.requests) { ent->visited = false; }
     }
     // rewrite keep flags into installs
-    for  (Package &pkg : packages_) {
-        if (pkg.installed) {
-            switch(pkg.keep) {
+    for  (auto &pkg : packages_) {
+        if (pkg->installed) {
+            switch(pkg->keep) {
                 case Cudf::Package::FEATURE: {
-                    for  (Feature *ftr : pkg.provides) {
+                    for  (Feature *ftr : pkg->provides) {
                         install_.push_back(Request(ftr->name));
                         install_.back().requests.push_back(ftr);
                     }
                     break;
                 }
                 case Cudf::Package::VERSION: {
-                    install_.push_back(Request(pkg.name));
-                    install_.back().requests.push_back(&pkg);
+                    install_.push_back(Request(pkg->name));
+                    install_.back().requests.push_back(pkg.get());
                     break;
                 }
                 case Cudf::Package::PACKAGE: {
-                    install_.push_back(Request(pkg.name));
-                    for  (Entity *ent : entityMap_[pkg.name]) {
+                    install_.push_back(Request(pkg->name));
+                    for  (Entity *ent : entityMap_[pkg->name]) {
                         if (dynamic_cast<Package*>(ent)) {
                             install_.back().requests.push_back(ent);
                         }
@@ -765,7 +765,7 @@ void Dependency::dumpAsFacts(std::ostream &out) {
         if (crit.selector == Criterion::INSTALLREQUEST || crit.selector == Criterion::REQUEST) { installrequest = true; }
         if (crit.selector == Criterion::UPGRADEREQUEST || crit.selector == Criterion::REQUEST) { upgraderequest = true; }
     }
-    for  (Package &pkg : packages_) { pkg.dumpAttrs(this, out); }
+    for  (auto &pkg : packages_) { pkg->dumpAttrs(this, out); }
     for  (Entity *ent : closure_) { ent->dumpAsFacts(this, out); }
     // requests according to install request
     for  (Request &request : install_) {

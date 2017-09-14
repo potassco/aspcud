@@ -32,7 +32,6 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include <iostream>
 #include <map>
 #include <set>
@@ -217,7 +216,7 @@ public:
     typedef boost::unordered_map<PackageList, uint32_t> ClauseMap;
     friend struct Package;
 private:
-    typedef boost::ptr_vector<Package>    PackageSet;
+    typedef std::vector<std::unique_ptr<Package>> PackageSet;
     typedef boost::unordered_set<Feature> FeatureSet;
     typedef boost::multi_index::multi_index_container<
         std::string, boost::multi_index::indexed_by<

@@ -32,7 +32,6 @@
 #include <map>
 #include <cudf/dependency.hh>
 #include <boost/lexical_cast.hpp>
-#include <boost/ptr_container/ptr_map.hpp>
 
 //////////////////// Parser //////////////////////////////////// {{{1
 
@@ -162,7 +161,7 @@ public:
         }
     }
     void addPackage(uint32_t name) {
-        setProperty(packageStr_, (const uint32_t)name);
+        setProperty(packageStr_, (const uint32_t &)name);
         doc_->packages.push_back(Cudf::Package(name));
         Cudf::Package &pkg = doc_->packages.back();
         getProp(versionStr_,    pkg.version);
