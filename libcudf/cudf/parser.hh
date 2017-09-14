@@ -102,16 +102,8 @@ public:
         std::swap(pkgFormula.back(), pkgList);
     }
     template <class T>
-    void setProperty(uint32_t name, T &value) {
-        std::pair<PropMap::iterator, bool> res = propMap_.insert(PropMap::value_type(name, T()));
-        if (!res.second) {
-            throw std::runtime_error("duplicate property");
-        }
-        std::swap(boost::any_cast<T&>(res.first->second), value);
-    }
-    template <class T>
-    void setProperty(uint32_t name, const T &value) {
-        if (!propMap_.insert(PropMap::value_type(name, value)).second) {
+    void setProperty(uint32_t name, T &&value) {
+        if (!propMap_.emplace(name, std::forward<T>(value)).second) {
             throw std::runtime_error("duplicate property");
         }
     }
@@ -161,7 +153,7 @@ public:
         }
     }
     void addPackage(uint32_t name) {
-        setProperty(packageStr_, (const uint32_t &)name);
+        setProperty(packageStr_, name);
         doc_->packages.push_back(Cudf::Package(name));
         Cudf::Package &pkg = doc_->packages.back();
         getProp(versionStr_,    pkg.version);

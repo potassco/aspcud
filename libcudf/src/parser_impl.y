@@ -76,11 +76,11 @@ property ::= parse_type(name) COLONSP FEEDBACK_NAT         nat(val).            
 property ::= parse_type(name) COLONSP FEEDBACK_POSINT      posint(val).         { pParser->setProperty(name.index, pParser->mapInt(val.index)); }
 property ::= parse_type(name) COLONSP FEEDBACK_PKGNAME     pkgname(val).        { pParser->setProperty(name.index, uint32_t(val.index)); }
 property ::= parse_type(name) COLONSP FEEDBACK_TYPEDECL    typedecl(val).       { /* ignore: name, val */ }
-property ::= parse_type(name) COLONSP FEEDBACK_VPKG        vpkg.                { pParser->setProperty(name.index, pParser->pkgRef); }
-property ::= parse_type(name) COLONSP FEEDBACK_VEQPKG      veqpkg.              { pParser->setProperty(name.index, pParser->pkgRef); }
-property ::= parse_type(name) COLONSP FEEDBACK_VPKGFORMULA vpkgformula.         { pParser->setProperty(name.index, pParser->pkgFormula); }
-property ::= parse_type(name) COLONSP FEEDBACK_VPKGLIST    vpkglist.            { pParser->setProperty(name.index, pParser->pkgList); }
-property ::= parse_type(name) COLONSP FEEDBACK_VEQPKGLIST  veqpkglist.          { pParser->setProperty(name.index, pParser->pkgList); }
+property ::= parse_type(name) COLONSP FEEDBACK_VPKG        vpkg.                { pParser->setProperty(name.index, std::move(pParser->pkgRef)); }
+property ::= parse_type(name) COLONSP FEEDBACK_VEQPKG      veqpkg.              { pParser->setProperty(name.index, std::move(pParser->pkgRef)); }
+property ::= parse_type(name) COLONSP FEEDBACK_VPKGFORMULA vpkgformula.         { pParser->setProperty(name.index, std::move(pParser->pkgFormula)); }
+property ::= parse_type(name) COLONSP FEEDBACK_VPKGLIST    vpkglist.            { pParser->setProperty(name.index, std::move(pParser->pkgList)); }
+property ::= parse_type(name) COLONSP FEEDBACK_VEQPKGLIST  veqpkglist.          { pParser->setProperty(name.index, std::move(pParser->pkgList)); }
 property ::= parse_type(name) COLONSP parse_string FEEDBACK_STRING STRING(val). { pParser->setProperty(name.index, uint32_t(val.index)); }
 
 // simple cudf types
