@@ -1,0 +1,39 @@
+sudo: false
+language: c++
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - re2c
+            - libboost-program-options-dev
+            - libboost-test-dev
+            - cmake3
+            - g++-5
+      env:
+        - MY_CC=gcc-5
+        - MY_CXX=g++-5
+    - os: osx
+      osx_image: xcode8.3
+      env:
+        - MY_CC=clang
+        - MY_CXX=clang++
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install re2c; fi
+
+script:
+  - mkdir build &&
+    cd build &&
+    cmake
+      -DCMAKE_VERBOSE_MAKEFILE=True
+      -DCMAKE_C_COMPILER=${MY_CC}
+      -DCMAKE_CXX_COMPILER=${MY_CXX}
+      .. &&
+    make -j3 &&
+    make test CTEST_OUTPUT_ON_FAILURE=True
+
