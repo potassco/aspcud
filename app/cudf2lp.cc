@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
     try {
         std::string file = "-";
         bool addall = false, help = false, version = false;
-        unsigned verbositiy;
+        unsigned verbositiy = 0;
         Criteria::CritVec criteria;
         Options options;
         options.group("Preprocessing Options");
