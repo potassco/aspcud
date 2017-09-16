@@ -59,6 +59,14 @@ endif()
 find_package(RE2C)
 find_package(Boost REQUIRED)
 
+if(NOT TARGET Boost::boost)
+  add_library(Boost::boost INTERFACE IMPORTED)
+  if(Boost_INCLUDE_DIRS)
+    set_target_properties(Boost::boost PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${Boost_INCLUDE_DIRS}")
+  endif()
+endif()
+
 enable_testing()
 
 add_subdirectory(libcudf)
