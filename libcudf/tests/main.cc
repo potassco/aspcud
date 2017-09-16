@@ -23,5 +23,5 @@
 // }}}
 //////////////////// Preamble /////////////////////////////////// {{{1
 
-#define BOOST_TEST_MODULE CudfTest
-#include <boost/test/unit_test.hpp>
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"

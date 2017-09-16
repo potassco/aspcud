@@ -56,13 +56,8 @@ if(ASPCUD_BUILD_STATIC)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a)
 endif()
 
-set(boost_components)
-if (ASPCUD_BUILD_TESTS)
-    list(APPEND boost_components unit_test_framework)
-endif()
-
 find_package(RE2C)
-find_package(Boost COMPONENTS ${boost_components} REQUIRED)
+find_package(Boost REQUIRED)
 
 enable_testing()
 

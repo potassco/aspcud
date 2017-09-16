@@ -27,6 +27,7 @@
 
 #include <iostream>
 #include <cudf/parser.hh>
+#include "catch.hpp"
 
 //////////////////// Helpers //////////////////////////////////// {{{1
 
