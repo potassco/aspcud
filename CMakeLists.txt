@@ -56,7 +56,7 @@ if(ASPCUD_BUILD_STATIC)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a)
 endif()
 
-set(boost_components program_options)
+set(boost_components)
 if (ASPCUD_BUILD_TESTS)
     list(APPEND boost_components unit_test_framework)
 endif()

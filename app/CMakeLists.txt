@@ -1,13 +1,10 @@
-source_group("Source Files" FILES aspcud.c cudf2lp.cc)
+source_group("Source Files" FILES aspcud.c cudf2lp.cc options.hh)
 
 add_executable(aspcud aspcud.c)
 target_include_directories(aspcud PRIVATE ${CMAKE_SOURCE_DIR}/libcudf)
 
-add_executable(cudf2lp cudf2lp.cc)
-target_link_libraries(cudf2lp PRIVATE libcudf Boost::boost Boost::program_options Boost::disable_autolinking)
-if(NOT ASPCUD_BUILD_STATIC)
-    target_link_libraries(cudf2lp PRIVATE Boost::dynamic_linking)
-endif()
+add_executable(cudf2lp options.hh cudf2lp.cc)
+target_link_libraries(cudf2lp PRIVATE libcudf Boost::boost Boost::disable_autolinking)
 
 install(
     FILES "${CMAKE_SOURCE_DIR}/encodings/misc2012.lp" "${CMAKE_SOURCE_DIR}/encodings/specification.lp"

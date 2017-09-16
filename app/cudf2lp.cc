@@ -30,87 +30,63 @@
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/range/adaptor/reversed.hpp>
-#include <boost/foreach.hpp>
-#include <boost/program_options.hpp>
-
-#define foreach BOOST_FOREACH
+#include "options.hh"
 
 #define CUDF_EXECUTABLE "cudf2lp"
 #define CUDF_USAGE "[options] [file]"
 
 //////////////////// Parse Criteria ///////////////////////// {{{1
 
-void validate(boost::any &result, std::vector<std::string> const &values, Criteria::CritVec *, int) {
-    namespace po = boost::program_options;
-    po::validators::check_first_occurrence(result);
-    result = boost::any(Criteria::CritVec{});
-    auto &criteria = boost::any_cast<Criteria::CritVec&>(result);
-    auto value = boost::algorithm::to_lower_copy(po::validators::get_single_string(values));
-    if (value == "paranoid") {
-        criteria.push_back(Criterion());
-        criteria.back().optimize = false;
-        criteria.back().measurement = Criterion::COUNT;
-        criteria.back().selector = Criterion::REMOVED;
-        criteria.push_back(Criterion());
-        criteria.back().optimize = false;
-        criteria.back().measurement = Criterion::COUNT;
-        criteria.back().selector = Criterion::CHANGED;
+void option_from_string(char const *value, Criteria::CritVec &target, int) {
+    auto lower = boost::algorithm::to_lower_copy(std::string(value));
+    if (lower == "paranoid") {
+        target.push_back(Criterion());
+        target.back().optimize = false;
+        target.back().measurement = Criterion::COUNT;
+        target.back().selector = Criterion::REMOVED;
+        target.push_back(Criterion());
+        target.back().optimize = false;
+        target.back().measurement = Criterion::COUNT;
+        target.back().selector = Criterion::CHANGED;
     }
-    else if (value == "trendy") {
-        criteria.push_back(Criterion());
-        criteria.back().optimize = false;
-        criteria.back().measurement = Criterion::COUNT;
-        criteria.back().selector = Criterion::REMOVED;
-        criteria.push_back(Criterion());
-        criteria.back().optimize = false;
-        criteria.back().measurement = Criterion::NOTUPTODATE;
-        criteria.back().selector = Criterion::SOLUTION;
-        criteria.push_back(Criterion());
-        criteria.back().optimize = false;
-        criteria.back().measurement = Criterion::UNSAT_RECOMMENDS;
-        criteria.back().selector = Criterion::SOLUTION;
-        criteria.push_back(Criterion());
-        criteria.back().optimize = false;
-        criteria.back().measurement = Criterion::COUNT;
-        criteria.back().selector = Criterion::NEW;
+    else if (lower == "trendy") {
+        target.push_back(Criterion());
+        target.back().optimize = false;
+        target.back().measurement = Criterion::COUNT;
+        target.back().selector = Criterion::REMOVED;
+        target.push_back(Criterion());
+        target.back().optimize = false;
+        target.back().measurement = Criterion::NOTUPTODATE;
+        target.back().selector = Criterion::SOLUTION;
+        target.push_back(Criterion());
+        target.back().optimize = false;
+        target.back().measurement = Criterion::UNSAT_RECOMMENDS;
+        target.back().selector = Criterion::SOLUTION;
+        target.push_back(Criterion());
+        target.back().optimize = false;
+        target.back().measurement = Criterion::COUNT;
+        target.back().selector = Criterion::NEW;
     }
-    else if (value == "none") { }
+    else if (lower == "none") { }
     else {
-        CritParser p(criteria);
+        CritParser p(target);
         std::istringstream iss(value);
         if (!p.parse(iss)) {
-            throw po::validation_error(po::validation_error::invalid_option_value);
-            // error
+            throw std::runtime_error("invalid criteria");
         }
     }
+}
+
+std::string option_to_string(Criteria::CritVec const &target) {
+    assert(target.empty());
+    return "none";
 }
 
 //////////////////// main /////////////////////////////////////// {{{1
 
-void printOptions(char const *caption, boost::program_options::options_description &options) {
-    std::cout << "\n" << caption << ":\n";
-    for (auto &option : options.options()) {
-        std::cout << "  " << option->format_name();
-        auto param = option->format_parameter();
-        if (!param.empty()) { std::cout << " " << param; }
-        std::cout << "\n";
-        auto &desc = option->description();
-        auto it = desc.begin(), ie = desc.end();
-        while (it != ie) {
-            auto jt = std::find(it, ie, '\n');
-            std::cout << "    ";
-            std::copy(it, jt, std::ostreambuf_iterator<char>(std::cout));
-            std::cout << "\n";
-            it = jt;
-            if (it != ie) { ++it; }
-        }
-    }
-}
-
-void printUsage(boost::program_options::options_description &a, boost::program_options::options_description &b) {
+void printUsage(Options &a) {
     std::cout << "Usage: " << CUDF_EXECUTABLE << " " << CUDF_USAGE << "\n";
-    printOptions("Preprocessing Options", a);
-    printOptions("Basic Options", b);
+    std::cout << a.description();
 }
 
 void printVersion() {
@@ -119,63 +95,54 @@ void printVersion() {
 }
 
 int main(int argc, char *argv[]) {
-    namespace po = boost::program_options;
     try {
+        std::string file = "-";
+        bool addall = false, help = false, version = false;
+        unsigned verbositiy;
         Criteria::CritVec criteria;
-        po::positional_options_description positional_options;
-        positional_options.add("file", 1);
-        po::options_description preprocessing_options("Preprocessing Options");
-        preprocessing_options.add_options()
-            ("criteria,c", po::value<Criteria::CritVec>(&criteria)->default_value({}, "none"),
-                "Preprocess for specific optimization criteria\n"
-                "  Accepted values: none, paranoid, trendy, <list>\n"
-                "    <list>: <sign><crit>\\(,<sign><crit>\\)*\n"
-                "    <sign>: + | -\n"
-                "    <crit>: count(<set>) | sum(<set>,<attr>)\n"
-                "          | unsat_recommends(<set>)\n"
-                "          | aligned(<set>,<attr>,<attr>)\n"
-                "          | notuptodate(<set>)\n"
-                "    <attr>: CUDF attribute name\n"
-                "    <set> : solution | changed | new | removed | up\n"
-                "          | down | installrequest | upgraderequest\n"
-                "          | request\n"
-                "  For backwards compatibility: \n"
-                "    new              = count(new)\n"
-                "    removed          = count(removed)\n"
-                "    changed          = count(changed)\n"
-                "    notuptodate      = notuptodate(solution)\n"
-                "    unsat_recommends = unsat_recommends(solution)\n"
-                "    sum(name)        = sum(name,solution)\n")
-            ("addall", "Disable preprocessing and add all packages");
-        po::options_description basic_options("Basic Options");
-        basic_options.add_options()
-            ("help,h", "Print help information and exit")
-            ("version,v", "Print version information and exit")
-            ("verbose,V", po::value<unsigned>()->default_value(0), "Set verbosity level");
-        po::options_description hidden_options;
-        hidden_options.add_options()
-            ("file,f", po::value<std::string>(), "input file");
+        Options options;
+        options.group("Preprocessing Options");
+        options.add(criteria, "c,criteria",
+            "Preprocess for specific optimization criteria\n"
+            "  Accepted values: none, paranoid, trendy, <list>\n"
+            "    <list>: <sign><crit>\\(,<sign><crit>\\)*\n"
+            "    <sign>: + | -\n"
+            "    <crit>: count(<set>) | sum(<set>,<attr>)\n"
+            "          | unsat_recommends(<set>)\n"
+            "          | aligned(<set>,<attr>,<attr>)\n"
+            "          | notuptodate(<set>)\n"
+            "    <attr>: CUDF attribute name\n"
+            "    <set> : solution | changed | new | removed | up\n"
+            "          | down | installrequest | upgraderequest\n"
+            "          | request\n"
+            "  For backwards compatibility: \n"
+            "    new              = count(new)\n"
+            "    removed          = count(removed)\n"
+            "    changed          = count(changed)\n"
+            "    notuptodate      = notuptodate(solution)\n"
+            "    unsat_recommends = unsat_recommends(solution)\n"
+            "    sum(name)        = sum(name,solution)\n");
+        options.add(addall, "a,addall", "Disable preprocessing and add all packages");
 
-        po::options_description cmdline_options, all_options;
-        cmdline_options.add(preprocessing_options).add(basic_options);
-        all_options.add(cmdline_options).add(hidden_options);
+        options.group("Basic Options");
+        options.add(file, "f,file", "input file", "arg", 1, 0, true);
+        options.add(help, "h,help", "Print help information and exit");
+        options.add(version, "v,version,v", "Print version information and exit");
+        options.add(verbositiy, "V,verbose", "Set verbosity level");
 
-        po::variables_map options;
-        po::store(po::command_line_parser(argc, argv).options(all_options).positional(positional_options).run(), options);
-        po::notify(options);
+        options.parse(argc, argv);
 
-        if (options.count("help")) {
-            printUsage(preprocessing_options, basic_options);
+        if (help) {
+            printUsage(options);
             return EXIT_SUCCESS;
         }
-        if (options.count("version")) {
+        if (version) {
             printVersion();
             return EXIT_SUCCESS;
         }
 
-        Dependency d(criteria, options.count("addall"), options["verbose"].as<unsigned>());
+        Dependency d(criteria, addall, verbositiy);
         Parser p(d);
-        std::string file = options.count("file") ? options["file"].as<std::string>() : "-";
         if (file == "-") { p.parse(std::cin); }
         else {
             std::ifstream in(file.c_str());
@@ -186,7 +153,7 @@ int main(int argc, char *argv[]) {
         d.dumpAsFacts(std::cout);
         return EXIT_SUCCESS;
     }
-    catch (po::error const &e) {
+    catch (OptionsException const &e) {
         std::cerr << "ERROR: " << e.what() << "\n";
         std::cerr << "INFO : " << "try '--help' for usage information" << std::endl;
         return EXIT_FAILURE;
