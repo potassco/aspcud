@@ -1,3 +1,30 @@
+// {{{ MIT License
+
+// Copyright 2017 Roland Kaminski
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+// IN THE SOFTWARE.
+
+// }}}
+//////////////////// Preamble /////////////////////////////////// {{{1
+
+#pragma once
+
 #include <map>
 #include <unordered_map>
 #include <memory>
@@ -8,6 +35,7 @@
 #include <vector>
 #include <algorithm>
 
+//////////////////// Options /////////////////////////////////// {{{1
 class OptionsException : public std::runtime_error {
 public:
     explicit OptionsException(char const *msg) : std::runtime_error(msg) { }
@@ -45,16 +73,28 @@ private:
 };
 
 template <class T>
-std::string option_to_string(T const &target) {
+std::string option_to_string(T const &target, unsigned) {
     std::ostringstream oss;
     oss << target;
     return oss.str();
+}
+
+template <class T, class A>
+std::string option_to_string(std::vector<T, A> const &, int) {
+    return "";
 }
 
 template <class T>
 void option_from_string(char const *value, T &target, unsigned) {
     std::istringstream iss{value};
     iss >> target;
+}
+
+template <class T, class A>
+void option_from_string(char const *value, std::vector<T,A> &target, int) {
+    target.emplace_back();
+    std::istringstream iss{value};
+    iss >> target.back();
 }
 
 template <class T>
@@ -115,7 +155,11 @@ public:
     }
     template <class T>
     void add(T &target, char const *name, char const *desc, char const *arg = "arg", int limit = 1, int minimum = 0, bool hidden = false) {
-        add_(std::make_unique<OptionParse<T>>(target, limit), name, desc, arg, option_to_string(target).c_str(), minimum, hidden);
+        add(target, name, desc, option_to_string(target, 0).c_str(), arg, limit, minimum, hidden);
+    }
+    template <class T>
+    void add(T &target, char const *name, char const *desc, char const *def, char const *arg = "arg", int limit = 1, int minimum = 0, bool hidden = false) {
+        add_(std::make_unique<OptionParse<T>>(target, limit), name, desc, arg, def, minimum, hidden);
     }
     char const *description() const {
         return description_.c_str();
@@ -194,6 +238,19 @@ public:
             }
         }
     }
+
+    int assigned(char const *option) {
+        auto it = long_options_.find(option);
+        if (it != long_options_.end()) {
+            return it->second->assigned();
+        }
+        auto jt = short_options_.find(option);
+        if (jt != short_options_.end()) {
+            return jt->second->assigned();
+        }
+        return 0;
+    }
+
 private:
 
     template <class... T>
