@@ -27,8 +27,15 @@
 #include "options.hh"
 #include <cudf/version.hh>
 
-#ifndef _MSC_VER
+#ifdef _WIN32
+#   define NOMINMAX
+#   define WIN32_LEAN_AND_MEAN
+#   include <windows.h>
+#   include <io.h>
+#else
 #   include <unistd.h>
+#   include <sys/wait.h>
+#   include <libgen.h>
 #endif
 #include <string>
 #include <vector>
@@ -42,15 +49,6 @@
 #include <cassert>
 #include <iterator>
 #include <fcntl.h>
-#ifdef _WIN32
-#   define NOMINMAX
-#   define WIN32_LEAN_AND_MEAN
-#   include <windows.h>
-#   include <io.h>
-#else
-#   include <sys/wait.h>
-#   include <libgen.h>
-#endif
 #ifdef __APPLE__
 #   include <mach-o/dyld.h>
 #endif
