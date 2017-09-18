@@ -313,7 +313,7 @@ int run(int argc, char *argv[]) {
 }
 
 private:
-    // if path starts with <module_prefix> replace this prefix with the
+    // if path starts with <module_path> replace this prefix with the
     // directory name of the aspcud executable
     // the function receives argv[0] in parameter module_path as a hint
     // which is used if no better method is available on a platform
@@ -327,12 +327,16 @@ private:
             if (!length || length >= MAX_PATH) {
                 throw std::runtime_error("module file path too long");
             }
+	    char *file;
             std::vector<char> buf(MAX_PATH+1);
-            length = GetFullPathName(module_filename, buf.size(), buf.data(), nullptr);
+            length = GetFullPathName(module_filename, buf.size(), buf.data(), &file);
+            if (!file) {
+                throw std::runtime_error("module file is a directory");
+            }
             if (!length || length >= MAX_PATH) {
                 throw std::runtime_error("module file path too long");
             }
-            module_path.assign(buf.begin(), buf.end());
+            module_path.assign(buf.data(), file-1);
 #else
 #   if defined(__linux__)
             module_path = "/proc/self/exe";
