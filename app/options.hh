@@ -34,6 +34,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <iterator>
 
 //////////////////// Options /////////////////////////////////// {{{1
 class OptionsException : public std::runtime_error {

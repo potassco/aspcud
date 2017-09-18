@@ -323,7 +323,7 @@ private:
             path.erase(path.begin(), path.begin() + strlen(prefix));
 #if defined(_WIN32)
             char module_filename[MAX_PATH+1];
-            size_t length = GetModuleFileName(nullptr, module_filename, MAX_PATH+1);
+            auto length = GetModuleFileName(nullptr, module_filename, MAX_PATH+1);
             if (!length || length >= MAX_PATH) {
                 throw std::runtime_error("module file path too long");
             }
@@ -408,7 +408,7 @@ private:
             //AttachConsole(current_pid_);
             //SetConsoleCtrlHandler(0, 1);
             GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
-            app()->interrupted_pid_ = current_pid_;
+            app()->interrupted_pid_ = app()->current_pid_;
         }
         app()->interrupted_ = 1;
 #else
@@ -465,11 +465,11 @@ private:
         // file descriptors returned by open are inheritable
         // http://msdn.microsoft.com/en-us/library/z0kc8e3z.aspx
         auto mode = _S_IREAD | _S_IWRITE;
-        int out_fd = _open(out_path, O_WRONLY | O_CREAT | O_TRUNC, mode);
+        int out_fd = _open(out_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
         if (out_fd == -1) {
             throw std::runtime_error("could not open " + out_path + " (" + strerror(errno) + ")");
         }
-        int err_fd = _open(err_path, O_RDWR | O_CREAT | O_TRUNC, mode);
+        int err_fd = _open(err_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, mode);
         if (err_fd == -1) {
             throw std::runtime_error("could not open " + err_path + " (" + strerror(errno) + ")");
         }
@@ -486,7 +486,9 @@ private:
         si.hStdError  = (HANDLE*)_get_osfhandle(err_fd);
 
         std::string cmdline = build_commandline_(args);
-        if (!CreateProcess(args[0], cmdline.c_str(), 0, 0, 1, 0, 0, 0, &si, &pi)) {
+	std::vector<char> buf{cmdline.c_str(), cmdline.c_str() + cmdline.length() + 1};
+	
+        if (!CreateProcess(args.front().c_str(), buf.data(), 0, 0, 1, 0, 0, 0, &si, &pi)) {
             throw std::runtime_error("could not execute " + cmdline);
         }
 
@@ -575,7 +577,7 @@ private:
         if (!_mktemp(name.data())) {
             throw std::runtime_error("could not create temporary file");
         }
-        int fd = _open (p, O_RDWR | O_CREAT | O_EXCL, _S_IREAD | _S_IWRITE);
+        int fd = _open (name.data(), O_RDWR | O_CREAT | O_EXCL, _S_IREAD | _S_IWRITE);
 #else
         int fd = mkstemp(name.data());
 #endif
