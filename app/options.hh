@@ -49,7 +49,7 @@ public:
     virtual ~AbstractOption() { }
     bool check_limit() {
         ++assigned_;
-        return limit_ < 0 || assigned_ <= limit_;
+        return limit_ <= 0 || assigned_ <= limit_;
     }
     int assigned() const {
         return assigned_;
@@ -137,10 +137,11 @@ private:
 
 class Options {
 public:
-    Options(char const *positional = "", size_t align_column = 30, size_t max_column = 79)
+    Options(char const *positional = "", size_t align_column = 30, size_t max_column = 79, bool force_positional_last = false)
     : positional_{positional}
     , align_column_{align_column}
-    , max_column_{max_column} { }
+    , max_column_{max_column}
+    , force_positional_last_{force_positional_last} { }
     void group(char const *caption, char const *suffix = ":", int align_column = -1) {
         description_ += "\n";
         description_ += caption;
@@ -217,11 +218,15 @@ public:
                 while (len > 0);
             }
             else if (!positional_.empty()) {
-                auto jt = long_options_.find(positional_);
-                if (jt == long_options_.end()) {
-                    fail_("unknown option --", positional_);
+                do {
+                    auto jt = long_options_.find(positional_);
+                    if (jt == long_options_.end()) {
+                        fail_("unknown option --", positional_);
+                    }
+                    it = parse_(*jt->second, positional_.c_str(), arg, arg, it - 1, ie, 0, "argument", "");
                 }
-                it = parse_(*jt->second, positional_.c_str(), arg, arg, it - 1, ie, 0, "argument", "");
+                while (force_positional_last_ && (++it, it != ie));
+                if (force_positional_last_) { break; }
             }
             else {
                 fail_("unexpected positional argument ", arg);
@@ -371,4 +376,5 @@ private:
     std::string positional_;
     size_t align_column_;
     size_t max_column_;
+    bool force_positional_last_;
 };

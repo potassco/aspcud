@@ -28,7 +28,8 @@ for x in "$location"/*/*.cudf.xz; do
     for solver in "$clasp"; do
         for encoding in "$location/../encodings/misc2012.lp" "$location/../encodings/specification.lp"; do
             start=$(date +%s)
-            "$aspcud" -e "$encoding" -s "$solver" -g "$gringo" -l "$cudf" "${extra[@]}" problem.cudf solution.cudf "$crit" > /dev/null
+            # echo "\"$aspcud\" -e \"$encoding\" -S \"$solver\" -G \"$gringo\" -P \"$cudf\" problem.cudf solution.cudf \"$crit\""
+            "$aspcud" -e "$encoding" -S "$solver" -G "$gringo" -P "$cudf" "${extra[@]}" problem.cudf solution.cudf "$crit" > /dev/null
             end=$(date +%s)
             "$check" -cudf problem.cudf -sol solution.cudf -crit "$crit" > solution.opt
             diff "${x%.cudf.xz}.opt" solution.opt && echo "passed ($[$end-$start]s, $(basename "$solver"), $(basename "$encoding"))" || echo "FAILED ($encoding/$solver)"

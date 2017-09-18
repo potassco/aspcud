@@ -35,7 +35,7 @@
 #include "options.hh"
 
 #define CUDF_EXECUTABLE "cudf2lp"
-#define CUDF_USAGE "[options] [file]"
+#define CUDF_USAGE "[option]... [file]"
 
 //////////////////// Parse Criteria ///////////////////////// {{{1
 
