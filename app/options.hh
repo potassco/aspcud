@@ -166,18 +166,18 @@ public:
     }
     void parse(int argc, char **argv) {
         for (auto it = argv + 1, ie = argv + argc; it != ie; ++it) {
-            auto arg{*it};
-            auto len{std::strlen(arg)};
+            auto arg = *it;
+            auto len = std::strlen(arg);
             if (std::strcmp("--", arg) == 0) {
                 throw std::runtime_error("unsupported argument --");
             }
             else if (std::strncmp("--", arg, 2) == 0) {
                 arg += 2;
                 len -= 2;
-                auto pos{std::find(arg, arg + len, '=')};
+                auto pos = std::find(arg, arg + len, '=');
                 std::string name{arg, pos};
-                auto je{long_options_.end()}, kt{je};
-                for (auto jt{long_options_.lower_bound(name)}; jt != je; ++jt) {
+                auto je = long_options_.end(), kt = je;
+                for (auto jt = long_options_.lower_bound(name); jt != je; ++jt) {
                     if (std::strncmp(jt->first.c_str(), name.c_str(), len) == 0) {
                         if (kt != je) {
                             fail_("ambigious option --", name, ": could be --", kt->first, " or --", jt->first);
@@ -196,11 +196,11 @@ public:
                 len -= 1;
                 do {
                     std::string name{*arg};
-                    auto jt{short_options_.find(name)};
+                    auto jt = short_options_.find(name);
                     if (jt == short_options_.end()) {
                         fail_("unknown option -", name);
                     }
-                    auto value{arg + 1};
+                    auto value = arg + 1;
                     size_t vlen;
                     if (jt->second->has_argument()) {
                         vlen = len - 1;
@@ -217,7 +217,7 @@ public:
                 while (len > 0);
             }
             else if (!positional_.empty()) {
-                auto jt{long_options_.find(positional_)};
+                auto jt = long_options_.find(positional_);
                 if (jt == long_options_.end()) {
                     fail_("unknown option --", positional_);
                 }
@@ -289,7 +289,7 @@ private:
         return it;
     }
     void add_(std::unique_ptr<AbstractOption> &&option, char const *name, char const *desc, char const *arg, char const *def, int minimum, bool hidden) {
-        auto len{std::strlen(name)};
+        auto len = std::strlen(name);
         assert(len > 0);
         std::string sname, lname;
         if (len == 1) {
@@ -318,7 +318,7 @@ private:
         }
         options_.emplace_back(std::move(option));
         if (!hidden) {
-            auto len{description_.size()};
+            auto len = description_.size();
             if (!sname.empty()) {
                 description_ += "  -";
                 description_ += sname;
@@ -350,9 +350,9 @@ private:
             }
             else {
                 description_ += '\n';
-                auto it{desc}, ie{it + std::strlen(desc)};
+                auto it = desc, ie = it + std::strlen(desc);
                 while (it != ie) {
-                    auto jt{std::find(it, ie, '\n')};
+                    auto jt = std::find(it, ie, '\n');
                     description_ +=  "    ";
                     std::copy(it, jt, std::back_inserter(description_));
                     description_ += "\n";
