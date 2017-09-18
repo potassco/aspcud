@@ -143,7 +143,7 @@ int run(int argc, char *argv[]) {
 
     options.add(clasp_args, "s,solver-option", "append argument for solver", clasp_default_args_str.c_str(), "arg", 0);
     options.add(gringo_args, "g,grounder-option", "append argument for grounder", "arg", nullptr, 0);
-    options.add(gringo_encodings, "e,encoding", "append encoding for grounder", "enc", nullptr, 0);
+    options.add(gringo_encodings, "e,encoding", "append encoding for grounder", encoding_.c_str(), "enc", 0);
     options.add(cudf2lp_args, "p,preprocessor-option", "append argument for preprocessor", "arg", nullptr, 0);
 
     options.add(clasp_bin_, "S,solver", "path to solver", "path", 1);
