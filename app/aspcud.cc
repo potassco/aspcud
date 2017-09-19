@@ -139,7 +139,7 @@ int run(int argc, char *argv[]) {
 
     options.group("Aspcud Options");
     options.add(inputs, "positional", "positional arguments", "arg", 3, 0, true);
-    options.add(criteria, "c,criteria", "optimization criteria");
+    options.add(criteria, "c,criterion", "optimization criterion");
 
     options.add(clasp_args, "s,solver-option", "append argument for solver", clasp_default_args_str.c_str(), "arg", 0);
     options.add(gringo_args, "g,grounder-option", "append argument for grounder", "arg", nullptr, 0);
@@ -162,8 +162,8 @@ int run(int argc, char *argv[]) {
         print_usage(argv[0]);
         std::cout << options.description() <<
             "\n"
-            "The optimization criteria can be passed as third argument or via option\n"
-            "--criteria. To get a list of supported criteria, call:\n"
+            "The optimization criterion can be passed as third argument or via option\n"
+            "--criterion. To get a list of supported criteria, call:\n"
             "  " << cudf2lp_bin_ << " --help\n"
             "\n"
             "If argument cudfout is not given, the solution is printed to stdout. If\n"
@@ -327,7 +327,7 @@ private:
             if (!length || length >= MAX_PATH) {
                 throw std::runtime_error("module file path too long");
             }
-	    char *file;
+            char *file;
             std::vector<char> buf(MAX_PATH+1);
             length = GetFullPathName(module_filename, buf.size(), buf.data(), &file);
             if (!file) {
@@ -490,8 +490,8 @@ private:
         si.hStdError  = (HANDLE*)_get_osfhandle(err_fd);
 
         std::string cmdline = build_commandline_(args);
-	std::vector<char> buf{cmdline.c_str(), cmdline.c_str() + cmdline.length() + 1};
-	
+        std::vector<char> buf{cmdline.c_str(), cmdline.c_str() + cmdline.length() + 1};
+
         if (!CreateProcess(args.front().c_str(), buf.data(), 0, 0, 1, 0, 0, 0, &si, &pi)) {
             throw std::runtime_error("could not execute " + cmdline);
         }

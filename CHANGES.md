@@ -1,5 +1,8 @@
 # Changes
 
+## aspcud 1.9.4
+  * refactor aspcud application to c++ to ease maintanance
+  * sanitize aspcud options
 ## aspcud 1.9.3
   * switch to MIT license
   * switch to boost program options

@@ -1,4 +1,4 @@
-.TH cudf2lp 1 "September 12, 2017"  "Version 1.9.3" "USER COMMANDS"
+.TH cudf2lp 1 "September 19, 2017"  "Version 1.9.4" "USER COMMANDS"
 .SH NAME
 cudf2lp \- a preprocessor for CUDF documents
 
@@ -11,7 +11,7 @@ simplifies a given CUDF specification and converts it into a set of facts suitab
 - e.g., \&\fIgringo\fR\|(1) and \&\fIclasp\fR\|(1).
 It is intended to be called by \&\fIaspcud\fR\|(1), but may also be used independently.
 
-It reads from the given \fRFILE\fR and from standard input if ommited.
+It reads from the given \fRFILE\fR or from standard input if ommited.
 
 .SH OPTIONS
 .B cudf2lp
@@ -27,7 +27,7 @@ print version and license information
 \fB\-V\fR, \fB\-\-verbose\fR[=\fIN\fR]
 set the verbosity level to \fIN\fR or the maximum if omitted
 .TP
-\fB\-c\fR \fICRITS\fR, \fB\-\-criteria\fR=\fICRITS\fR
+\fB\-c\fR \fICRITS\fR, \fB\-\-criterion\fR=\fICRITS\fR
 preprocess for specific optimization criteria (defaults to none):
   \fICRITS\fR: none | paranoid | trendy | \fICRIT\fR\\(','\fICRIT\fR\\)*
   \fICRIT\fR : \fISIGN\fR count(\fISET\fR) | 

@@ -1,37 +1,38 @@
-.TH aspcud 1 "September 17, 2017"  "Version 1.9.3" "USER COMMANDS"
+.TH aspcud 1 "September 19, 2017"  "Version 1.9.4" "USER COMMANDS"
 .SH NAME
 aspcud \- solve dependencies between packages
 
 .SH SYNOPSIS
 .B aspcud
-[\fIOPTION\fR]... \fIINPUT-FILE\fR \fIOUTPUT-FILE\fR [\fICRITERION\fR]
+[\fIOPTION\fR]... [\fIINPUT-FILE\fR] [\fIOUTPUT-FILE\fR] [\fICRITERION\fR]
 
 .SH DESCRIPTION
 .B aspcud
-solves package installation/removal/upgrade problems expressed in the
-CUDF format. It is intended to be called by package installers, but
-may also be used independently.
+solves package installation/removal/upgrade problems expressed in the CUDF format.
+It is intended to be called by package installers, but may also be used independently.
 
-If the tool is not able to find a solution, then it writes "FAIL" to
-the output file.
+If the tool is not able to find a solution, then it writes "FAIL" to the output file.
 
 .SH ARGUMENTS
 
 The first two command line arguments are mandatory:
 .TP
 .I INPUT-FILE
-is the pathname of a file containing the problem specification in
-CUDF format (both the universe and the request)
+is the pathname of the file containing the problem specification in CUDF format
+(both the universe and the request).
+If absent, the specification is read from stdin.
 .TP
 .I OUTPUT-FILE
-is the pathname of a file into which the solution will be written in
-CUDF output format. If the file does not exist it will be created, if
-it does already exist it will be overwritten without warning.
+is the pathname of the file into which the solution will be written in CUDF output format.
+If the file does not exist it will be created,
+if it does already exist it will be overwritten without warning.
+If absent, output is written to stdout.
 .TP
 .I CRITERION
-If no criteria is given, then the paranoid optimization criteria is chosen.
-To get a list of supported criteria, see the \fB\-c\fR option of \&\fIcudf2lp\fR\|(1).
-
+selects the optimization criterion. To get a list of supported criteria, see
+the \fB\-c\fR option of \&\fIcudf2lp\fR\|(1). If absent, the paranoid criterion
+is used.  Note that the criterion can be passed via option \fB\-\-criterion\fR
+as well.
 .SH OPTIONS
 .B aspcud
 supports the following options:
@@ -42,28 +43,37 @@ print help text, and default configurations and paths
 \fB\-v\fR, \fB\-\-version\fR
 print version and license information
 .TP
-\fB\-c\fR \fIOPT\fR
+\fB\-c\fR, \fB\-\-criterion\fR \fICRIT\fR
+set the optimization criterion
+.TP
+\fB\-s\fR, \fB\-\-solver\-option\fR \fIOPT\fR
 append clasp option OPT (can be given multiple times);
 if at least one clasp option is given, then default search options are not used
 .TP
-\fB\-e\fR \fIENC\fR
+\fB\-g\fR, \fB\-\-grounder\-option\fR \fIOPT\fR
+append gringo option OPT (can be given multiple times)
+.TP
+\fB\-e\fR, \fB\-\-encoding\fR \fIENC\fR
 append encoding ENC (can be given multiple times);
 if at least one encoding is given, then the default encoding is not used
 .TP
-\fB\-p\fR \fIOPT\fR
+\fB\-p\fR, \fB\-\-preprocessor\-option\fR \fIOPT\fR
 append cudf2lp option OPT (can be given multiple times)
 .TP
-\fB\-s\fR \fISOL\fR
+\fB\-S\fR, \fB\-\-solver\fR \fISOL\fR
 path to solver (clasp)
 .TP
-\fB\-g\fR \fIGRD\fR
+\fB\-G\fR, \fB\-\-grounder\fR \fIGRD\fR
 path to grounder (gringo)
 .TP
-\fB\-l\fR \fIPRE\fR
+\fB\-P\fR, \fB\-\-preprocessor\fR \fIPRE\fR
 path to cudf preprocessor (cudf2lp)
 .TP
-\fB\-d\fR
-print debug info and do not cleanup temporary files
+\fB\-V\fR, \fB\-\-verbosity\fR \fIN\fR
+set the verbosity level
+.TP
+\fB\-d\fR, \fB\-\-debug\fR
+do not cleanup temporary files
 
 .SH ENVIRONMENT VARIABLES
 .B aspcud
