@@ -352,6 +352,17 @@ private:
             }
             module_path.assign(buf.begin(), buf.end());
 #endif // freebsd, openbsd, ...
+            /*
+            // for reference: this is how it can be done on freebsd...
+            int mib[4];
+            mib[0] = CTL_KERN;
+            mib[1] = KERN_PROC;
+            mib[2] = KERN_PROC_PATHNAME;
+            mib[3] = -1;
+            char buf[1024];
+            size_t cb = sizeof(buf);
+            sysctl(mib, 4, buf, &cb, NULL, 0);
+            */
             struct stat sb;
             if (lstat(module_path.c_str(), &sb) == -1) {
                 throw std::runtime_error("could not lstat file");
