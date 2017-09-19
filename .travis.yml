@@ -48,10 +48,11 @@ script:
     make -j3 &&
     make test CTEST_OUTPUT_ON_FAILURE=True &&
     make install
-  - install/bin/aspcud --help
-  - install/bin/aspcud -c paranoid examples/feature.cudf
-  - install/bin/aspcud -c paranoid examples/feature.cudf solution.cudf
-  - cat solution.cudf
-  - install/bin/aspcud examples/feature.cudf solution.cudf paranoid
-  - cat solution.cudf
+  - cd "${TRAVIS_BUILD_DIR}";
+    ./install/bin/aspcud --help;
+    ./install/bin/aspcud -c paranoid examples/feature.cudf;
+    ./install/bin/aspcud -c paranoid examples/feature.cudf solution.cudf;
+    cat solution.cudf;
+    ./install/bin/aspcud examples/feature.cudf solution.cudf paranoid;
+    cat solution.cudf
 
