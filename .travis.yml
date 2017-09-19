@@ -29,7 +29,7 @@ matrix:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install re2c; fi
-  - curl -O "${CLINGO_URL}";
+  - curl -LO "${CLINGO_URL}";
   - tar xf "${CLINGO_NAME}.tar.gz"
   - mkdir -p install/bin
   - cp "${CLINGO_NAME}/clasp" install/bin/
