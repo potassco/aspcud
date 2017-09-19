@@ -72,7 +72,7 @@ void option_from_string(char const *value, Criteria::CritVec &target, int) {
     else if (lower == "none") { }
     else {
         CritParser p(target);
-        std::istringstream iss(value);
+        std::istringstream iss(lower);
         if (!p.parse(iss)) {
             throw std::runtime_error("invalid criteria");
         }
