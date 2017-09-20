@@ -26,8 +26,10 @@
 
 #include "options.hh"
 #include <cudf/version.hh>
-
-#ifdef _WIN32
+#if defined(__FreeBSD__)
+#   define ASPCUD_BSD
+#endif
+#if defined(_WIN32)
 #   define NOMINMAX
 #   define WIN32_LEAN_AND_MEAN
 #   include <windows.h>
@@ -49,8 +51,11 @@
 #include <cassert>
 #include <iterator>
 #include <fcntl.h>
-#ifdef __APPLE__
+#if defined(__APPLE__)
 #   include <mach-o/dyld.h>
+#elif defined(ASPCUD_BSD)
+#   include <sys/types.h>
+#   include <sys/sysctl.h>
 #endif
 #include <sys/stat.h>
 
@@ -351,9 +356,7 @@ private:
                 throw std::runtime_error("could not get executable path");
             }
             module_path.assign(buf.begin(), buf.end());
-#endif // freebsd, openbsd, ...
-            /*
-            // for reference: this is how it can be done on freebsd...
+#   elif defined(ASPCUD_BSD)
             int mib[4];
             mib[0] = CTL_KERN;
             mib[1] = KERN_PROC;
@@ -362,7 +365,8 @@ private:
             char buf[1024];
             size_t cb = sizeof(buf);
             sysctl(mib, 4, buf, &cb, NULL, 0);
-            */
+            module_path.assign(buf, buf + cb);
+#    endif // freebsd, openbsd, ...
             struct stat sb;
             if (lstat(module_path.c_str(), &sb) == -1) {
                 throw std::runtime_error("could not lstat file");
