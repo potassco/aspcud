@@ -347,7 +347,7 @@ private:
             module_path = "/proc/self/exe";
 #   elif defined(__APPLE__)
             uint32_t length = 0;
-            _NSGetExecutablePath(NULL, &length);
+            _NSGetExecutablePath(nullptr, &length);
             if (!length) {
                 throw std::runtime_error("could not get executable path");
             }
@@ -362,10 +362,16 @@ private:
             mib[1] = KERN_PROC;
             mib[2] = KERN_PROC_PATHNAME;
             mib[3] = -1;
-            char buf[1024];
-            size_t cb = sizeof(buf);
-            sysctl(mib, 4, buf, &cb, NULL, 0);
-            module_path.assign(buf, buf + cb);
+            std::vector<char> buf;
+            size_t cb = 0;
+            if (sysctl(mib, 4, nullptr, &cb, nullptr, 0) == -1) {
+                throw std::runtime_error("could not get executable path: " + std::string(std::strerror(errno)));
+            }
+            buf.resize(cb);
+            if (sysctl(mib, 4, buf.data(), &cb, nullptr, 0) == -1) {
+                throw std::runtime_error("could not get executable path: " + std::string(std::strerror(errno)));
+            }
+            module_path.assign(buf.data(), buf.data() + cb - 1);
 #    endif // freebsd, openbsd, ...
             struct stat sb;
             if (lstat(module_path.c_str(), &sb) == -1) {
