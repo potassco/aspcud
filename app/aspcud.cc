@@ -356,7 +356,7 @@ private:
                 throw std::runtime_error("could not get executable path");
             }
             module_path.assign(buf.begin(), buf.end());
-#   elif defined(ASPCUD_BSD)
+#   elif defined(__FreeBSD__) || defined(__NetBSD__)
             int mib[4];
             mib[0] = CTL_KERN;
             mib[1] = KERN_PROC;
@@ -372,7 +372,7 @@ private:
                 throw std::runtime_error("could not get executable path: " + std::string(std::strerror(errno)));
             }
             module_path.assign(buf.data(), buf.data() + cb - 1);
-#    endif // freebsd, openbsd, ...
+#    endif // freebsd, netbsd
             struct stat sb;
             if (lstat(module_path.c_str(), &sb) == -1) {
                 throw std::runtime_error("could not lstat file");
