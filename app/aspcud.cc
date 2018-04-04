@@ -373,7 +373,7 @@ private:
                 throw std::runtime_error("could not get executable path: " + std::string(std::strerror(errno)));
             }
             module_path.assign(buf.data(), buf.data() + cb - 1);
-#    endif // freebsd, openbsd, ...
+#    endif // freebsd and netbsd
             struct stat sb;
             if (lstat(module_path.c_str(), &sb) == -1) {
                 throw std::runtime_error("could not lstat file");
