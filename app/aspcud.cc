@@ -26,7 +26,8 @@
 
 #include "options.hh"
 #include <cudf/version.hh>
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+// NOTE: openbsd does not have KERN_PROC_PATHNAME
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 #   define ASPCUD_BSD
 #endif
 #if defined(_WIN32)
