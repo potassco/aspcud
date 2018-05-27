@@ -1,58 +1,44 @@
-sudo: false
-language: c++
+language: c
+
 matrix:
   include:
     - os: linux
-      compiler: gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - re2c
-            - libboost-program-options-dev
-            - libboost-test-dev
-            - cmake3
-            - g++-5
       env:
-        - CLINGO_URL="https://github.com/potassco/clingo/releases/download/v5.2.1/clingo-5.2.1-linux-x86_64.tar.gz"
-        - CLINGO_NAME="clingo-5.2.1-linux-x86_64"
-        - MY_CC=gcc-5
-        - MY_CXX=g++-5
+        - COMPILER=gxx_linux-64
+        - CTEST_OUTPUT_ON_FAILURE=1
+        - ANACONDA=https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
     - os: osx
-      osx_image: xcode8.3
       env:
-        - CLINGO_URL="https://github.com/potassco/clingo/releases/download/v5.2.1/clingo-5.2.1-macos-10.9.tar.gz"
-        - CLINGO_NAME="clingo-5.2.1-macos-10.9"
-        - MY_CC=clang
-        - MY_CXX=clang++
+        - COMPILER=clangxx_osx-64
+        - CTEST_OUTPUT_ON_FAILURE=1
+        - ANACONDA=https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
 
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install re2c; fi
-  - curl -LO "${CLINGO_URL}";
-  - tar xf "${CLINGO_NAME}.tar.gz"
-  - mkdir -p install/bin
-  - cp "${CLINGO_NAME}/clasp" install/bin/
-  - cp "${CLINGO_NAME}/gringo" install/bin/
+install:
+  - wget "${ANACONDA}" -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda config --append channels potassco
+  - conda update -q conda
+  - conda info -a
+  - conda create -q -n test-environment
+  - source activate test-environment
+  - conda install -q clingo cmake "${COMPILER}" ninja re2c libboost
+  - cmake -G Ninja -H. -Bbuild
+      -DCMAKE_BUILD_TYPE=release
+      -DCMAKE_BUILD_WITH_INSTALL_RPATH=True
+      -DCMAKE_INSTALL_RPATH="${CONDA_PREFIX}/lib"
+      -DCMAKE_INSTALL_PREFIX="${CONDA_PREFIX}"
+      -DASPCUD_ENCODING_PATH="<module_path>/../share/aspcud/specification.lp"
+  - cmake --build build
+  - cmake --build build --target test
+  - cmake --build build --target install
 
 script:
-  - mkdir build &&
-    cd build &&
-    cmake
-      -DCMAKE_VERBOSE_MAKEFILE=True
-      -DCMAKE_C_COMPILER=${MY_CC}
-      -DCMAKE_CXX_COMPILER=${MY_CXX}
-      -DCMAKE_INSTALL_PREFIX="${TRAVIS_BUILD_DIR}/install/"
-      -DASPCUD_ENCODING_PATH="<module_path>/../share/aspcud/specification.lp"
-      .. &&
-    make -j3 &&
-    make test CTEST_OUTPUT_ON_FAILURE=True &&
-    make install
-  - cd "${TRAVIS_BUILD_DIR}";
-    ./install/bin/aspcud --help;
-    ./install/bin/aspcud -c paranoid examples/feature.cudf;
-    ./install/bin/aspcud -c paranoid examples/feature.cudf solution.cudf;
-    cat solution.cudf;
-    ./install/bin/aspcud examples/feature.cudf solution.cudf paranoid;
-    cat solution.cudf
-
+  - aspcud --help
+  - aspcud -c paranoid examples/feature.cudf
+  - aspcud -c paranoid examples/feature.cudf solution.cudf
+  - cat solution.cudf
+  - aspcud examples/feature.cudf solution.cudf paranoid
+  - cat solution.cudf
