@@ -9,7 +9,7 @@ matrix:
         - ANACONDA=https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
     - os: osx
       env:
-        - COMPILER=clangxx_osx-64
+        - COMPILER=clingo # just install no compiler to use the one from the system because the SDK is missing
         - CTEST_OUTPUT_ON_FAILURE=1
         - ANACONDA=https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
 
