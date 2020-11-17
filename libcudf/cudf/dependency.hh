@@ -186,6 +186,7 @@ public:
     void addEdges(Package *a, PackageList const &neighbors);
     void init(bool verbose);
     void dump(Dependency *dep, std::ostream &out);
+    bool edgeSort(Package *a, Package *b);
 private:
     void components_(bool verbose);
     void cliques_(bool verbose);
@@ -196,7 +197,6 @@ private:
     struct PkgHash {
         size_t operator()(Package *pkg) const;
     };
-    bool edgeSort(Package *a, Package *b);
     typedef boost::unordered_map<Package*, PackageList, ConflictGraph::PkgHash> Edges;
     typedef boost::unordered_set<std::pair<Package*, Package*> > EdgeSet;
     EdgeSet edgeSet_;

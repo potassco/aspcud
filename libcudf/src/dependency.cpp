@@ -462,6 +462,13 @@ void ConflictGraph::components_(bool verbose) {
     }
 }
 
+struct EdgeCmp {
+    ConflictGraph *g;
+    bool operator()(Package *a, Package *b) const {
+        return g->edgeSort(a, b);
+    }
+};
+
 void ConflictGraph::cliques_(bool verbose) {
     uint32_t min = 0, max = 0, sum = 0;
     for (PackageList &component : components) {
@@ -473,7 +480,8 @@ void ConflictGraph::cliques_(bool verbose) {
         }
         else {
             PackageList candidates = component, next;
-            boost::sort(candidates, boost::bind(&ConflictGraph::edgeSort, this, _1, _2));
+            EdgeCmp cmp = {this};
+            boost::sort(candidates, cmp);
             // TODO: sort by out-going edges
             do {
                 cliques.push_back(PackageList());
