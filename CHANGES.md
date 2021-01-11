@@ -1,5 +1,8 @@
 # Changes
 
+## aspcud 1.9.5
+  * compatibility with boost >=1.74
+  * update catch
 ## aspcud 1.9.4
   * refactor aspcud application to c++ to ease maintanance
   * sanitize aspcud options
