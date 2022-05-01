@@ -1,5 +1,7 @@
 # Changes
 
+## aspcud 1.9.6
+  * update catch
 ## aspcud 1.9.5
   * compatibility with boost >=1.74
   * update catch

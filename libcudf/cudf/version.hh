@@ -25,5 +25,5 @@
 
 #pragma once
 
-#define CUDF_VERSION "1.9.5"
+#define CUDF_VERSION "1.9.6"
 
